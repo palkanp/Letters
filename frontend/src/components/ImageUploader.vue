@@ -1,0 +1,63 @@
+<template>
+  <div>
+    <!-- Hidden native file input (shared by dropzone + replace button) -->
+    <input ref="fileInput" type="file" accept="image/*" class="hidden" @change="onFileSelect" />
+
+    <!-- Uploaded image — rendering delegated to the parent via slot so each
+         block controls its own framing (full-width, fixed-width, borders…) -->
+    <template v-if="url">
+      <slot :url="url">
+        <img :src="url" class="w-full block" :alt="alt" />
+      </slot>
+
+      <button
+        v-if="!hideReplace"
+        type="button"
+        class="mt-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
+        :class="replaceClass"
+        @click.stop="triggerFileInput"
+      >Replace image</button>
+    </template>
+
+    <!-- Empty state dropzone -->
+    <div
+      v-else
+      class="w-full border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors select-none"
+      :class="[heightClass, isDragging
+        ? 'border-gray-500 bg-gray-100'
+        : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100']"
+      @click.stop="triggerFileInput"
+      @dragover.prevent.stop="isDragging = true"
+      @dragleave.stop="isDragging = false"
+      @drop.prevent.stop="onFileDrop"
+    >
+      <span v-if="uploading" class="text-xs text-gray-400">Uploading…</span>
+      <template v-else>
+        <span class="text-2xl">🖼</span>
+        <span class="text-xs text-gray-600 font-medium">Click or drop image</span>
+        <span class="text-xs text-gray-400">PNG, JPG, GIF, WebP</span>
+      </template>
+    </div>
+
+    <p v-if="uploadError" class="mt-1 text-xs text-red-500">{{ uploadError }}</p>
+  </div>
+</template>
+
+<script setup>
+import { useImageUpload } from "../composables/useImageUpload";
+
+const props = defineProps({
+  url:         { type: String, default: "" },
+  alt:         { type: String, default: "" },
+  heightClass: { type: String, default: "h-44" },   // dropzone height
+  replaceClass:{ type: String, default: "" },        // extra classes for replace btn
+  hideReplace: { type: Boolean, default: false },
+});
+
+const emit = defineEmits(["uploaded"]);
+
+const {
+  fileInput, uploading, uploadError, isDragging,
+  triggerFileInput, onFileSelect, onFileDrop,
+} = useImageUpload((url) => emit("uploaded", url));
+</script>

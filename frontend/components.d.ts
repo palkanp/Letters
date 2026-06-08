@@ -10,14 +10,18 @@ declare module 'vue' {
   export interface GlobalComponents {
     BlockWrapper: typeof import('./src/components/BlockWrapper.vue')['default']
     Button: typeof import('./src/components/blocks/button.vue')['default']
+    Columns: typeof import('./src/components/blocks/columns.vue')['default']
     Divider: typeof import('./src/components/blocks/divider.vue')['default']
     Footer: typeof import('./src/components/blocks/footer.vue')['default']
     Hero: typeof import('./src/components/blocks/hero.vue')['default']
+    Image: typeof import('./src/components/blocks/image.vue')['default']
     Image_text: typeof import('./src/components/blocks/image_text.vue')['default']
+    ImageUploader: typeof import('./src/components/ImageUploader.vue')['default']
     Inspector: typeof import('./src/components/Inspector.vue')['default']
     LayersPanel: typeof import('./src/components/LayersPanel.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    Section_label: typeof import('./src/components/blocks/section_label.vue')['default']
     SendModal: typeof import('./src/components/SendModal.vue')['default']
     Text: typeof import('./src/components/blocks/text.vue')['default']
   }
