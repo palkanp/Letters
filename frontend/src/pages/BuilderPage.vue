@@ -27,17 +27,41 @@
       @drop="onDrop"
     >
       <div class="max-w-2xl mx-auto">
-        <!-- Campaign title bar -->
-        <div class="mb-4 flex items-center gap-3">
-          <TextInput
-            v-model="editorStore.campaignName"
-            placeholder="Campaign name…"
-            class="flex-1"
-            size="sm"
-          />
-          <Button variant="solid" theme="gray" size="sm" @click="saveCampaign" :loading="saving">
-            Save
-          </Button>
+        <!-- Campaign meta bar -->
+        <div class="mb-3 flex flex-col gap-2">
+          <div class="flex items-center gap-3">
+            <TextInput
+              v-model="editorStore.campaignName"
+              placeholder="Campaign name…"
+              class="flex-1"
+              size="sm"
+            />
+            <Button variant="solid" theme="gray" size="sm" @click="saveCampaign" :loading="saving">
+              Save
+            </Button>
+            <Button variant="subtle" size="sm" @click="refreshPreview" :loading="previewing">
+              Preview
+            </Button>
+          </div>
+          <div class="flex items-center gap-2">
+            <TextInput
+              v-model="subject"
+              placeholder="Subject line…"
+              class="flex-1"
+              size="sm"
+            />
+            <TextInput
+              v-model="previewText"
+              placeholder="Preview text…"
+              class="flex-1"
+              size="sm"
+            />
+          </div>
+        </div>
+
+        <!-- Save feedback -->
+        <div v-if="saveMsg" class="mb-3 px-3 py-2 rounded bg-green-50 text-green-700 text-xs">
+          {{ saveMsg }}
         </div>
 
         <!-- Empty state -->
@@ -82,7 +106,7 @@
         <div
           class="border border-gray-200 rounded overflow-hidden bg-white transition-all mx-auto"
           :class="previewMode === 'mobile' ? 'max-w-[375px]' : 'w-full'"
-          v-html="editorStore.renderedHtml || '<div class=\'p-8 text-gray-400 text-sm text-center\'>Save to see preview</div>'"
+          v-html="editorStore.renderedHtml || '<div class=\'p-8 text-gray-400 text-sm text-center\'>Save &amp; click Preview</div>'"
         />
       </div>
     </aside>
@@ -91,14 +115,92 @@
 </template>
 
 <script setup>
-import { ref, defineAsyncComponent } from "vue";
-import { Button } from "frappe-ui";
-import { TextInput } from "frappe-ui";
+import { ref, defineAsyncComponent, onMounted } from "vue";
+import { Button, TextInput } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 
 const editorStore = useEditorStore();
 const previewMode = ref("desktop");
 const saving = ref(false);
+const previewing = ref(false);
+const saveMsg = ref("");
+const subject = ref("");
+const previewText = ref("");
+
+// Read campaign name from URL ?name=xxx
+const urlParams = new URLSearchParams(window.location.search);
+const initialName = urlParams.get("name");
+
+onMounted(async () => {
+  if (initialName) {
+    await loadCampaign(initialName);
+  }
+});
+
+async function loadCampaign(name) {
+  try {
+    const res = await frappe.call({
+      method: "letters.api.get_campaign",
+      args: { name },
+    });
+    const doc = res.message;
+    editorStore.loadFromDoc(doc);
+    subject.value = doc.subject;
+    previewText.value = doc.preview_text;
+  } catch (e) {
+    console.error("Failed to load campaign", e);
+  }
+}
+
+async function saveCampaign() {
+  saving.value = true;
+  saveMsg.value = "";
+  try {
+    const res = await frappe.call({
+      method: "letters.api.save_campaign",
+      args: {
+        name: editorStore.campaignDoc?.name || null,
+        title: editorStore.campaignName || "Untitled Campaign",
+        subject: subject.value,
+        preview_text: previewText.value,
+        blocks: JSON.stringify(
+          editorStore.blocks.map(({ id: _id, ...rest }) => rest)
+        ),
+      },
+    });
+    const saved = res.message;
+    if (!editorStore.campaignDoc) {
+      editorStore.campaignDoc = saved;
+    } else {
+      editorStore.campaignDoc.name = saved.name;
+    }
+    saveMsg.value = "Saved!";
+    setTimeout(() => (saveMsg.value = ""), 2500);
+  } catch (e) {
+    console.error("Save failed", e);
+  } finally {
+    saving.value = false;
+  }
+}
+
+async function refreshPreview() {
+  previewing.value = true;
+  try {
+    const res = await frappe.call({
+      method: "letters.api.render_preview",
+      args: {
+        blocks: JSON.stringify(
+          editorStore.blocks.map(({ id: _id, ...rest }) => rest)
+        ),
+      },
+    });
+    editorStore.setRenderedHtml(res.message.html);
+  } catch (e) {
+    console.error("Preview failed", e);
+  } finally {
+    previewing.value = false;
+  }
+}
 
 const availableBlocks = [
   { type: "hero",       label: "Hero",         icon: "◉" },
@@ -131,12 +233,5 @@ function onDrop() {
     editorStore.addBlock(dragging.type);
     dragging = null;
   }
-}
-
-async function saveCampaign() {
-  saving.value = true;
-  // TODO: call Frappe API
-  await new Promise(r => setTimeout(r, 600));
-  saving.value = false;
 }
 </script>

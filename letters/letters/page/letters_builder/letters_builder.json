@@ -1,0 +1,12 @@
+{
+  "doctype": "Page",
+  "module": "Letters",
+  "name": "letters-builder",
+  "page_name": "letters-builder",
+  "title": "Letters Builder",
+  "roles": [
+    {
+      "role": "System Manager"
+    }
+  ]
+}

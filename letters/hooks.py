@@ -24,9 +24,8 @@ required_apps = ["frappe"]
 #     "filters": [],
 # }
 
-# Web includes (served via Frappe asset pipeline)
-# app_include_css = []
-# app_include_js = []
+page_js = {"letters-builder": "public/js/letters-builder.js"}
+page_css = {"letters-builder": "public/js/letters-builder.css"}
 
 # Override standard DocType forms
 # override_doctype_class = {}

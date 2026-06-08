@@ -7,6 +7,7 @@ export const useEditorStore = defineStore("editor", () => {
   const blocks = ref([]);
   const renderedHtml = ref("");
   const campaignName = ref("");
+  const campaignDoc = ref(null); // { name, title, subject, preview_text }
 
   function addBlock(type) {
     blocks.value.push({ id: ++_idCounter, type, props: defaultProps(type) });
@@ -30,15 +31,24 @@ export const useEditorStore = defineStore("editor", () => {
     renderedHtml.value = html;
   }
 
+  function loadFromDoc(doc) {
+    campaignDoc.value = doc;
+    campaignName.value = doc.title;
+    _idCounter = 0;
+    blocks.value = (doc.blocks || []).map((b) => ({ ...b, id: ++_idCounter }));
+  }
+
   return {
     blocks,
     renderedHtml,
     campaignName,
+    campaignDoc,
     addBlock,
     removeBlock,
     moveBlock,
     updateBlockProps,
     setRenderedHtml,
+    loadFromDoc,
   };
 });
 
