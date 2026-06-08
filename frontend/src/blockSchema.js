@@ -151,6 +151,28 @@ export const BLOCK_SCHEMA = {
         title: "Style",
         fields: [
           { key: "text_color", label: "Text color", type: "color" },
+          {
+            key: "font_size",
+            label: "Font size",
+            type: "select",
+            options: [
+              { label: "XS (10px)", value: "10px" },
+              { label: "Small (11px)", value: "11px" },
+              { label: "Normal (13px)", value: "13px" },
+              { label: "Medium (15px)", value: "15px" },
+              { label: "Large (18px)", value: "18px" },
+            ],
+          },
+          {
+            key: "font_weight",
+            label: "Weight",
+            type: "select",
+            options: [
+              { label: "Normal", value: "400" },
+              { label: "Semibold", value: "600" },
+              { label: "Bold", value: "700" },
+            ],
+          },
           { key: "line_color", label: "Line color", type: "color" },
           {
             key: "line_position",

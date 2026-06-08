@@ -127,6 +127,8 @@ class SectionLabelRenderer(BlockRenderer):
         line_color    = escape(p.get("line_color", "#ededed"))
         line_position = p.get("line_position", "below")
         align         = escape(p.get("align", "left"))
+        font_size     = escape(p.get("font_size", "11px"))
+        font_weight   = escape(str(p.get("font_weight", "600")))
 
         line_html = f'<hr style="border:0;border-top:1px solid {line_color};margin:8px 0 0;" />'
         above_line = line_html if line_position == "above" else ""
@@ -137,7 +139,7 @@ class SectionLabelRenderer(BlockRenderer):
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr><td style="padding:{padding};" align="{align}">'
             f'{above_line}'
-            f'<span style="font-family:Arial,sans-serif;font-size:11px;font-weight:600;'
+            f'<span style="font-family:Arial,sans-serif;font-size:{font_size};font-weight:{font_weight};'
             f'color:{text_color};text-transform:uppercase;letter-spacing:0.99px;'
             f'line-height:1.2;">{label}</span>'
             f'{below_line}'

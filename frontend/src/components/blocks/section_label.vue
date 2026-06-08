@@ -10,8 +10,13 @@
 
       <!-- Label text -->
       <div
-        class="inline-block text-xs font-semibold tracking-widest uppercase outline-none"
-        :style="{ color: block.props.text_color || '#383838', letterSpacing: '0.99px' }"
+        class="inline-block tracking-widest uppercase outline-none"
+        :style="{
+          color: block.props.text_color || '#383838',
+          fontSize: block.props.font_size || '11px',
+          fontWeight: block.props.font_weight || '600',
+          letterSpacing: '0.99px',
+        }"
         contenteditable="true"
         @blur="update('label', $event.target.innerText)"
         @click.stop="store.selectBlock(block.id)"
