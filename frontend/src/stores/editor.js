@@ -101,6 +101,21 @@ function defaultProps(type) {
       align: "center",
       border_radius: "8px",
     },
+    image: {
+      image_url: "",
+      caption: "",
+      alt: "",
+      background_color: "#ffffff",
+      border: "0.5px solid #383838",
+      border_radius: "0",
+    },
+    section_label: {
+      label: "SECTION TITLE",
+      text_color: "#383838",
+      line_color: "#ededed",
+      line_position: "below",
+      align: "left",
+    },
     columns: {
       column_count: "2",
       background_color: "#ffffff",

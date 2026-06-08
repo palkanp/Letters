@@ -86,7 +86,7 @@
         @drop="onDrop"
         @click="editorStore.selectBlock(null)"
       >
-        <div class="max-w-2xl mx-auto">
+        <div class="mx-auto" style="max-width:600px">
           <!-- Empty state -->
           <div
             v-if="!editorStore.blocks.length"
@@ -280,13 +280,15 @@ function onSent() {
 
 // ── Block palette ─────────────────────────────────────────────────────────────
 const availableBlocks = [
-  { type: "hero",       label: "Hero",         icon: "◉" },
-  { type: "text",       label: "Text",         icon: "¶" },
-  { type: "image_text", label: "Image + Text", icon: "▣" },
-  { type: "button",     label: "Button",       icon: "▷" },
-  { type: "columns",    label: "Columns",      icon: "⊞" },
-  { type: "divider",    label: "Divider",      icon: "—" },
-  { type: "footer",     label: "Footer",       icon: "≡" },
+  { type: "hero",          label: "Hero",          icon: "◉" },
+  { type: "section_label", label: "Section Label", icon: "§" },
+  { type: "text",          label: "Text",          icon: "¶" },
+  { type: "image",         label: "Image",         icon: "🖼" },
+  { type: "image_text",    label: "Image + Text",  icon: "▣" },
+  { type: "button",        label: "Button",        icon: "▷" },
+  { type: "columns",       label: "Columns",       icon: "⊞" },
+  { type: "divider",       label: "Divider",       icon: "—" },
+  { type: "footer",        label: "Footer",        icon: "≡" },
 ];
 
 const blockComponentCache = {};

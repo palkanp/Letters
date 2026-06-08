@@ -15,7 +15,13 @@
       "Bash(sed -i '' 's|import FormControl from \"frappe-ui/src/components/FormControl/FormControl.vue\"|import { FormControl } from \"frappe-ui\"|g' src/components/blocks/divider.vue src/components/blocks/image_text.vue src/components/blocks/button.vue src/components/blocks/text.vue)",
       "Bash(git add *)",
       "Bash(git commit -m 'fix: add pyproject.toml required by Frappe Cloud *)",
-      "Bash(npm run *)"
+      "Bash(npm run *)",
+      "Bash(git commit -m ' *)",
+      "mcp__Claude_in_Chrome__tabs_context_mcp",
+      "WebFetch(domain:frappe.io)",
+      "Bash(curl -s \"https://frappe.io/times/may-2026\")",
+      "Bash(curl -s \"https://frappe.io/files/page_styles/CSS-3eacf-fc1dd5f243.css\")",
+      "Bash(curl -s \"https://frappe.io/files/page_styles/CSS-ff9cd-e3f33dfc51.css\")"
     ]
   }
 }

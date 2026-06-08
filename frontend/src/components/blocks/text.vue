@@ -8,6 +8,8 @@
           fontSize: block.props.font_size,
           fontWeight: block.props.font_weight,
           color: block.props.text_color,
+          lineHeight: block.props.line_height || '1.6',
+          letterSpacing: block.props.letter_spacing || 'normal',
         }"
         contenteditable="true"
         @blur="update('content', $event.target.innerText)"

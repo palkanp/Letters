@@ -84,6 +84,105 @@ export const BLOCK_SCHEMA = {
             ],
           },
           { key: "text_color", label: "Text color", type: "color" },
+          {
+            key: "line_height",
+            label: "Line height",
+            type: "select",
+            options: [
+              { label: "Tight (1.3)", value: "1.3" },
+              { label: "Snug (1.4)", value: "1.4" },
+              { label: "Normal (1.6)", value: "1.6" },
+              { label: "Relaxed (1.75)", value: "1.75" },
+              { label: "Loose (2.0)", value: "2.0" },
+            ],
+          },
+          {
+            key: "letter_spacing",
+            label: "Letter spacing",
+            type: "select",
+            options: [
+              { label: "Normal", value: "normal" },
+              { label: "Tight (−0.5px)", value: "-0.5px" },
+              { label: "Wide (0.3px)", value: "0.3px" },
+              { label: "Wider (0.99px)", value: "0.99px" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+
+  image: {
+    label: "Image",
+    icon: "🖼",
+    sections: [
+      {
+        id: "content",
+        title: "Content",
+        fields: [
+          { key: "image_url", label: "Image URL", type: "text", placeholder: "https://…" },
+          { key: "caption", label: "Caption", type: "text", placeholder: "Optional caption…" },
+          { key: "alt", label: "Alt text", type: "text", placeholder: "Describe the image…" },
+        ],
+      },
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          { key: "background_color", label: "Background", type: "color" },
+          {
+            key: "border",
+            label: "Border",
+            type: "select",
+            options: [
+              { label: "None", value: "none" },
+              { label: "Subtle (0.5px)", value: "0.5px solid #383838" },
+              { label: "Light (1px gray)", value: "1px solid #e5e7eb" },
+              { label: "Medium (2px)", value: "2px solid #383838" },
+            ],
+          },
+          {
+            key: "border_radius",
+            label: "Corners",
+            type: "select",
+            options: [
+              { label: "None", value: "0" },
+              { label: "Small (4px)", value: "4px" },
+              { label: "Rounded (8px)", value: "8px" },
+              { label: "Large (12px)", value: "12px" },
+            ],
+          },
+          { key: "caption_color", label: "Caption color", type: "color" },
+        ],
+      },
+    ],
+  },
+
+  section_label: {
+    label: "Section Label",
+    icon: "§",
+    sections: [
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          { key: "text_color", label: "Text color", type: "color" },
+          { key: "line_color", label: "Line color", type: "color" },
+          {
+            key: "line_position",
+            label: "Line",
+            type: "select",
+            options: [
+              { label: "Below label", value: "below" },
+              { label: "Above label", value: "above" },
+              { label: "None", value: "none" },
+            ],
+          },
+          {
+            key: "align",
+            label: "Alignment",
+            type: "align",
+          },
         ],
       },
     ],
