@@ -94,8 +94,8 @@ export const BLOCK_SCHEMA = {
     icon: "▣",
     sections: [
       {
-        id: "content",
-        title: "Content",
+        id: "image",
+        title: "Image",
         fields: [
           { key: "image_url", label: "Image URL", type: "text", placeholder: "https://…" },
           {
@@ -105,6 +105,17 @@ export const BLOCK_SCHEMA = {
             options: [
               { label: "Left", value: "left" },
               { label: "Right", value: "right" },
+            ],
+          },
+          {
+            key: "image_width",
+            label: "Image width",
+            type: "select",
+            options: [
+              { label: "Small (25%)", value: "25%" },
+              { label: "Medium (33%)", value: "33%" },
+              { label: "Half (50%)", value: "50%" },
+              { label: "Large (175px)", value: "175px" },
             ],
           },
         ],

@@ -2,7 +2,7 @@
   <div
     class="relative rounded border-2 my-1 transition-colors cursor-pointer"
     :class="selected
-      ? 'border-blue-500 shadow-sm'
+      ? 'border-gray-900 shadow-sm'
       : 'border-transparent hover:border-gray-200'"
     @click.stop="store.selectBlock(block.id)"
   >

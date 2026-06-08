@@ -33,7 +33,9 @@
       <!-- Actions -->
       <div class="flex items-center gap-1.5 flex-shrink-0">
         <Button variant="ghost" size="sm" :loading="previewing" title="Preview in new window" @click="openPreview">↗</Button>
-        <Button variant="solid" theme="gray" size="sm" @click="saveCampaign" :loading="saving">Save</Button>
+        <Button variant="ghost" size="sm" :loading="saving" title="Save" @click="saveCampaign">
+          <template #prefix><FeatherIcon name="save" class="w-3.5 h-3.5" /></template>
+        </Button>
         <Button variant="subtle" size="sm" :disabled="!editorStore.campaignDoc" @click="showSendModal = true">Send</Button>
       </div>
     </header>
@@ -121,7 +123,7 @@
 
 <script setup>
 import { ref, defineAsyncComponent, onMounted } from "vue";
-import { Button, TextInput } from "frappe-ui";
+import { Button, TextInput, FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import Inspector from "../components/Inspector.vue";
 import LayersPanel from "../components/LayersPanel.vue";

@@ -6,38 +6,42 @@
       :style="{ backgroundColor: block.props.background_color }"
     >
       <!-- Image slot -->
-      <div class="flex-shrink-0 w-44">
+      <div class="flex-shrink-0" :style="{ width: imageWidth }">
+
         <img
           v-if="block.props.image_url"
           :src="block.props.image_url"
-          class="w-full rounded"
+          class="w-full rounded object-cover"
         />
-        <!-- Upload zone -->
+
+        <!-- Upload zone — stop propagation so BlockWrapper doesn't interfere -->
         <div
           v-else
-          class="w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
+          class="w-full h-32 border-2 border-dashed rounded-lg flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors select-none"
           :class="isDragging
-            ? 'border-blue-400 bg-blue-50'
+            ? 'border-gray-500 bg-gray-100'
             : 'border-gray-300 bg-gray-50 hover:border-gray-400 hover:bg-gray-100'"
-          @click="triggerFileInput"
-          @dragover.prevent="isDragging = true"
-          @dragleave="isDragging = false"
-          @drop.prevent="onFileDrop"
+          @click.stop="triggerFileInput"
+          @dragover.prevent.stop="isDragging = true"
+          @dragleave.stop="isDragging = false"
+          @drop.prevent.stop="onFileDrop"
         >
           <span v-if="uploading" class="text-xs text-gray-400">Uploading…</span>
           <template v-else>
             <span class="text-xl">🖼</span>
-            <span class="text-xs text-gray-500 font-medium">Click or drop image</span>
+            <span class="text-xs text-gray-600 font-medium">Click or drop image</span>
             <span class="text-xs text-gray-400">PNG, JPG, GIF, WebP</span>
           </template>
         </div>
-        <!-- Replace image button (shown when image exists) -->
+
+        <!-- Replace button -->
         <button
           v-if="block.props.image_url"
           type="button"
           class="mt-1 w-full text-xs text-gray-400 hover:text-gray-600 text-center py-0.5 transition-colors"
-          @click="triggerFileInput"
+          @click.stop="triggerFileInput"
         >Replace image</button>
+
         <input
           ref="fileInput"
           type="file"
@@ -62,7 +66,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import BlockWrapper from "../BlockWrapper.vue";
 import { useEditorStore } from "../../stores/editor";
 
@@ -70,10 +74,16 @@ const props = defineProps({ block: Object, index: Number });
 const store = useEditorStore();
 function update(key, val) { store.updateBlockProps(props.block.id, { [key]: val }); }
 
-const fileInput = ref(null);
-const uploading = ref(false);
+// Image width from prop (e.g. "33%", "50%", "175px")
+const imageWidth = computed(() => {
+  const w = props.block.props.image_width;
+  return w || "175px";
+});
+
+const fileInput   = ref(null);
+const uploading   = ref(false);
 const uploadError = ref("");
-const isDragging = ref(false);
+const isDragging  = ref(false);
 
 function triggerFileInput() {
   fileInput.value?.click();
@@ -91,7 +101,7 @@ function onFileDrop(e) {
 }
 
 async function uploadFile(file) {
-  uploading.value = true;
+  uploading.value  = true;
   uploadError.value = "";
   try {
     const fd = new FormData();
@@ -99,20 +109,24 @@ async function uploadFile(file) {
     fd.append("is_private", "0");
     fd.append("doctype", "Email Campaign");
 
-    const csrfToken =
-      (typeof window !== "undefined" && window.frappe?.csrf_token) || "";
+    // Frappe CSRF token — always available on window.frappe in Desk context
+    const csrf = window?.frappe?.csrf_token || "";
 
     const res = await fetch("/api/method/upload_file", {
-      method: "POST",
-      headers: { "X-Frappe-CSRF-Token": csrfToken },
-      body: fd,
+      method:  "POST",
+      headers: { "X-Frappe-CSRF-Token": csrf, "Accept": "application/json" },
+      body:    fd,
     });
 
-    if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-
     const data = await res.json();
+
+    // Frappe wraps errors in exc / _server_messages even on HTTP 200
+    if (data.exc || data._server_messages) {
+      throw new Error("Upload rejected by server");
+    }
+
     const url = data?.message?.file_url;
-    if (!url) throw new Error("No file URL returned");
+    if (!url) throw new Error("No file URL in response");
 
     update("image_url", url);
   } catch (err) {
