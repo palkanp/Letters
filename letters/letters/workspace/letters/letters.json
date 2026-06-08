@@ -1,0 +1,67 @@
+{
+  "doctype": "Workspace",
+  "module": "Letters",
+  "name": "Letters",
+  "label": "Letters",
+  "title": "Letters",
+  "icon": "mail",
+  "indicator_color": "blue",
+  "is_standard": 1,
+  "public": 1,
+  "roles": [],
+  "shortcuts": [
+    {
+      "color": "Blue",
+      "doc_view": "List",
+      "format": "{} Email Campaign",
+      "label": "Email Campaign",
+      "link_to": "Email Campaign",
+      "stats_filter": "{}",
+      "type": "DocType"
+    },
+    {
+      "color": "Green",
+      "label": "Letter Builder",
+      "link_to": "letters-builder",
+      "type": "Page"
+    },
+    {
+      "color": "Gray",
+      "doc_view": "List",
+      "format": "{} Email Send",
+      "label": "Email Send",
+      "link_to": "Email Send",
+      "stats_filter": "{}",
+      "type": "DocType"
+    }
+  ],
+  "links": [
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Campaigns",
+      "link_to": "Email Campaign",
+      "link_type": "DocType",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Letter Builder",
+      "link_to": "letters-builder",
+      "link_type": "Page",
+      "onboard": 1,
+      "type": "Link"
+    },
+    {
+      "hidden": 0,
+      "is_query_report": 0,
+      "label": "Email Sends",
+      "link_to": "Email Send",
+      "link_type": "DocType",
+      "onboard": 0,
+      "type": "Link"
+    }
+  ]
+}
