@@ -173,7 +173,7 @@ onMounted(async () => {
 
 async function loadCampaign(name) {
   try {
-    const res = await frappe.call({ method: "letters.api.get_campaign", args: { name } });
+    const res = await frappe.call({ method: "letters.letters.api.get_campaign", args: { name } });
     const doc = res.message;
     editorStore.loadFromDoc(doc);
     subject.value = doc.subject || "";
@@ -192,7 +192,7 @@ async function saveCampaign() {
   errorMsg.value = "";
   try {
     const res = await frappe.call({
-      method: "letters.api.save_campaign",
+      method: "letters.letters.api.save_campaign",
       args: {
         name: editorStore.campaignDoc?.name || null,
         title: editorStore.campaignName || "Untitled Campaign",
@@ -231,7 +231,7 @@ async function openPreview() {
   errorMsg.value = "";
   try {
     const res = await frappe.call({
-      method: "letters.api.render_preview",
+      method: "letters.letters.api.render_preview",
       args: {
         blocks: JSON.stringify(
           editorStore.blocks.map(({ id: _id, ...rest }) => rest)

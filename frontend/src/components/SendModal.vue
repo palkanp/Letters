@@ -219,7 +219,7 @@ onMounted(loadDoctypes);
 
 async function loadDoctypes() {
   try {
-    const res = await frappe.call({ method: "letters.api.get_doctypes_with_email_fields" });
+    const res = await frappe.call({ method: "letters.letters.api.get_doctypes_with_email_fields" });
     doctypes.value = res.message || [];
   } catch {
     // picker unavailable — user can still paste
@@ -234,7 +234,7 @@ async function onDoctypeChange() {
   if (!selectedDoctype.value) return;
   try {
     const res = await frappe.call({
-      method: "letters.api.get_email_fields",
+      method: "letters.letters.api.get_email_fields",
       args: { doctype: selectedDoctype.value },
     });
     emailFields.value = res.message || [];
@@ -259,7 +259,7 @@ async function loadRecords() {
   loadingRecords.value = true;
   try {
     const res = await frappe.call({
-      method: "letters.api.get_emails_from_doctype",
+      method: "letters.letters.api.get_emails_from_doctype",
       args: {
         doctype: selectedDoctype.value,
         email_field: selectedField.value,
@@ -291,7 +291,7 @@ async function send() {
   sendError.value = "";
   try {
     const res = await frappe.call({
-      method: "letters.api.send_campaign",
+      method: "letters.letters.api.send_campaign",
       args: {
         name: props.campaignDoc?.name,
         recipients: JSON.stringify(allRecipients.value),
