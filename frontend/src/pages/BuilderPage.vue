@@ -1,5 +1,5 @@
 <template>
-  <div class="letters-builder flex flex-col bg-gray-100 font-sans overflow-hidden" style="height: calc(100vh - 60px)">
+  <div class="letters-builder flex flex-col bg-gray-100 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
     <header class="flex-shrink-0 h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3">
