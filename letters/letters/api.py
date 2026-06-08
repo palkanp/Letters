@@ -44,7 +44,7 @@ def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks
 @frappe.whitelist()
 def render_preview(name=None, blocks=None):
     """Compile blocks to email HTML via MJML renderers."""
-    from letters.utils.email_compiler import EmailCompiler
+    from letters.letters.utils.email_compiler import EmailCompiler
 
     if name and not blocks:
         doc = frappe.get_doc("Email Campaign", name)
@@ -75,7 +75,7 @@ def send_campaign(name):
     if not sends:
         frappe.throw(_("No draft Email Send records found for this campaign."))
 
-    from letters.utils.email_compiler import EmailCompiler
+    from letters.letters.utils.email_compiler import EmailCompiler
     compiler = EmailCompiler(doc.blocks_json)
     html = compiler.compile()
 

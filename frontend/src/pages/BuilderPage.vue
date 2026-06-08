@@ -169,10 +169,17 @@ async function saveCampaign() {
       },
     });
     const saved = res.message;
-    if (!editorStore.campaignDoc) {
+    const isNew = !editorStore.campaignDoc;
+    if (isNew) {
       editorStore.campaignDoc = saved;
     } else {
       editorStore.campaignDoc.name = saved.name;
+    }
+    // Update URL so refreshing the page reloads this campaign
+    if (isNew && saved.name) {
+      const url = new URL(window.location.href);
+      url.searchParams.set("name", saved.name);
+      window.history.replaceState({}, "", url.toString());
     }
     saveMsg.value = "Saved!";
     setTimeout(() => (saveMsg.value = ""), 2500);
