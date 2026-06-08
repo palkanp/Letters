@@ -153,19 +153,31 @@ def get_emails_from_doctype(doctype, email_field, search=None):
 
 
 @frappe.whitelist()
-def send_campaign(name, recipients):
-    """
-    Compile and send a campaign to the given recipients.
-    `recipients` is a JSON string or list of email addresses.
-    Creates an Email Send record for tracking.
-    """
-    if isinstance(recipients, str):
-        recipients = json.loads(recipients)
+def get_email_groups():
+    """Return all Email Groups available on the site."""
+    groups = frappe.get_all(
+        "Email Group",
+        fields=["name", "title"],
+        order_by="title asc",
+    )
+    # Attach member count to each group
+    for g in groups:
+        g["count"] = frappe.db.count(
+            "Email Group Member",
+            filters={"email_group": g["name"], "unsubscribed": 0},
+        )
+    return groups
 
-    recipients = [r.strip() for r in recipients if r.strip()]
-    if not recipients:
-        frappe.throw(_("No recipients provided."))
 
+@frappe.whitelist()
+def send_campaign(name, recipients=None, email_group=None):
+    """
+    Compile and send a campaign.
+
+    Pass either:
+      - email_group: name of a Frappe Email Group (respects unsubscribes, adds unsubscribe link)
+      - recipients:  JSON string or list of email addresses (direct send, no unsubscribe tracking)
+    """
     doc = frappe.get_doc("Email Campaign", name)
     if not doc.blocks_json:
         frappe.throw(_("Campaign has no content to send."))
@@ -176,7 +188,55 @@ def send_campaign(name, recipients):
     compiler = EmailCompiler(doc.blocks_json, preview_text=doc.preview_text)
     html = compiler.compile()
 
-    # Create a tracking record
+    # ── Email Group mode ─────────────────────────────────────────────────────
+    if email_group:
+        members = frappe.get_all(
+            "Email Group Member",
+            filters={"email_group": email_group, "unsubscribed": 0},
+            fields=["email"],
+        )
+        recipient_list = [m.email for m in members if m.email]
+        if not recipient_list:
+            frappe.throw(_("The selected Email Group has no active subscribers."))
+
+        send_doc = frappe.get_doc({
+            "doctype": "Email Send",
+            "campaign": name,
+            "status": "Sending",
+            "recipient_emails": "\n".join(recipient_list),
+        })
+        send_doc.insert(ignore_permissions=True)
+
+        try:
+            for email in recipient_list:
+                frappe.sendmail(
+                    recipients=[email],
+                    subject=doc.subject,
+                    message=html,
+                    now=False,
+                    unsubscribe_method="/api/method/frappe.email.doctype.email_group.email_group.unsubscribe",
+                    unsubscribe_params={"email_group": email_group},
+                )
+            send_doc.status = "Sent"
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), "Letters send_campaign error")
+            send_doc.status = "Failed"
+            send_doc.save(ignore_permissions=True)
+            frappe.throw(_("Failed to queue emails. Check the error log."))
+
+        send_doc.save(ignore_permissions=True)
+        doc.status = "Ready"
+        doc.save(ignore_permissions=True)
+        return {"sent": True, "count": len(recipient_list), "mode": "email_group"}
+
+    # ── Direct recipients mode ────────────────────────────────────────────────
+    if isinstance(recipients, str):
+        recipients = json.loads(recipients)
+
+    recipients = [r.strip() for r in (recipients or []) if r.strip()]
+    if not recipients:
+        frappe.throw(_("No recipients provided."))
+
     send_doc = frappe.get_doc({
         "doctype": "Email Send",
         "campaign": name,
@@ -201,8 +261,6 @@ def send_campaign(name, recipients):
         frappe.throw(_("Failed to queue emails. Check the error log."))
 
     send_doc.save(ignore_permissions=True)
-
     doc.status = "Ready"
     doc.save(ignore_permissions=True)
-
-    return {"sent": True, "count": len(recipients)}
+    return {"sent": True, "count": len(recipients), "mode": "direct"}
