@@ -1,9 +1,3 @@
 <template>
-  <div class="letters-builder">
-    <BuilderPage />
-  </div>
+  <RouterView />
 </template>
-
-<script setup>
-import BuilderPage from "./pages/BuilderPage.vue";
-</script>

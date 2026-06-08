@@ -1,0 +1,20 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+}
+
+#letters-builder,
+#letters-builder > .letters-builder {
+  width: 100%;
+  height: 100vh;
+}
+
+[contenteditable]:focus {
+  outline: none;
+}

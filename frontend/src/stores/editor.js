@@ -45,11 +45,11 @@ export const useEditorStore = defineStore("editor", () => {
 function defaultProps(type) {
   const defaults = {
     hero: { heading: "Your heading", subheading: "Your subheading", background_color: "#ffffff" },
-    text: { content: "Start typing your message..." },
-    image_text: { image_url: "", text: "Describe the image" },
-    button: { label: "Click here", url: "#", color: "#000000" },
-    divider: { border_color: "#e0e0e0" },
-    footer: { text: "You received this email because you signed up." },
+    text: { content: "Start typing your message...", align: "left", font_size: "16px" },
+    image_text: { image_url: "", text: "Describe the image", image_position: "left" },
+    button: { label: "Click here", url: "#", color: "#6366f1", text_color: "#ffffff", align: "center" },
+    divider: { border_color: "#e0e0e0", thickness: 1, style: "solid" },
+    footer: { text: "You received this email because you signed up.", background_color: "#f9fafb", text_color: "#6b7280" },
   };
   return defaults[type] ?? {};
 }

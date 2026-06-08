@@ -2,15 +2,23 @@
   "name": "letters-builder",
   "version": "0.1.0",
   "private": true,
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@frappe/ui": "latest",
+    "autoprefixer": "^10.5.0",
+    "frappe-ui": "^0.1.278",
+    "pinia": "^2.1.0",
+    "postcss": "^8.5.15",
+    "tailwindcss": "^3.4.19",
+    "unplugin-auto-import": "^21.0.0",
+    "unplugin-icons": "^23.0.1",
+    "unplugin-vue-components": "^32.1.0",
     "vue": "^3.4.0",
-    "pinia": "^2.1.0"
+    "vue-router": "^4.6.4"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.0.0",
