@@ -24,8 +24,9 @@ required_apps = ["frappe"]
 #     "filters": [],
 # }
 
+# The Vite IIFE bundle inlines its CSS (injects a <style> tag at runtime),
+# so there is no separate .css file to register via page_css.
 page_js = {"letters-builder": "public/js/letters-builder.js"}
-page_css = {"letters-builder": "public/js/letters-builder.css"}
 
 doctype_js = {"Email Campaign": "public/frappe_customizations/email_campaign.js"}
 

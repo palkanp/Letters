@@ -66,22 +66,38 @@ def render_preview(name=None, blocks=None, preview_text=None):
         frappe.throw(str(e))
 
 
+def _is_email_field(df):
+    """Frappe has no dedicated 'Email' fieldtype on most versions — email fields are
+    Data fields with options='Email'. We accept both representations to be safe."""
+    return df.fieldtype == "Email" or (df.fieldtype == "Data" and (df.options or "") == "Email")
+
+
 @frappe.whitelist()
 def get_doctypes_with_email_fields():
-    """Return doctypes that have at least one field of type Email."""
-    rows = frappe.get_all(
-        "DocField",
-        filters={"fieldtype": "Email"},
-        fields=["parent"],
-        distinct=True,
-        order_by="parent asc",
-    )
-    # Only include non-system doctypes the user can at least read
+    """Return doctypes that have at least one email field, that the user can read."""
+    doctypes = set()
+
+    # Standard fields (DocField) — match both possible representations.
+    for filters in (
+        {"fieldtype": "Data", "options": "Email"},
+        {"fieldtype": "Email"},
+    ):
+        for row in frappe.get_all("DocField", filters=filters, fields=["parent"], distinct=True):
+            doctypes.add(row.parent)
+
+    # Custom fields live in a separate doctype.
+    for filters in (
+        {"fieldtype": "Data", "options": "Email"},
+        {"fieldtype": "Email"},
+    ):
+        for row in frappe.get_all("Custom Field", filters=filters, fields=["dt"], distinct=True):
+            doctypes.add(row.dt)
+
     result = []
-    for row in rows:
+    for dt in sorted(doctypes):
         try:
-            if frappe.has_permission(row.parent, "read"):
-                result.append(row.parent)
+            if frappe.has_permission(dt, "read"):
+                result.append(dt)
         except Exception:
             pass
     return result
@@ -89,15 +105,14 @@ def get_doctypes_with_email_fields():
 
 @frappe.whitelist()
 def get_email_fields(doctype):
-    """Return field names/labels of type Email for a given doctype."""
+    """Return field names/labels of email fields for a doctype (incl. custom fields)."""
     frappe.has_permission(doctype, "read", throw=True)
-    fields = frappe.get_all(
-        "DocField",
-        filters={"parent": doctype, "fieldtype": "Email"},
-        fields=["fieldname", "label"],
-        order_by="idx asc",
-    )
-    return fields
+    meta = frappe.get_meta(doctype)
+    return [
+        {"fieldname": df.fieldname, "label": df.label or df.fieldname}
+        for df in meta.fields
+        if _is_email_field(df)
+    ]
 
 
 @frappe.whitelist()
