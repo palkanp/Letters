@@ -99,14 +99,14 @@ function defaultProps(type) {
       image_url: "",
       text: "Describe the image here. Keep it short and compelling.",
       image_position: "left",
-      image_width: "175px",
+      image_width: "160px",
       background_color: "#ffffff",
       padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
     },
     button: {
       label: "Click here",
       url: "#",
-      color: "#6366f1",
+      color: "#111827",
       text_color: "#ffffff",
       align: "center",
       border_radius: "8px",
@@ -151,6 +151,7 @@ function defaultProps(type) {
     },
     divider: {
       border_color: "#e5e7eb", thickness: 1, style: "solid",
+      width: "100%", align: "center",
       padding_top: 16, padding_right: 32, padding_bottom: 16, padding_left: 32,
     },
     footer: {

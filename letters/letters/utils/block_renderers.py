@@ -154,11 +154,10 @@ class ImageTextRenderer(BlockRenderer):
         image_url = escape(p.get("image_url", ""))
         text      = escape(p.get("text", ""))
         position  = p.get("image_position", "left")
-        img_width = p.get("image_width", "175px")
+        img_width = p.get("image_width", "160px")
 
-        # Convert percentage widths to approximate pixel widths for email
-        width_map = {"25%": "140", "33%": "180", "50%": "260", "175px": "175"}
-        img_px = width_map.get(img_width, "175")
+        # All width values are now NNNpx — strip the unit for use as HTML attribute
+        img_px = img_width.replace("px", "") if img_width.endswith("px") else "160"
 
         pt = int(p.get("padding_top",    20))
         pr = int(p.get("padding_right",  32))
@@ -221,12 +220,16 @@ class DividerRenderer(BlockRenderer):
         color     = escape(p.get("border_color", "#e0e0e0"))
         thickness = int(p.get("thickness", 1))
         style     = escape(p.get("style", "solid"))
+        width     = escape(p.get("width", "100%"))
+        align     = p.get("align", "center")
+        text_align = "left" if align == "left" else "right" if align == "right" else "center"
 
         padding = _padding(p, 16, 32, 16, 32)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr><td style="padding:{padding};">'
-            f'<hr style="border:0;border-top:{thickness}px {style} {color};margin:0;" />'
+            f'<tr><td style="padding:{padding};" align="{text_align}">'
+            f'<hr style="border:0;border-top:{thickness}px {style} {color};'
+            f'width:{width};margin:0 auto;" />'
             f'</td></tr></table>'
         )
         return _spacing_wrapper(html, p)
