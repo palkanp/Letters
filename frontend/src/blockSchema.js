@@ -102,6 +102,7 @@ export const BLOCK_SCHEMA = {
         title: "Content",
         fields: [
           { key: "image_url", label: "Image URL", type: "text", placeholder: "https://example.com" },
+          { key: "link_url", label: "Link URL", type: "text", placeholder: "https://example.com" },
           { key: "caption", label: "Caption", type: "text", placeholder: "Optional caption" },
           { key: "alt", label: "Alt text", type: "text", placeholder: "Describe the image" },
         ],
@@ -572,6 +573,87 @@ export const BLOCK_SCHEMA = {
           { key: "button_color", label: "Button color", type: "color" },
           { key: "title_color",  label: "Title color",  type: "color" },
           { key: "text_color",   label: "Text color",   type: "color" },
+        ],
+      },
+    ],
+  },
+
+  header: {
+    label: "Header",
+    icon: "award",
+    defaults: {
+      logo_url: "",
+      logo_height: "40px",
+      tagline: "",
+      align: "center",
+      background_color: "#ffffff",
+      border_bottom: true,
+      tagline_color: "#6b7280",
+      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+    },
+    sections: [
+      {
+        id: "content",
+        title: "Content",
+        fields: [
+          { key: "logo_url",   label: "Logo URL",    type: "text", placeholder: "https://example.com/logo.png" },
+          { key: "logo_height", label: "Logo height", type: "text", placeholder: "40px" },
+          { key: "tagline",    label: "Tagline",     type: "text", placeholder: "Monthly newsletter" },
+        ],
+      },
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          { key: "align",            label: "Alignment",    type: "align" },
+          { key: "background_color", label: "Background",   type: "color" },
+          { key: "tagline_color",    label: "Tagline color", type: "color" },
+          {
+            key: "border_bottom",
+            label: "Bottom border",
+            type: "select",
+            options: [
+              { label: "Show", value: true },
+              { label: "Hide", value: false },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+
+  rich_text: {
+    label: "Rich Text",
+    icon: "edit-3",
+    defaults: {
+      html_content: "<p>Start typing your message. Use the toolbar to add <strong>bold</strong>, <em>italic</em>, lists, and <a href=\"https://example.com\">links</a>.</p>",
+      align: "left",
+      font_size: "15px",
+      font_weight: "400",
+      text_color: "#374151",
+      line_height: "1.6",
+      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+    },
+    sections: [
+      {
+        id: "typography",
+        title: "Typography",
+        fields: [
+          { key: "align",       label: "Alignment",   type: "align" },
+          { key: "font_size",   label: "Font size",   type: "text", placeholder: "15px" },
+          {
+            key: "font_weight",
+            label: "Weight",
+            type: "select",
+            options: [
+              { label: "Normal",   value: "400" },
+              { label: "Medium",   value: "500" },
+              { label: "Semibold", value: "600" },
+              { label: "Bold",     value: "700" },
+            ],
+          },
+          { key: "text_color",  label: "Text color",  type: "color" },
+          { key: "line_height", label: "Line height",  type: "text", placeholder: "1.6" },
         ],
       },
     ],

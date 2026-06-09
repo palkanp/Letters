@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from html import escape
-from typing import Any
+from html.parser import HTMLParser
+from typing import Any, List, Optional, Tuple
 import re
 
 
@@ -46,6 +47,87 @@ def _spacing_wrapper(inner_html: str, props: dict) -> str:
         f'{inner_html}'
         f'</td></tr></table>'
     )
+
+
+# ── Rich-text HTML sanitizer ─────────────────────────────────────────────────
+
+_RT_ALLOWED = frozenset({
+    "p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li", "span",
+})
+_RT_BLOCK_TO_BR = frozenset({
+    "div", "h1", "h2", "h3", "h4", "h5", "h6",
+})
+_RT_VOID = frozenset({"br"})
+# Tags whose inner content is entirely suppressed (dangerous)
+_RT_SUPPRESS = frozenset({"script", "style", "head", "meta", "link", "iframe", "object", "embed"})
+
+
+class _RichTextSanitizer(HTMLParser):
+    """Parse arbitrary HTML and emit only whitelisted tags/attributes.
+
+    Content inside dangerous tags (script, style, etc.) is suppressed entirely.
+    Unknown tags are stripped but their text content is preserved.
+    Block-level containers (div, headings) are converted to <br>.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=False)
+        self._out: List[str] = []
+        self._suppress_depth: int = 0  # >0 means we're inside a dangerous tag
+
+    def handle_starttag(self, tag: str, attrs: List[Tuple[str, Optional[str]]]) -> None:
+        if tag in _RT_SUPPRESS:
+            self._suppress_depth += 1
+            return
+        if self._suppress_depth > 0:
+            return
+        if tag in _RT_ALLOWED:
+            if tag == "a":
+                href = dict(attrs).get("href") or ""
+                safe = _safe_url(href)
+                self._out.append(
+                    f'<a href="{safe}" style="color:#2563eb;" target="_blank">'
+                )
+            elif tag in _RT_VOID:
+                self._out.append(f"<{tag} />")
+            else:
+                self._out.append(f"<{tag}>")
+        elif tag in _RT_BLOCK_TO_BR:
+            # Convert block-level wrappers (div, headings) to line breaks
+            self._out.append("<br>")
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in _RT_SUPPRESS:
+            self._suppress_depth = max(0, self._suppress_depth - 1)
+            return
+        if self._suppress_depth > 0:
+            return
+        if tag in _RT_ALLOWED and tag not in _RT_VOID:
+            self._out.append(f"</{tag}>")
+
+    def handle_data(self, data: str) -> None:
+        if self._suppress_depth == 0:
+            self._out.append(escape(data))
+
+    def handle_entityref(self, name: str) -> None:  # type: ignore[override]
+        if self._suppress_depth == 0:
+            self._out.append(f"&{name};")
+
+    def handle_charref(self, name: str) -> None:  # type: ignore[override]
+        if self._suppress_depth == 0:
+            self._out.append(f"&#{name};")
+
+    def get_output(self) -> str:
+        return "".join(self._out)
+
+
+
+
+def _sanitize_rich_html(html_str: str) -> str:
+    """Whitelist-sanitize rich-text HTML for safe email output."""
+    sanitizer = _RichTextSanitizer()
+    sanitizer.feed(html_str or "")
+    return sanitizer.get_output()
 
 
 class BlockRenderer(ABC):
@@ -120,6 +202,19 @@ class ImageRenderer(BlockRenderer):
         if not image_url:
             return ""  # Don't render empty image blocks
 
+        link_url = _safe_url(p.get("link_url", ""))
+
+        img_tag = (
+            f'<img src="{image_url}" width="100%" alt="{alt}"'
+            f' style="display:block;max-width:100%;height:auto;{border_style}{radius_style}" />'
+        )
+        # Wrap image in a clickable link when link_url is set
+        img_content = (
+            f'<a href="{link_url}" style="display:block;text-decoration:none;">{img_tag}</a>'
+            if link_url and link_url != "#"
+            else img_tag
+        )
+
         caption_html = ""
         if caption:
             caption_html = (
@@ -132,8 +227,7 @@ class ImageRenderer(BlockRenderer):
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
             f'<tr><td style="padding:{padding};">'
-            f'<img src="{image_url}" width="100%" alt="{alt}"'
-            f' style="display:block;max-width:100%;height:auto;{border_style}{radius_style}" />'
+            f'{img_content}'
             f'</td></tr>'
             f'{caption_html}'
             f'</table>'
@@ -674,6 +768,74 @@ class VideoThumbRenderer(BlockRenderer):
         return _spacing_wrapper(html, p)
 
 
+class HeaderRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p             = block.get("props", {})
+        logo_url      = escape(p.get("logo_url", ""))
+        logo_height   = escape(p.get("logo_height", "40px"))
+        tagline       = escape(p.get("tagline", ""))
+        bg            = escape(p.get("background_color", "#ffffff"))
+        align         = escape(p.get("align", "center"))
+        tagline_color = escape(p.get("tagline_color", "#6b7280"))
+        border_bottom = p.get("border_bottom", True)
+        padding       = _padding(p, 20, 32, 20, 32)
+
+        h_px = logo_height.replace("px", "")
+        if logo_url:
+            logo_html = (
+                f'<img src="{logo_url}" height="{h_px}" alt="Logo"'
+                f' style="display:block;border:0;height:{logo_height};width:auto;" />'
+            )
+        else:
+            logo_html = (
+                f'<div style="height:{logo_height};width:120px;background:#eeeeee;'
+                f'font-family:Arial,sans-serif;font-size:11px;color:#999;'
+                f'display:inline-block;line-height:{logo_height};text-align:center;">Logo</div>'
+            )
+
+        tagline_html = (
+            f'<p style="margin:8px 0 0;font-family:Arial,sans-serif;font-size:13px;'
+            f'color:{tagline_color};line-height:1.4;">{tagline}</p>'
+        ) if tagline else ""
+
+        border_style = "border-bottom:1px solid #e5e7eb;" if border_bottom else ""
+
+        html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="background-color:{bg};{border_style}">'
+            f'<tr><td align="{align}" style="padding:{padding};">'
+            f'{logo_html}'
+            f'{tagline_html}'
+            f'</td></tr></table>'
+        )
+        return _spacing_wrapper(html, p)
+
+
+class RichTextRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p            = block.get("props", {})
+        html_content = _sanitize_rich_html(p.get("html_content", ""))
+        if not html_content:
+            return ""
+
+        align          = escape(p.get("align", "left"))
+        size           = escape(p.get("font_size", "15px"))
+        weight         = escape(str(p.get("font_weight", "400")))
+        color          = escape(p.get("text_color", "#374151"))
+        line_height    = escape(str(p.get("line_height", "1.6")))
+        padding        = _padding(p, 20, 32, 20, 32)
+
+        html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr><td align="{align}" style="padding:{padding};'
+            f'font-family:Arial,sans-serif;font-size:{size};color:{color};'
+            f'line-height:{line_height};font-weight:{weight};">'
+            f'{html_content}'
+            f'</td></tr></table>'
+        )
+        return _spacing_wrapper(html, p)
+
+
 RENDERER_MAP: dict[str, BlockRenderer] = {
     "hero":          HeroRenderer(),
     "section_label": SectionLabelRenderer(),
@@ -690,4 +852,6 @@ RENDERER_MAP: dict[str, BlockRenderer] = {
     "social":        SocialRenderer(),
     "product_card":  ProductCardRenderer(),
     "video_thumb":   VideoThumbRenderer(),
+    "header":        HeaderRenderer(),
+    "rich_text":     RichTextRenderer(),
 }

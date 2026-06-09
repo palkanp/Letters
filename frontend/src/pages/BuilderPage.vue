@@ -397,8 +397,10 @@ function onSent() {
 
 // ── Block picker ──────────────────────────────────────────────────────────────
 const availableBlocks = [
+  { type: "header",        label: "Header",      icon: "award" },
   { type: "hero",          label: "Hero",        icon: "layout" },
   { type: "text",          label: "Text",        icon: "type" },
+  { type: "rich_text",     label: "Rich Text",   icon: "edit-3" },
   { type: "image",         label: "Image",       icon: "image" },
   { type: "image_text",    label: "Image + Text", icon: "sidebar" },
   { type: "button",        label: "Button",      icon: "square" },

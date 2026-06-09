@@ -16,6 +16,7 @@ from letters.letters.utils.block_renderers import (
     _hex_to_rgba,
     _padding,
     _spacing_wrapper,
+    _sanitize_rich_html,
     HeroRenderer,
     TextRenderer,
     ImageRenderer,
@@ -29,6 +30,8 @@ from letters.letters.utils.block_renderers import (
     SocialRenderer,
     ProductCardRenderer,
     VideoThumbRenderer,
+    HeaderRenderer,
+    RichTextRenderer,
     RENDERER_MAP,
 )
 
@@ -435,6 +438,196 @@ class TestContainerRenderer:
         assert "<td" in html
 
 
+# ── _sanitize_rich_html ───────────────────────────────────────────────────────
+
+class TestSanitizeRichHtml:
+    def test_plain_text_is_preserved(self):
+        # Text data (not inside a tag) is escaped and emitted
+        out = _sanitize_rich_html("Hello & goodbye")
+        assert "Hello " in out
+        assert "&amp;" in out
+
+    def test_unknown_tag_stripped_content_kept(self):
+        # Unknown tag <span> is allowed; unknown tag <marquee> should drop the
+        # tag itself but keep the inner text
+        out = _sanitize_rich_html("<marquee>spin</marquee>")
+        assert "<marquee>" not in out
+        assert "spin" in out
+
+    def test_allowed_tags_pass_through(self):
+        out = _sanitize_rich_html("<p><strong>bold</strong> and <em>italic</em></p>")
+        assert "<strong>bold</strong>" in out
+        assert "<em>italic</em>" in out
+        assert "<p>" in out
+
+    def test_link_kept_with_safe_href(self):
+        out = _sanitize_rich_html('<a href="https://frappe.io">Frappe</a>')
+        assert 'href="https://frappe.io"' in out
+        assert "Frappe" in out
+
+    def test_javascript_link_sanitized(self):
+        out = _sanitize_rich_html('<a href="javascript:alert(1)">click</a>')
+        assert 'href="#"' in out
+        assert "javascript:" not in out
+
+    def test_ul_and_li_pass_through(self):
+        out = _sanitize_rich_html("<ul><li>Item 1</li><li>Item 2</li></ul>")
+        assert "<ul>" in out
+        assert "<li>Item 1</li>" in out
+
+    def test_ol_passes_through(self):
+        out = _sanitize_rich_html("<ol><li>First</li></ol>")
+        assert "<ol>" in out
+
+    def test_script_tag_stripped(self):
+        out = _sanitize_rich_html("<script>alert(1)</script>text")
+        assert "<script>" not in out
+        assert "alert" not in out
+
+    def test_div_converted_to_br(self):
+        out = _sanitize_rich_html("<div>line one</div>")
+        assert "<br>" in out
+        assert "<div>" not in out
+
+    def test_style_attribute_stripped(self):
+        # Inline style on a <p> should not be preserved
+        out = _sanitize_rich_html('<p style="color:red">text</p>')
+        assert "style=" not in out
+        assert "<p>" in out
+
+    def test_empty_string_returns_empty(self):
+        assert _sanitize_rich_html("") == ""
+
+    def test_none_like_empty_returns_empty(self):
+        assert _sanitize_rich_html(None) == ""  # type: ignore[arg-type]
+
+
+# ── HeaderRenderer ────────────────────────────────────────────────────────────
+
+class TestHeaderRenderer:
+    renderer = HeaderRenderer()
+
+    def _block(self, **props):
+        return {"type": "header", "props": props}
+
+    def test_renders_logo_img(self):
+        out = self.renderer.render(self._block(logo_url="https://example.com/logo.png"))
+        assert '<img src="https://example.com/logo.png"' in out
+
+    def test_placeholder_when_no_logo(self):
+        out = self.renderer.render(self._block())
+        assert "Logo" in out
+        assert "<img" not in out
+
+    def test_tagline_rendered(self):
+        out = self.renderer.render(self._block(tagline="May 2026"))
+        assert "May 2026" in out
+
+    def test_no_tagline_no_p_tag(self):
+        out = self.renderer.render(self._block(logo_url="x.png"))
+        # tagline paragraph should not appear
+        assert "margin:8px 0 0" not in out
+
+    def test_background_color_applied(self):
+        out = self.renderer.render(self._block(background_color="#111827"))
+        assert "background-color:#111827" in out
+
+    def test_align_center_default(self):
+        out = self.renderer.render(self._block())
+        assert 'align="center"' in out
+
+    def test_border_bottom_shown_by_default(self):
+        out = self.renderer.render(self._block())
+        assert "border-bottom:1px solid #e5e7eb" in out
+
+    def test_border_bottom_hidden(self):
+        out = self.renderer.render(self._block(border_bottom=False))
+        assert "border-bottom" not in out
+
+    def test_logo_xss_escaped(self):
+        out = self.renderer.render(self._block(logo_url='"><script>bad</script>'))
+        assert "<script>" not in out
+
+
+# ── RichTextRenderer ──────────────────────────────────────────────────────────
+
+class TestRichTextRenderer:
+    renderer = RichTextRenderer()
+
+    def _block(self, html_content="", **props):
+        return {"type": "rich_text", "props": {"html_content": html_content, **props}}
+
+    def test_empty_content_returns_empty(self):
+        assert self.renderer.render(self._block("")) == ""
+
+    def test_plain_paragraph_rendered(self):
+        out = self.renderer.render(self._block("<p>Hello world</p>"))
+        assert "Hello world" in out
+        assert "<p>" in out
+
+    def test_bold_and_italic_preserved(self):
+        out = self.renderer.render(self._block("<p><strong>Bold</strong> and <em>Italic</em></p>"))
+        assert "<strong>Bold</strong>" in out
+        assert "<em>Italic</em>" in out
+
+    def test_link_preserved(self):
+        out = self.renderer.render(self._block('<a href="https://frappe.io">Frappe</a>'))
+        assert "https://frappe.io" in out
+        assert "Frappe" in out
+
+    def test_script_tag_stripped(self):
+        out = self.renderer.render(self._block("<script>evil()</script><p>safe</p>"))
+        assert "<script>" not in out
+        assert "safe" in out
+
+    def test_unordered_list(self):
+        out = self.renderer.render(self._block("<ul><li>A</li><li>B</li></ul>"))
+        assert "<ul>" in out
+        assert "<li>A</li>" in out
+
+    def test_font_size_applied(self):
+        out = self.renderer.render(self._block("<p>hi</p>", font_size="18px"))
+        assert "font-size:18px" in out
+
+    def test_text_color_applied(self):
+        out = self.renderer.render(self._block("<p>hi</p>", text_color="#ff0000"))
+        assert "color:#ff0000" in out
+
+    def test_padding_applied(self):
+        out = self.renderer.render(self._block("<p>hi</p>", padding_top=10, padding_right=20, padding_bottom=10, padding_left=20))
+        assert "padding:10px 20px 10px 20px" in out
+
+    def test_output_is_email_table(self):
+        out = self.renderer.render(self._block("<p>hi</p>"))
+        assert "<table" in out
+        assert 'width="100%"' in out
+
+
+# ── ImageRenderer link-through ────────────────────────────────────────────────
+
+class TestImageRendererLinkThrough:
+    renderer = ImageRenderer()
+
+    def _block(self, **props):
+        return {"type": "image", "props": {"image_url": "https://example.com/img.png", **props}}
+
+    def test_no_link_url_no_anchor(self):
+        out = self.renderer.render(self._block())
+        assert "<a " not in out
+
+    def test_link_url_wraps_image(self):
+        out = self.renderer.render(self._block(link_url="https://frappe.io"))
+        assert '<a href="https://frappe.io"' in out
+
+    def test_link_url_javascript_blocked(self):
+        # _safe_url converts dangerous URLs to "#"; the renderer then skips
+        # the anchor entirely (treats "#" the same as no link)
+        out = self.renderer.render(self._block(link_url="javascript:evil()"))
+        assert "javascript:" not in out
+        # No <a> wrapper should appear
+        assert "<a " not in out
+
+
 # ── RENDERER_MAP completeness ─────────────────────────────────────────────────
 
 class TestRendererMap:
@@ -442,6 +635,7 @@ class TestRendererMap:
         "hero", "text", "image", "image_text", "button", "columns",
         "container", "section_label", "divider", "footer", "spacer",
         "quote", "social", "product_card", "video_thumb",
+        "header", "rich_text",
     }
 
     def test_all_expected_types_present(self):
