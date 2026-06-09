@@ -449,4 +449,159 @@ export const BLOCK_SCHEMA = {
       },
     ],
   },
+
+  spacer: {
+    label: "Spacer",
+    icon: "↕",
+    sections: [
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          {
+            key: "height",
+            label: "Height",
+            type: "select",
+            options: [
+              { label: "XS — 8px",   value: 8 },
+              { label: "S — 16px",   value: 16 },
+              { label: "M — 32px",   value: 32 },
+              { label: "L — 48px",   value: 48 },
+              { label: "XL — 64px",  value: 64 },
+              { label: "XXL — 96px", value: 96 },
+            ],
+          },
+          { key: "background_color", label: "Background", type: "color" },
+        ],
+      },
+    ],
+  },
+
+  quote: {
+    label: "Quote",
+    icon: "❝",
+    sections: [
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          {
+            key: "style",
+            label: "Style",
+            type: "select",
+            options: [
+              { label: "Left border", value: "left-border" },
+              { label: "Centered",    value: "centered" },
+            ],
+          },
+          { key: "background_color", label: "Background", type: "color" },
+          { key: "border_color",     label: "Accent color", type: "color" },
+          { key: "quote_color",      label: "Quote color", type: "color" },
+          { key: "author_color",     label: "Author color", type: "color" },
+        ],
+      },
+    ],
+  },
+
+  social: {
+    label: "Social",
+    icon: "⇄",
+    sections: [
+      {
+        id: "links",
+        title: "Links",
+        fields: [
+          { key: "x_url",         label: "X / Twitter URL",  type: "text", placeholder: "https://x.com/…" },
+          { key: "linkedin_url",  label: "LinkedIn URL",     type: "text", placeholder: "https://linkedin.com/…" },
+          { key: "instagram_url", label: "Instagram URL",    type: "text", placeholder: "https://instagram.com/…" },
+          { key: "facebook_url",  label: "Facebook URL",     type: "text", placeholder: "https://facebook.com/…" },
+          { key: "youtube_url",   label: "YouTube URL",      type: "text", placeholder: "https://youtube.com/…" },
+          { key: "github_url",    label: "GitHub URL",       type: "text", placeholder: "https://github.com/…" },
+          { key: "website_url",   label: "Website URL",      type: "text", placeholder: "https://…" },
+        ],
+      },
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          { key: "color",            label: "Icon color",  type: "color" },
+          { key: "background_color", label: "Background",  type: "color" },
+          { key: "align",            label: "Alignment",   type: "align" },
+        ],
+      },
+    ],
+  },
+
+  product_card: {
+    label: "Product",
+    icon: "🛍",
+    sections: [
+      {
+        id: "content",
+        title: "Content",
+        fields: [
+          { key: "image_url",    label: "Image URL",    type: "text", placeholder: "https://…" },
+          { key: "button_url",   label: "Button URL",   type: "text", placeholder: "https://…" },
+        ],
+      },
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          { key: "background_color", label: "Card background", type: "color" },
+          { key: "border_color",     label: "Border color",    type: "color" },
+          {
+            key: "border_radius",
+            label: "Corners",
+            type: "select",
+            options: [
+              { label: "None",       value: "0" },
+              { label: "Small (4px)", value: "4px" },
+              { label: "Rounded (8px)", value: "8px" },
+              { label: "Large (12px)", value: "12px" },
+              { label: "XL (16px)",  value: "16px" },
+            ],
+          },
+          { key: "button_color", label: "Button color", type: "color" },
+          { key: "title_color",  label: "Title color",  type: "color" },
+          { key: "text_color",   label: "Text color",   type: "color" },
+        ],
+      },
+    ],
+  },
+
+  video_thumb: {
+    label: "Video",
+    icon: "▶",
+    sections: [
+      {
+        id: "content",
+        title: "Content",
+        fields: [
+          { key: "thumbnail_url", label: "Thumbnail URL", type: "text", placeholder: "https://…" },
+          { key: "video_url",     label: "Video link URL", type: "text", placeholder: "https://youtube.com/…" },
+          { key: "caption",       label: "Caption",        type: "text", placeholder: "Watch the video…" },
+        ],
+      },
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          { key: "play_button_color", label: "Play button",   type: "color" },
+          { key: "play_icon_color",   label: "Play icon",     type: "color" },
+          {
+            key: "border_radius",
+            label: "Corners",
+            type: "select",
+            options: [
+              { label: "None",          value: "0" },
+              { label: "Rounded (8px)", value: "8px" },
+              { label: "Large (12px)",  value: "12px" },
+              { label: "XL (16px)",     value: "16px" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
 };

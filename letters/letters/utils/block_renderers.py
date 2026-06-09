@@ -386,6 +386,219 @@ class FooterRenderer(BlockRenderer):
         return _spacing_wrapper(html, p)
 
 
+class SpacerRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p = block.get("props", {})
+        h  = int(p.get("height", 32))
+        bg = escape(p.get("background_color", "transparent"))
+        bg_style = f"background-color:{bg};" if bg and bg != "transparent" else ""
+        return (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="{bg_style}">'
+            f'<tr><td style="height:{h}px;line-height:{h}px;font-size:{h}px;">'
+            f'&nbsp;</td></tr></table>'
+        )
+
+
+class QuoteRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p = block.get("props", {})
+        quote        = escape(p.get("quote", ""))
+        author       = escape(p.get("author", ""))
+        role         = escape(p.get("role", ""))
+        style        = p.get("style", "left-border")
+        quote_color  = escape(p.get("quote_color", "#111827"))
+        author_color = escape(p.get("author_color", "#6b7280"))
+        border_color = escape(p.get("border_color", "#e5e7eb"))
+        bg           = escape(p.get("background_color", "#f9fafb"))
+        padding      = _padding(p, 24, 32, 24, 32)
+
+        if style == "centered":
+            inner = (
+                f'<p style="margin:0 0 4px;font-family:Georgia,serif;font-size:40px;'
+                f'line-height:1;color:{border_color};">&ldquo;</p>'
+                f'<p style="margin:0 0 16px;font-family:Georgia,\'Times New Roman\',serif;'
+                f'font-size:16px;font-style:italic;color:{quote_color};line-height:1.6;">'
+                f'{quote}</p>'
+                f'<p style="margin:0;font-family:Arial,sans-serif;font-size:14px;'
+                f'font-weight:600;color:{author_color};">{author}</p>'
+                f'<p style="margin:2px 0 0;font-family:Arial,sans-serif;font-size:12px;'
+                f'color:{author_color};">{role}</p>'
+            )
+            html = (
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background-color:{bg};">'
+                f'<tr><td align="center" style="padding:{padding};">'
+                f'{inner}'
+                f'</td></tr></table>'
+            )
+        else:
+            # Left-border style
+            inner = (
+                f'<p style="margin:0 0 12px;font-family:Georgia,\'Times New Roman\',serif;'
+                f'font-size:16px;font-style:italic;color:{quote_color};line-height:1.6;">'
+                f'{quote}</p>'
+                f'<p style="margin:0;font-family:Arial,sans-serif;font-size:14px;'
+                f'font-weight:600;color:{author_color};">{author}</p>'
+                f'<p style="margin:2px 0 0;font-family:Arial,sans-serif;font-size:12px;'
+                f'color:{author_color};">{role}</p>'
+            )
+            pt = int(p.get("padding_top", 24))
+            pr = int(p.get("padding_right", 32))
+            pb = int(p.get("padding_bottom", 24))
+            pl = int(p.get("padding_left", 32))
+            html = (
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="background-color:{bg};">'
+                f'<tr><td style="padding:{pt}px {pr}px {pb}px {pl}px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<tr>'
+                f'<td width="4" style="background-color:{border_color};border-radius:2px;">&nbsp;</td>'
+                f'<td style="padding-left:16px;">{inner}</td>'
+                f'</tr></table>'
+                f'</td></tr></table>'
+            )
+        return _spacing_wrapper(html, p)
+
+
+class SocialRenderer(BlockRenderer):
+    _LABELS = {
+        "x_url":         "X / Twitter",
+        "linkedin_url":  "LinkedIn",
+        "instagram_url": "Instagram",
+        "facebook_url":  "Facebook",
+        "youtube_url":   "YouTube",
+        "github_url":    "GitHub",
+        "website_url":   "Website",
+    }
+
+    def render(self, block: dict[str, Any]) -> str:
+        p     = block.get("props", {})
+        color = escape(p.get("color", "#374151"))
+        bg    = escape(p.get("background_color", "#ffffff"))
+        align = escape(p.get("align", "center"))
+        padding = _padding(p, 20, 32, 20, 32)
+
+        links = []
+        for key, label in self._LABELS.items():
+            url = p.get(key, "").strip()
+            if url:
+                links.append(
+                    f'<a href="{escape(url)}" style="display:inline-block;margin:4px;'
+                    f'padding:6px 14px;background-color:{color}1a;color:{color};'
+                    f'font-family:Arial,sans-serif;font-size:12px;font-weight:600;'
+                    f'text-decoration:none;border-radius:999px;'
+                    f'border:1px solid {color}30;">{label}</a>'
+                )
+
+        if not links:
+            return ""
+
+        html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="background-color:{bg};">'
+            f'<tr><td align="{align}" style="padding:{padding};">'
+            + "".join(links) +
+            f'</td></tr></table>'
+        )
+        return _spacing_wrapper(html, p)
+
+
+class ProductCardRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p             = block.get("props", {})
+        image_url     = escape(p.get("image_url", ""))
+        title         = escape(p.get("title", ""))
+        description   = escape(p.get("description", ""))
+        price         = escape(p.get("price", ""))
+        button_label  = escape(p.get("button_label", ""))
+        button_url    = escape(p.get("button_url", "#"))
+        bg            = escape(p.get("background_color", "#ffffff"))
+        border_color  = escape(p.get("border_color", "#e5e7eb"))
+        border_radius = escape(p.get("border_radius", "12px"))
+        button_color  = escape(p.get("button_color", "#111827"))
+        title_color   = escape(p.get("title_color", "#111827"))
+        text_color    = escape(p.get("text_color", "#6b7280"))
+
+        pt = int(p.get("padding_top", 20))
+        pr = int(p.get("padding_right", 32))
+        pb = int(p.get("padding_bottom", 20))
+        pl = int(p.get("padding_left", 32))
+
+        img_html = ""
+        if image_url:
+            img_html = (
+                f'<img src="{image_url}" width="100%" alt="{title}"'
+                f' style="display:block;max-width:100%;height:auto;border:0;" />'
+            )
+
+        btn_html = ""
+        if button_label:
+            btn_html = (
+                f'<a href="{button_url}" style="display:inline-block;padding:8px 18px;'
+                f'background-color:{button_color};color:#ffffff;font-family:Arial,sans-serif;'
+                f'font-size:13px;font-weight:bold;text-decoration:none;border-radius:6px;">'
+                f'{button_label}</a>'
+            )
+
+        html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr><td style="padding:{pt}px {pr}px {pb}px {pl}px;">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="background-color:{bg};border:1px solid {border_color};'
+            f'border-radius:{border_radius};overflow:hidden;">'
+            f'<tr><td>{img_html}</td></tr>'
+            f'<tr><td style="padding:16px;">'
+            f'<p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:16px;'
+            f'font-weight:600;color:{title_color};line-height:1.3;">{title}</p>'
+            f'<p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:14px;'
+            f'color:{text_color};line-height:1.5;">{description}</p>'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr>'
+            f'<td style="font-family:Arial,sans-serif;font-size:18px;font-weight:700;'
+            f'color:{title_color};">{price}</td>'
+            f'<td align="right">{btn_html}</td>'
+            f'</tr></table>'
+            f'</td></tr></table>'
+            f'</td></tr></table>'
+        )
+        return _spacing_wrapper(html, p)
+
+
+class VideoThumbRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p             = block.get("props", {})
+        thumbnail_url = escape(p.get("thumbnail_url", ""))
+        video_url     = escape(p.get("video_url", "#"))
+        caption       = escape(p.get("caption", ""))
+        border_radius = escape(p.get("border_radius", "8px"))
+        padding       = _padding(p, 16, 32, 16, 32)
+
+        if not thumbnail_url:
+            return ""
+
+        # In email, we link the thumbnail image to the video URL.
+        # A play-button overlay is achieved via a linked image approach.
+        html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<tr><td style="padding:{padding};">'
+            f'<a href="{video_url}" style="display:block;text-decoration:none;">'
+            f'<img src="{thumbnail_url}" width="100%" alt="Watch video"'
+            f' style="display:block;max-width:100%;height:auto;border:0;'
+            f'border-radius:{border_radius};" />'
+            f'</a>'
+        )
+        if caption:
+            html += (
+                f'<p style="margin:8px 0 0;font-family:Arial,sans-serif;font-size:13px;'
+                f'color:#6b7280;text-align:center;">'
+                f'<a href="{video_url}" style="color:#111827;font-weight:600;text-decoration:none;">'
+                f'&#9654; {caption}</a></p>'
+            )
+        html += f'</td></tr></table>'
+        return _spacing_wrapper(html, p)
+
+
 RENDERER_MAP: dict[str, BlockRenderer] = {
     "hero":          HeroRenderer(),
     "section_label": SectionLabelRenderer(),
@@ -397,4 +610,9 @@ RENDERER_MAP: dict[str, BlockRenderer] = {
     "container":     ContainerRenderer(),
     "divider":       DividerRenderer(),
     "footer":        FooterRenderer(),
+    "spacer":        SpacerRenderer(),
+    "quote":         QuoteRenderer(),
+    "social":        SocialRenderer(),
+    "product_card":  ProductCardRenderer(),
+    "video_thumb":   VideoThumbRenderer(),
 }

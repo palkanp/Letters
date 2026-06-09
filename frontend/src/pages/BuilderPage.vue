@@ -319,16 +319,21 @@ function onSent() {
 
 // ── Block picker ──────────────────────────────────────────────────────────────
 const availableBlocks = [
-  { type: "hero",          label: "Hero",       icon: "◉" },
-  { type: "text",          label: "Text",        icon: "¶" },
-  { type: "image",         label: "Image",       icon: "◻" },
-  { type: "image_text",    label: "Img + Text",  icon: "▣" },
-  { type: "button",        label: "Button",      icon: "▷" },
-  { type: "columns",       label: "Columns",     icon: "⊞" },
-  { type: "container",     label: "Container",   icon: "▢" },
-  { type: "section_label", label: "Label",       icon: "§" },
-  { type: "divider",       label: "Divider",     icon: "—" },
-  { type: "footer",        label: "Footer",      icon: "≡" },
+  { type: "hero",          label: "Hero",        icon: "◉" },
+  { type: "text",          label: "Text",         icon: "¶" },
+  { type: "image",         label: "Image",        icon: "◻" },
+  { type: "image_text",    label: "Img + Text",   icon: "▣" },
+  { type: "button",        label: "Button",       icon: "▷" },
+  { type: "columns",       label: "Columns",      icon: "⊞" },
+  { type: "container",     label: "Container",    icon: "▢" },
+  { type: "quote",         label: "Quote",        icon: "❝" },
+  { type: "social",        label: "Social",       icon: "⇄" },
+  { type: "product_card",  label: "Product",      icon: "🛍" },
+  { type: "video_thumb",   label: "Video",        icon: "▶" },
+  { type: "spacer",        label: "Spacer",       icon: "↕" },
+  { type: "section_label", label: "Label",        icon: "§" },
+  { type: "divider",       label: "Divider",      icon: "—" },
+  { type: "footer",        label: "Footer",       icon: "≡" },
 ];
 
 function openPicker(afterIndex) {
