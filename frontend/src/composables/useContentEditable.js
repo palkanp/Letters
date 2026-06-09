@@ -65,7 +65,7 @@ export function useContentEditable(getValue, onCommit) {
     const text = (e.clipboardData || window.clipboardData).getData("text/plain");
     // execCommand keeps cursor position; fallback for environments where it
     // isn't supported (rare) is a no-op rather than a corrupt insert.
-    if (document.queryCommandSupported?.("insertText")) {
+    if (typeof document.execCommand === "function") {
       document.execCommand("insertText", false, text);
     } else {
       const sel = window.getSelection();
