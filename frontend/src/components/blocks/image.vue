@@ -8,17 +8,24 @@
         height-class="h-44"
         @uploaded="update('image_url', $event)"
       >
-        <!-- Custom framing: full-width with configurable border + radius -->
+        <!-- Wrap in a div so border-radius + overflow:hidden clips the image correctly -->
         <template #default="{ url }">
-          <img
-            :src="url"
-            :alt="block.props.alt || ''"
-            class="w-full block"
+          <div
             :style="{
-              border: block.props.border || 'none',
               borderRadius: block.props.border_radius || '0',
+              overflow: 'hidden',
+              border: block.props.border && block.props.border !== 'none'
+                ? block.props.border : 'none',
+              display: 'block',
+              lineHeight: 0,
             }"
-          />
+          >
+            <img
+              :src="url"
+              :alt="block.props.alt || ''"
+              class="w-full block"
+            />
+          </div>
         </template>
       </ImageUploader>
 

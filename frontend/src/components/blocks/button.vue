@@ -3,12 +3,8 @@
     <div :style="paddingStyle">
       <div :class="alignClass">
         <span
-          class="inline-block px-6 py-2.5 font-semibold cursor-text outline-none"
-          :style="{
-            backgroundColor: block.props.color,
-            color: block.props.text_color,
-            borderRadius: block.props.border_radius || '8px',
-          }"
+          class="inline-block font-semibold cursor-text outline-none"
+          :style="buttonStyle"
           contenteditable="true"
           @blur="update('label', $event.target.innerText)"
           @click.stop="store.selectBlock(block.id)"
@@ -30,9 +26,23 @@ function update(key, val) { store.updateBlockProps(props.block.id, { [key]: val 
 const blockProps = computed(() => props.block.props);
 const paddingStyle = usePadding(blockProps);
 
+const PADDING_MAP = {
+  compact: "6px 14px",
+  normal:  "10px 24px",
+  large:   "14px 36px",
+};
+
+const buttonStyle = computed(() => ({
+  backgroundColor: props.block.props.color,
+  color:           props.block.props.text_color,
+  borderRadius:    props.block.props.border_radius || "8px",
+  fontSize:        props.block.props.font_size || "14px",
+  padding:         PADDING_MAP[props.block.props.button_padding] || PADDING_MAP.normal,
+}));
+
 const alignClass = computed(() => ({
-  "text-left": props.block.props.align === "left",
+  "text-left":   props.block.props.align === "left",
   "text-center": props.block.props.align === "center",
-  "text-right": props.block.props.align === "right",
+  "text-right":  props.block.props.align === "right",
 }));
 </script>

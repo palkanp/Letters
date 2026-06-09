@@ -6,17 +6,24 @@
     <!-- Uploaded image — rendering delegated to the parent via slot so each
          block controls its own framing (full-width, fixed-width, borders…) -->
     <template v-if="url">
-      <slot :url="url">
-        <img :src="url" class="w-full block" :alt="alt" />
-      </slot>
-
-      <button
-        v-if="!hideReplace"
-        type="button"
-        class="mt-1 text-xs text-gray-400 hover:text-gray-600 transition-colors"
-        :class="replaceClass"
-        @click.stop="triggerFileInput"
-      >Replace image</button>
+      <div v-if="!hideReplace" class="relative group/img">
+        <slot :url="url">
+          <img :src="url" class="w-full block" :alt="alt" />
+        </slot>
+        <!-- Replace overlay — appears on hover, no extra height -->
+        <button
+          type="button"
+          class="absolute top-1.5 right-1.5 px-2 py-0.5 rounded text-xs font-medium
+                 bg-black/60 text-white opacity-0 group-hover/img:opacity-100
+                 transition-opacity backdrop-blur-sm"
+          @click.stop="triggerFileInput"
+        >Replace</button>
+      </div>
+      <template v-else>
+        <slot :url="url">
+          <img :src="url" class="w-full block" :alt="alt" />
+        </slot>
+      </template>
     </template>
 
     <!-- Empty state dropzone -->

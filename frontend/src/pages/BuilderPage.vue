@@ -101,7 +101,7 @@
         @drop="onCanvasDrop"
         @click="editorStore.selectBlock(null)"
       >
-        <div class="mx-auto" style="max-width:600px">
+        <div class="mx-auto bg-white shadow-sm" style="max-width:600px;min-height:200px">
 
           <!-- Empty state -->
           <div
@@ -350,7 +350,7 @@ function onSent() {
 const availableBlocks = [
   { type: "hero",          label: "Hero",       icon: "◉" },
   { type: "text",          label: "Text",        icon: "¶" },
-  { type: "image",         label: "Image",       icon: "🖼" },
+  { type: "image",         label: "Image",       icon: "◻" },
   { type: "image_text",    label: "Img + Text",  icon: "▣" },
   { type: "button",        label: "Button",      icon: "▷" },
   { type: "columns",       label: "Columns",     icon: "⊞" },

@@ -98,7 +98,7 @@ export const BLOCK_SCHEMA = {
 
   image: {
     label: "Image",
-    icon: "🖼",
+    icon: "◻",
     sections: [
       {
         id: "content",
@@ -223,6 +223,15 @@ export const BLOCK_SCHEMA = {
               { label: "Half — 260px",   value: "260px" },
             ],
           },
+          {
+            key: "layout_mode",
+            label: "Layout",
+            type: "select",
+            options: [
+              { label: "Side by side", value: "side" },
+              { label: "Text wraps image", value: "wrap" },
+            ],
+          },
         ],
       },
       {
@@ -252,6 +261,27 @@ export const BLOCK_SCHEMA = {
         fields: [
           { key: "color", label: "Button color", type: "color" },
           { key: "text_color", label: "Text color", type: "color" },
+          {
+            key: "font_size",
+            label: "Font size",
+            type: "select",
+            options: [
+              { label: "Small (12px)",  value: "12px" },
+              { label: "Normal (14px)", value: "14px" },
+              { label: "Medium (16px)", value: "16px" },
+              { label: "Large (18px)",  value: "18px" },
+            ],
+          },
+          {
+            key: "button_padding",
+            label: "Button size",
+            type: "select",
+            options: [
+              { label: "Compact",  value: "compact" },
+              { label: "Normal",   value: "normal" },
+              { label: "Large",    value: "large" },
+            ],
+          },
           {
             key: "border_radius",
             label: "Corners",
@@ -328,6 +358,33 @@ export const BLOCK_SCHEMA = {
               { label: "3 Columns", value: "3" },
             ],
           },
+          {
+            key: "col_gap",
+            label: "Column gap",
+            type: "select",
+            options: [
+              { label: "None",   value: 0  },
+              { label: "Small",  value: 12 },
+              { label: "Medium", value: 24 },
+              { label: "Large",  value: 40 },
+            ],
+          },
+        ],
+      },
+      {
+        id: "dividers",
+        title: "Dividers",
+        fields: [
+          {
+            key: "show_dividers",
+            label: "Column lines",
+            type: "select",
+            options: [
+              { label: "None",       value: false },
+              { label: "Show lines", value: true  },
+            ],
+          },
+          { key: "divider_color", label: "Line color", type: "color" },
         ],
       },
       {
@@ -335,9 +392,9 @@ export const BLOCK_SCHEMA = {
         title: "Style",
         fields: [
           { key: "background_color", label: "Background", type: "color" },
-          { key: "heading_color", label: "Heading color", type: "color" },
-          { key: "text_color", label: "Text color", type: "color" },
-          { key: "button_color", label: "Button color", type: "color" },
+          { key: "heading_color",    label: "Heading color", type: "color" },
+          { key: "text_color",       label: "Text color", type: "color" },
+          { key: "button_color",     label: "Button color", type: "color" },
         ],
       },
     ],
