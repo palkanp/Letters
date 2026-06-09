@@ -4,23 +4,6 @@
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
     <header class="flex-shrink-0 h-12 bg-white border-b border-gray-200 flex items-center px-4 gap-3">
 
-      <!-- Layers toggle -->
-      <button
-        type="button"
-        title="Layers"
-        class="w-8 h-8 flex items-center justify-center rounded-lg transition-colors flex-shrink-0"
-        :class="showLayers ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700 hover:bg-gray-100'"
-        @click="showLayers = !showLayers"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <rect x="2" y="3" width="12" height="1.5" rx="0.75" fill="currentColor"/>
-          <rect x="2" y="7.25" width="12" height="1.5" rx="0.75" fill="currentColor"/>
-          <rect x="2" y="11.5" width="12" height="1.5" rx="0.75" fill="currentColor"/>
-        </svg>
-      </button>
-
-      <div class="w-px h-5 bg-gray-200 flex-shrink-0"></div>
-
       <!-- Campaign name -->
       <TextInput
         v-model="editorStore.campaignName"
@@ -60,39 +43,34 @@
     </header>
 
     <!-- ── Body ──────────────────────────────────────────────────────────────── -->
-    <div class="flex flex-1 overflow-hidden relative">
+    <div class="flex flex-1 overflow-hidden">
 
-      <!-- Layers drawer (slide-in overlay) -->
-      <transition
-        enter-active-class="transition-transform duration-200 ease-out"
-        enter-from-class="-translate-x-full"
-        enter-to-class="translate-x-0"
-        leave-active-class="transition-transform duration-150 ease-in"
-        leave-from-class="translate-x-0"
-        leave-to-class="-translate-x-full"
-      >
-        <div
-          v-if="showLayers"
-          class="absolute left-0 top-0 bottom-0 z-30 w-56 bg-white border-r border-gray-200 flex flex-col shadow-xl"
-        >
-          <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
-            <span class="text-xs font-semibold text-gray-500 uppercase tracking-widest">Layers</span>
-            <button
-              type="button"
-              class="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 text-sm"
-              @click="showLayers = false"
-            >✕</button>
-          </div>
+      <!-- Permanent left sidebar: Layers + Add block -->
+      <aside class="flex-shrink-0 w-52 bg-white border-r border-gray-200 flex flex-col">
+        <!-- Header -->
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
+          <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Layers</span>
+          <span class="text-xs text-gray-300 tabular-nums">{{ editorStore.blocks.length }}</span>
+        </div>
+
+        <!-- Layer list fills remaining space -->
+        <div class="flex-1 overflow-y-auto min-h-0">
           <LayersPanel />
         </div>
-      </transition>
 
-      <!-- Backdrop for layers drawer -->
-      <div
-        v-if="showLayers"
-        class="absolute inset-0 z-20"
-        @click="showLayers = false"
-      ></div>
+        <!-- Add block button pinned to bottom -->
+        <div class="flex-shrink-0 p-3 border-t border-gray-100">
+          <button
+            type="button"
+            class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
+                   bg-gray-900 text-white text-xs font-semibold
+                   hover:bg-gray-700 transition-colors"
+            @click.stop="openPicker(-1)"
+          >
+            <span class="text-base leading-none">+</span> Add block
+          </button>
+        </div>
+      </aside>
 
       <!-- Canvas -->
       <main
@@ -109,14 +87,8 @@
             class="border-2 border-dashed border-gray-300 rounded-xl p-16 text-center text-gray-400 bg-white/50 select-none"
           >
             <div class="text-4xl mb-3 opacity-40">✦</div>
-            <p class="text-sm font-medium mb-4">Your canvas is empty</p>
-            <button
-              type="button"
-              class="inline-flex items-center gap-1.5 px-4 py-2 bg-gray-900 text-white text-sm font-semibold rounded-lg hover:bg-gray-700 transition-colors"
-              @click.stop="openPicker(-1)"
-            >
-              <span class="text-base leading-none">+</span> Add first block
-            </button>
+            <p class="text-sm font-medium mb-1">Your canvas is empty</p>
+            <p class="text-xs opacity-60">Use <strong>+ Add block</strong> in the left panel to get started</p>
           </div>
 
           <!-- Block list with inline adders -->
@@ -198,7 +170,6 @@ const editorStore = useEditorStore();
 const saving     = ref(false);
 const previewing = ref(false);
 const showSendModal = ref(false);
-const showLayers = ref(false);
 const saveMsg    = ref("");
 const errorMsg   = ref("");
 const subject    = ref("");
