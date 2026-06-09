@@ -51,7 +51,13 @@
         />
 
         <!-- Drag grip -->
-        <span class="text-gray-300 group-hover:text-gray-400 cursor-grab active:cursor-grabbing text-sm leading-none flex-shrink-0" title="Drag to reorder">⠿</span>
+        <span class="text-gray-300 group-hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0" title="Drag to reorder">
+          <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
+            <circle cx="2" cy="2"  r="1.2"/><circle cx="6" cy="2"  r="1.2"/>
+            <circle cx="2" cy="6"  r="1.2"/><circle cx="6" cy="6"  r="1.2"/>
+            <circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/>
+          </svg>
+        </span>
 
         <!-- Block icon -->
         <FeatherIcon :name="blockIcon(item.block.type)" class="w-3 h-3 flex-shrink-0" :class="item.depth > 0 ? 'opacity-60' : ''" />
@@ -82,16 +88,18 @@
           type="button"
           class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 transition-all text-sm leading-none flex-shrink-0 w-4 h-4 flex items-center justify-center rounded hover:bg-blue-50"
           title="Add block inside"
+          aria-label="Add block inside container"
           @click.stop="openPicker({ mode: 'child', parentId: item.block.id, afterIndex: (item.block.children?.length ?? 1) - 1 })"
-        >+</button>
+        ><FeatherIcon name="plus" class="w-3 h-3" /></button>
 
         <!-- Remove -->
         <button
           type="button"
           class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all text-xs leading-none flex-shrink-0 w-4 h-4 flex items-center justify-center rounded"
           title="Remove"
+          aria-label="Remove block"
           @click.stop="store.removeBlock(item.block.id)"
-        >✕</button>
+        ><FeatherIcon name="x" class="w-3 h-3" /></button>
       </li>
     </ul>
 

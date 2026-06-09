@@ -13,12 +13,14 @@
              bg-white border border-gray-300 text-gray-400
              hover:bg-gray-900 hover:text-white hover:border-gray-900 hover:scale-110
              shadow-sm"
+      aria-label="Add block here"
       @click.stop="$emit('open', afterIndex)"
-    >+</button>
+    ><FeatherIcon name="plus" class="w-3.5 h-3.5" /></button>
   </div>
 </template>
 
 <script setup>
+import { FeatherIcon } from "frappe-ui";
 defineProps({ afterIndex: { type: Number, required: true } });
 defineEmits(["open"]);
 </script>

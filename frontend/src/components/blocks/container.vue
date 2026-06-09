@@ -62,8 +62,9 @@
                    opacity-0 group-hover/child:opacity-100 transition-opacity
                    flex items-center justify-center"
             title="Remove block"
+            aria-label="Remove block"
             @click.stop="store.removeBlock(child.id)"
-          >✕</button>
+          ><FeatherIcon name="x" class="w-3 h-3" /></button>
           <!-- Render the child block -->
           <BlockRenderer :block="child" :index="childIndex" />
         </div>
@@ -74,10 +75,10 @@
         v-else
         class="flex flex-col items-center justify-center gap-2 py-8 select-none pointer-events-none"
       >
-        <div class="text-2xl opacity-20">⬚</div>
+        <FeatherIcon name="box" class="w-5 h-5 text-gray-300" />
         <p class="text-xs text-gray-400 text-center leading-relaxed">
-          Empty — use the <strong>Layers</strong> panel<br/>
-          <span class="text-gray-300">to add blocks inside</span>
+          Empty. Use the <strong>Layers</strong> panel<br/>
+          <span class="text-gray-300">to add blocks inside.</span>
         </p>
       </div>
     </div>
@@ -88,6 +89,7 @@
 import { computed, ref } from "vue";
 import BlockWrapper from "../BlockWrapper.vue";
 import BlockRenderer from "../BlockRenderer.vue";
+import { FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../../stores/editor";
 import { usePadding } from "../../composables/usePadding";
 

@@ -40,7 +40,7 @@
     >
       <span v-if="uploading" class="text-xs text-gray-400">Uploading…</span>
       <template v-else>
-        <span class="text-2xl">🖼</span>
+        <FeatherIcon name="image" class="w-6 h-6 text-gray-400" />
         <span class="text-xs text-gray-600 font-medium">Click or drop image</span>
         <span class="text-xs text-gray-400">PNG, JPG, GIF, WebP</span>
       </template>
@@ -51,6 +51,7 @@
 </template>
 
 <script setup>
+import { FeatherIcon } from "frappe-ui";
 import { useImageUpload } from "../composables/useImageUpload";
 
 const props = defineProps({

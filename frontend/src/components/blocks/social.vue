@@ -11,11 +11,10 @@
           :style="{ backgroundColor: hexToRgba(block.props.color, 0.08), color: block.props.color, border: `1px solid ${hexToRgba(block.props.color, 0.2)}` }"
           @click.prevent="store.selectBlock(block.id)"
         >
-          <span>{{ link.icon }}</span>
           <span>{{ link.label }}</span>
         </a>
         <span v-if="visibleLinks.length === 0" class="text-xs text-gray-400 italic">
-          Add social URLs in the Inspector →
+          No links added yet. Enter URLs in the Inspector.
         </span>
       </div>
     </div>
@@ -46,13 +45,13 @@ const blockProps = computed(() => props.block.props);
 const paddingStyle = usePadding(blockProps);
 
 const ALL_LINKS = [
-  { key: "x_url",         label: "X / Twitter", icon: "𝕏" },
-  { key: "linkedin_url",  label: "LinkedIn",     icon: "in" },
-  { key: "instagram_url", label: "Instagram",    icon: "◎" },
-  { key: "facebook_url",  label: "Facebook",     icon: "f" },
-  { key: "youtube_url",   label: "YouTube",      icon: "▶" },
-  { key: "github_url",    label: "GitHub",       icon: "⌥" },
-  { key: "website_url",   label: "Website",      icon: "🌐" },
+  { key: "x_url",         label: "X / Twitter" },
+  { key: "linkedin_url",  label: "LinkedIn" },
+  { key: "instagram_url", label: "Instagram" },
+  { key: "facebook_url",  label: "Facebook" },
+  { key: "youtube_url",   label: "YouTube" },
+  { key: "github_url",    label: "GitHub" },
+  { key: "website_url",   label: "Website" },
 ];
 
 const visibleLinks = computed(() =>
