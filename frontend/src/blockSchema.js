@@ -307,16 +307,9 @@ export const BLOCK_SCHEMA = {
     defaults: {
       column_count: "2",
       background_color: "#ffffff",
-      heading_color: "#111827",
-      text_color: "#6b7280",
-      button_color: "#111827",
       show_dividers: false,
       divider_color: "#e5e7eb",
       col_gap: 24,
-      columns: [
-        { heading: "", text: "Add your text here.", button_label: "", button_url: "" },
-        { heading: "", text: "Add your text here.", button_label: "", button_url: "" },
-      ],
       padding_top: 20, padding_right: 24, padding_bottom: 20, padding_left: 24,
     },
     sections: [
@@ -357,9 +350,46 @@ export const BLOCK_SCHEMA = {
         title: "Style",
         fields: [
           { key: "background_color", label: "Background", type: "color" },
-          { key: "heading_color",    label: "Heading color", type: "color" },
-          { key: "text_color",       label: "Text color", type: "color" },
-          { key: "button_color",     label: "Button color", type: "color" },
+        ],
+      },
+    ],
+  },
+
+  link_list: {
+    label: "Link List",
+    icon: "list",
+    defaults: {
+      heading: "",
+      items: [
+        { title: "Article title", url: "https://example.com", description: "Brief description of this article." },
+        { title: "Another read", url: "https://example.com", description: "" },
+      ],
+      style: "bullet",
+      link_color: "#2563eb",
+      text_color: "#6b7280",
+      accent_color: "#9ca3af",
+      background_color: "#ffffff",
+      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+    },
+    sections: [
+      {
+        id: "style",
+        title: "Style",
+        fields: [
+          {
+            key: "style",
+            label: "List style",
+            type: "select",
+            options: [
+              { label: "Bullets",   value: "bullet" },
+              { label: "Numbers",   value: "numbered" },
+              { label: "No marker", value: "none" },
+            ],
+          },
+          { key: "background_color", label: "Background",   type: "color" },
+          { key: "link_color",       label: "Link color",   type: "color" },
+          { key: "text_color",       label: "Description",  type: "color" },
+          { key: "accent_color",     label: "Marker color", type: "color" },
         ],
       },
     ],

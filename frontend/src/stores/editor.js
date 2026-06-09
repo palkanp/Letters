@@ -10,8 +10,6 @@ export const useEditorStore = defineStore("editor", () => {
   const selectedBlockId = ref(null);
   const isDirty        = ref(false);
 
-  // ID counter lives inside the store so it resets correctly with the store
-  // and is not shared as a stale module-level variable across HMR reloads.
   const _idCounter = ref(0);
   function nextId() { return ++_idCounter.value; }
 
@@ -19,12 +17,21 @@ export const useEditorStore = defineStore("editor", () => {
   function clearDirty() { isDirty.value = false; }
 
   // ── Recursive helpers ────────────────────────────────────────────────────────
+  // Search top-level blocks, container children, AND column blocks.
   function findBlock(id, list = blocks.value) {
     for (const b of list) {
       if (b.id === id) return b;
       if (b.children?.length) {
         const found = findBlock(id, b.children);
         if (found) return found;
+      }
+      if (b.columns?.length) {
+        for (const col of b.columns) {
+          if (col.blocks?.length) {
+            const found = findBlock(id, col.blocks);
+            if (found) return found;
+          }
+        }
       }
     }
     return null;
@@ -52,6 +59,11 @@ export const useEditorStore = defineStore("editor", () => {
       if (idx !== -1) { list.splice(idx, 1); return true; }
       for (const b of list) {
         if (b.children && removeFrom(b.children)) return true;
+        if (b.columns) {
+          for (const col of b.columns) {
+            if (col.blocks && removeFrom(col.blocks)) return true;
+          }
+        }
       }
       return false;
     }
@@ -75,7 +87,7 @@ export const useEditorStore = defineStore("editor", () => {
     if (block) { Object.assign(block.props, props); markDirty(); }
   }
 
-  // ── Child block operations (for containers) ──────────────────────────────────
+  // ── Container child operations ───────────────────────────────────────────────
   function addChildBlock(parentId, type, afterIndex = null) {
     const parent = findBlock(parentId);
     if (!parent) return;
@@ -100,7 +112,49 @@ export const useEditorStore = defineStore("editor", () => {
     markDirty();
   }
 
-  // Move any block to any location (cross-level drag from the layers panel)
+  // ── Columns child operations ─────────────────────────────────────────────────
+  function addBlockToColumn(blockId, colIndex, type, afterIndex = null) {
+    const block = findBlock(blockId);
+    if (!block?.columns) return;
+    const col = block.columns[colIndex];
+    if (!col) return;
+    if (!col.blocks) col.blocks = [];
+    const newBlock = _createBlock(type, nextId());
+    if (afterIndex === null || afterIndex === undefined) {
+      col.blocks.push(newBlock);
+    } else if (afterIndex < 0) {
+      col.blocks.unshift(newBlock);
+    } else {
+      col.blocks.splice(afterIndex + 1, 0, newBlock);
+    }
+    selectedBlockId.value = newBlock.id;
+    markDirty();
+  }
+
+  function moveBlockInColumn(blockId, colIndex, fromIndex, toIndex) {
+    const block = findBlock(blockId);
+    const col = block?.columns?.[colIndex];
+    if (!col?.blocks) return;
+    const item = col.blocks.splice(fromIndex, 1)[0];
+    col.blocks.splice(toIndex, 0, item);
+    markDirty();
+  }
+
+  function setColumnCount(blockId, count) {
+    const block = findBlock(blockId);
+    if (!block?.columns) return;
+    const current = block.columns.length;
+    if (count > current) {
+      for (let i = current; i < count; i++) {
+        block.columns.push({ blocks: [] });
+      }
+    } else if (count < current) {
+      block.columns.splice(count);
+    }
+    markDirty();
+  }
+
+  // ── Cross-level move (layers panel drag) ─────────────────────────────────────
   function moveBlockTo(blockId, targetParentId, targetIndex) {
     if (targetParentId !== null && _isDescendant(blockId, targetParentId)) return;
 
@@ -110,6 +164,11 @@ export const useEditorStore = defineStore("editor", () => {
       if (idx !== -1) { moved = list.splice(idx, 1)[0]; return true; }
       for (const b of list) {
         if (b.children && detach(b.children)) return true;
+        if (b.columns) {
+          for (const col of b.columns) {
+            if (col.blocks && detach(col.blocks)) return true;
+          }
+        }
       }
       return false;
     }
@@ -132,27 +191,39 @@ export const useEditorStore = defineStore("editor", () => {
 
   function _isDescendant(blockId, ofId) {
     const ancestor = findBlock(ofId);
-    if (!ancestor?.children) return false;
+    if (!ancestor) return false;
     function check(list) {
       for (const b of list) {
         if (b.id === blockId) return true;
         if (b.children && check(b.children)) return true;
+        if (b.columns) {
+          for (const col of b.columns) {
+            if (col.blocks && check(col.blocks)) return true;
+          }
+        }
       }
       return false;
     }
-    return check(ancestor.children);
+    const sources = [];
+    if (ancestor.children) sources.push(...ancestor.children);
+    if (ancestor.columns) ancestor.columns.forEach(c => sources.push(...(c.blocks || [])));
+    return check(sources);
   }
 
   function duplicateBlock(id) {
-    // Deep-clone the block, assign fresh IDs to it and all descendants
     function cloneWithNewIds(b) {
       const clone = JSON.parse(JSON.stringify(b));
       clone.id = nextId();
       if (clone.children) clone.children = clone.children.map(cloneWithNewIds);
+      if (clone.columns) {
+        clone.columns = clone.columns.map(col => ({
+          ...col,
+          blocks: (col.blocks || []).map(cloneWithNewIds),
+        }));
+      }
       return clone;
     }
 
-    // Try top-level first
     const topIdx = blocks.value.findIndex((b) => b.id === id);
     if (topIdx !== -1) {
       const clone = cloneWithNewIds(blocks.value[topIdx]);
@@ -162,7 +233,6 @@ export const useEditorStore = defineStore("editor", () => {
       return;
     }
 
-    // Try inside containers
     function duplicateIn(list) {
       for (let i = 0; i < list.length; i++) {
         if (list[i].id === id) {
@@ -173,6 +243,11 @@ export const useEditorStore = defineStore("editor", () => {
           return true;
         }
         if (list[i].children && duplicateIn(list[i].children)) return true;
+        if (list[i].columns) {
+          for (const col of list[i].columns) {
+            if (col.blocks && duplicateIn(col.blocks)) return true;
+          }
+        }
       }
       return false;
     }
@@ -194,13 +269,29 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function _assignIds(list) {
-    return (list || []).map((b) => ({
-      ...b,
-      id: nextId(),
-      children: b.children
-        ? _assignIds(b.children)
-        : (b.type === "container" ? [] : undefined),
-    }));
+    return (list || []).map((b) => {
+      const result = { ...b, id: nextId() };
+
+      // Container children
+      if (b.children) {
+        result.children = _assignIds(b.children);
+      } else if (b.type === "container") {
+        result.children = [];
+      }
+
+      // Columns nested blocks
+      if (b.columns) {
+        result.columns = b.columns.map(col => ({
+          ...col,
+          blocks: _assignIds(col.blocks || []),
+        }));
+      } else if (b.type === "columns") {
+        const count = parseInt(b.props?.column_count || "2");
+        result.columns = Array.from({ length: count }, () => ({ blocks: [] }));
+      }
+
+      return result;
+    });
   }
 
   function loadFromDoc(doc) {
@@ -227,6 +318,9 @@ export const useEditorStore = defineStore("editor", () => {
     updateBlockProps,
     addChildBlock,
     moveChildBlock,
+    addBlockToColumn,
+    moveBlockInColumn,
+    setColumnCount,
     moveBlockTo,
     duplicateBlock,
     setBlockLabel,
@@ -239,16 +333,18 @@ export const useEditorStore = defineStore("editor", () => {
 });
 
 // ── Block factory ─────────────────────────────────────────────────────────────
-// Defaults come from BLOCK_SCHEMA[type].defaults — single source of truth.
-// No separate defaultProps() function needed.
 function _createBlock(type, id) {
-  const defaults = BLOCK_SCHEMA[type]?.defaults ?? {};
-  return {
+  const schema = BLOCK_SCHEMA[type];
+  const defaults = schema?.defaults ?? {};
+  const block = {
     id,
     type,
-    // Spread a deep copy of defaults so mutations on one block don't affect others
-    // (only relevant for object/array props like `columns` in the columns block).
     props: JSON.parse(JSON.stringify(defaults)),
     ...(type === "container" ? { children: [] } : {}),
   };
+  if (type === "columns") {
+    const count = parseInt(defaults.column_count || "2");
+    block.columns = Array.from({ length: count }, () => ({ blocks: [] }));
+  }
+  return block;
 }

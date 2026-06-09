@@ -32,6 +32,7 @@ from letters.letters.utils.block_renderers import (
     VideoThumbRenderer,
     HeaderRenderer,
     RichTextRenderer,
+    LinkListRenderer,
     RENDERER_MAP,
 )
 
@@ -245,25 +246,62 @@ class TestButtonRenderer:
 # ── ColumnsRenderer ───────────────────────────────────────────────────────────
 
 class TestColumnsRenderer:
-    def _r(self, props):
-        return ColumnsRenderer().render({"type": "columns", "props": props})
+    renderer = ColumnsRenderer()
 
-    def test_renders_column_heading(self):
-        html = self._r({"columns": [{"heading": "Col 1", "text": "", "button_label": ""}]})
-        assert "Col 1" in html
+    def _block(self, columns, **props):
+        """columns is a list of {'blocks': [...]} dicts."""
+        return {"type": "columns", "props": props, "columns": columns}
 
-    def test_column_button_url_javascript_blocked(self):
-        html = self._r({
-            "columns": [{
-                "heading": "", "text": "body", "button_label": "Go",
-                "button_url": "javascript:alert(1)",
-            }]
-        })
-        assert "javascript:" not in html
-        assert 'href="#"' in html
+    def _text_child(self, content="Hello"):
+        return {"type": "text", "props": {"content": content}}
 
-    def test_xss_column_heading_escaped(self):
-        html = self._r({"columns": [{"heading": "<script>x</script>", "text": "", "button_label": ""}]})
+    def test_empty_columns_returns_empty(self):
+        assert self.renderer.render({"type": "columns", "props": {}, "columns": []}) == ""
+
+    def test_no_columns_key_returns_empty(self):
+        assert self.renderer.render({"type": "columns", "props": {}}) == ""
+
+    def test_two_columns_renders_two_cells(self):
+        block = self._block([
+            {"blocks": [self._text_child("Left")]},
+            {"blocks": [self._text_child("Right")]},
+        ])
+        html = self.renderer.render(block)
+        assert "Left" in html
+        assert "Right" in html
+        assert html.count('<td width="50%"') == 2
+
+    def test_three_columns(self):
+        block = self._block([
+            {"blocks": [self._text_child("A")]},
+            {"blocks": [self._text_child("B")]},
+            {"blocks": [self._text_child("C")]},
+        ])
+        html = self.renderer.render(block)
+        assert html.count('<td width="33%"') == 3
+
+    def test_empty_column_renders_nbsp(self):
+        block = self._block([{"blocks": []}, {"blocks": [self._text_child("X")]}])
+        html = self.renderer.render(block)
+        assert "&nbsp;" in html
+
+    def test_show_dividers_adds_border(self):
+        block = self._block(
+            [{"blocks": []}, {"blocks": []}],
+            show_dividers=True, divider_color="#cccccc",
+        )
+        html = self.renderer.render(block)
+        assert "border-right:1px solid #cccccc" in html
+
+    def test_background_color_applied(self):
+        block = self._block([{"blocks": []}, {"blocks": []}], background_color="#f0f0f0")
+        html = self.renderer.render(block)
+        assert "background-color:#f0f0f0" in html
+
+    def test_child_block_xss_safe(self):
+        child = {"type": "text", "props": {"content": "<script>evil()</script>"}}
+        block = self._block([{"blocks": [child]}, {"blocks": []}])
+        html = self.renderer.render(block)
         assert "<script>" not in html
 
 
@@ -628,6 +666,83 @@ class TestImageRendererLinkThrough:
         assert "<a " not in out
 
 
+# ── LinkListRenderer ─────────────────────────────────────────────────────────
+
+class TestLinkListRenderer:
+    renderer = LinkListRenderer()
+
+    def _block(self, items=None, **props):
+        return {"type": "link_list", "props": {"items": items or [], **props}}
+
+    def _item(self, title="Title", url="https://example.com", description="Desc"):
+        return {"title": title, "url": url, "description": description}
+
+    def test_empty_items_returns_empty(self):
+        assert self.renderer.render(self._block()) == ""
+
+    def test_item_title_rendered(self):
+        out = self.renderer.render(self._block([self._item("My Article")]))
+        assert "My Article" in out
+
+    def test_item_link_rendered(self):
+        out = self.renderer.render(self._block([self._item(url="https://frappe.io")]))
+        assert 'href="https://frappe.io"' in out
+
+    def test_javascript_url_blocked(self):
+        out = self.renderer.render(self._block([self._item(url="javascript:evil()")]))
+        assert "javascript:" not in out
+
+    def test_description_rendered(self):
+        out = self.renderer.render(self._block([self._item(description="A great read about Frappe.")]))
+        assert "A great read about Frappe." in out
+
+    def test_no_description_no_desc_tag(self):
+        item = {"title": "Title", "url": "https://example.com"}  # no description key
+        out = self.renderer.render(self._block([item]))
+        assert "Title" in out
+
+    def test_bullet_marker(self):
+        out = self.renderer.render(self._block([self._item()], style="bullet"))
+        assert "&bull;" in out
+
+    def test_numbered_marker(self):
+        out = self.renderer.render(self._block(
+            [self._item("A"), self._item("B")], style="numbered"
+        ))
+        assert "1." in out
+        assert "2." in out
+
+    def test_no_marker_style_none(self):
+        out = self.renderer.render(self._block([self._item()], style="none"))
+        assert "&bull;" not in out
+
+    def test_heading_rendered(self):
+        out = self.renderer.render(self._block([self._item()], heading="Fresh Reads"))
+        assert "Fresh Reads" in out
+
+    def test_xss_title_escaped(self):
+        out = self.renderer.render(self._block([self._item(title="<script>bad</script>")]))
+        assert "<script>" not in out
+
+    def test_multiple_items(self):
+        out = self.renderer.render(self._block([
+            self._item("Article One"),
+            self._item("Article Two"),
+            self._item("Article Three"),
+        ]))
+        assert "Article One" in out
+        assert "Article Three" in out
+
+    def test_link_color_applied(self):
+        out = self.renderer.render(self._block([self._item()], link_color="#ff0000"))
+        assert "color:#ff0000" in out
+
+    def test_output_is_email_table(self):
+        out = self.renderer.render(self._block([self._item()]))
+        assert "<table" in out
+        assert 'width="100%"' in out
+
+
 # ── RENDERER_MAP completeness ─────────────────────────────────────────────────
 
 class TestRendererMap:
@@ -635,7 +750,7 @@ class TestRendererMap:
         "hero", "text", "image", "image_text", "button", "columns",
         "container", "section_label", "divider", "footer", "spacer",
         "quote", "social", "product_card", "video_thumb",
-        "header", "rich_text",
+        "header", "rich_text", "link_list",
     }
 
     def test_all_expected_types_present(self):

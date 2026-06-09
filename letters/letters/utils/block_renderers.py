@@ -383,58 +383,41 @@ class DividerRenderer(BlockRenderer):
 
 class ColumnsRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
-        p = block.get("props", {})
-        bg             = escape(p.get("background_color", "#ffffff"))
-        heading_color  = escape(p.get("heading_color", "#111827"))
-        text_color     = escape(p.get("text_color", "#6b7280"))
-        button_color   = escape(p.get("button_color", "#111827"))
-        show_dividers  = p.get("show_dividers", False)
-        divider_color  = escape(p.get("divider_color", "#e5e7eb"))
-        col_gap        = int(p.get("col_gap", 24))
-        cols           = p.get("columns", [])
-        count          = max(len(cols), 1)
-        col_width      = round(100 / count)
-        half_gap       = round(col_gap / 2)
+        p             = block.get("props", {})
+        bg            = escape(p.get("background_color", "#ffffff"))
+        show_dividers = p.get("show_dividers", False)
+        divider_color = escape(p.get("divider_color", "#e5e7eb"))
+        col_gap       = int(p.get("col_gap", 24))
+        columns       = block.get("columns", [])
 
+        if not columns:
+            return ""
+
+        count     = len(columns)
+        col_width = round(100 / count)
+        half_gap  = round(col_gap / 2)
         outer_pad = _padding(p, 20, 20, 20, 20)
+
         cells = ""
-        for idx, col in enumerate(cols):
-            heading   = escape(col.get("heading", ""))
-            text      = escape(col.get("text", ""))
-            btn_label = escape(col.get("button_label", ""))
-            btn_url   = _safe_url(col.get("button_url", "#"))
-            is_last   = idx == len(cols) - 1
+        for idx, col in enumerate(columns):
+            col_blocks = col.get("blocks", [])
+            col_html = ""
+            for child in col_blocks:
+                renderer = RENDERER_MAP.get(child.get("type", ""))
+                if renderer:
+                    col_html += renderer.render(child)
 
-            heading_html = ""
-            if heading:
-                heading_html = (
-                    f'<p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:16px;'
-                    f'font-weight:600;color:{heading_color};line-height:1.3;">{heading}</p>'
-                )
-
-            btn_html = ""
-            if btn_label:
-                btn_html = (
-                    f'<p style="margin:12px 0 0;">'
-                    f'<a href="{btn_url}" style="display:inline-block;padding:8px 20px;'
-                    f'background-color:{button_color};color:#ffffff;font-family:Arial,sans-serif;'
-                    f'font-size:13px;font-weight:bold;text-decoration:none;border-radius:4px;">'
-                    f'{btn_label}</a></p>'
-                )
-
-            left_pad  = 0 if idx == 0 else half_gap
-            right_pad = 0 if is_last  else half_gap
+            is_last      = idx == count - 1
+            left_pad     = 0 if idx == 0 else half_gap
+            right_pad    = 0 if is_last  else half_gap
             border_style = (
-                f'border-right:1px solid {divider_color};' if show_dividers and not is_last else ""
+                f"border-right:1px solid {divider_color};"
+                if show_dividers and not is_last else ""
             )
-
             cells += (
                 f'<td width="{col_width}%" valign="top"'
                 f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:top;{border_style}">'
-                f'{heading_html}'
-                f'<p style="margin:0;font-family:Arial,sans-serif;font-size:14px;'
-                f'color:{text_color};line-height:1.6;">{text}</p>'
-                f'{btn_html}'
+                f'{col_html or "&nbsp;"}'
                 f'</td>'
             )
 
@@ -768,6 +751,81 @@ class VideoThumbRenderer(BlockRenderer):
         return _spacing_wrapper(html, p)
 
 
+class LinkListRenderer(BlockRenderer):
+    def render(self, block: dict[str, Any]) -> str:
+        p           = block.get("props", {})
+        heading     = escape(p.get("heading", ""))
+        items       = p.get("items", [])
+        style       = p.get("style", "bullet")
+        link_color  = escape(p.get("link_color", "#2563eb"))
+        text_color  = escape(p.get("text_color", "#6b7280"))
+        accent_color = escape(p.get("accent_color", "#9ca3af"))
+        bg          = escape(p.get("background_color", "#ffffff"))
+        padding     = _padding(p, 20, 32, 20, 32)
+
+        if not items:
+            return ""
+
+        heading_html = ""
+        if heading:
+            heading_html = (
+                f'<p style="margin:0 0 12px;font-family:Arial,sans-serif;font-size:13px;'
+                f'font-weight:600;color:#374151;text-transform:uppercase;letter-spacing:1px;">'
+                f'{heading}</p>'
+            )
+
+        rows = ""
+        for i, item in enumerate(items):
+            title       = escape(item.get("title", ""))
+            url         = _safe_url(item.get("url", "#"))
+            description = escape(item.get("description", ""))
+
+            if style == "numbered":
+                marker = f"{i + 1}."
+            elif style == "none":
+                marker = ""
+            else:
+                marker = "&bull;"
+
+            marker_cell = (
+                f'<td width="16" valign="top" style="padding:0 8px 0 0;'
+                f'font-family:Arial,sans-serif;font-size:14px;color:{accent_color};'
+                f'line-height:1.5;white-space:nowrap;">{marker}</td>'
+            ) if marker else ""
+
+            desc_html = (
+                f'<p style="margin:2px 0 0;font-family:Arial,sans-serif;font-size:13px;'
+                f'color:{text_color};line-height:1.5;">{description}</p>'
+            ) if description else ""
+
+            rows += (
+                f'<tr><td style="padding:0 0 10px;">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<tr>'
+                f'{marker_cell}'
+                f'<td valign="top">'
+                f'<a href="{url}" style="font-family:Arial,sans-serif;font-size:14px;'
+                f'font-weight:500;color:{link_color};text-decoration:underline;line-height:1.5;">'
+                f'{title}</a>'
+                f'{desc_html}'
+                f'</td>'
+                f'</tr></table>'
+                f'</td></tr>'
+            )
+
+        html = (
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="background-color:{bg};">'
+            f'<tr><td style="padding:{padding};">'
+            f'{heading_html}'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'{rows}'
+            f'</table>'
+            f'</td></tr></table>'
+        )
+        return _spacing_wrapper(html, p)
+
+
 class HeaderRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
@@ -854,4 +912,5 @@ RENDERER_MAP: dict[str, BlockRenderer] = {
     "video_thumb":   VideoThumbRenderer(),
     "header":        HeaderRenderer(),
     "rich_text":     RichTextRenderer(),
+    "link_list":     LinkListRenderer(),
 }

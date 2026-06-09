@@ -405,6 +405,7 @@ const availableBlocks = [
   { type: "image_text",    label: "Image + Text", icon: "sidebar" },
   { type: "button",        label: "Button",      icon: "square" },
   { type: "columns",       label: "Columns",     icon: "columns" },
+  { type: "link_list",     label: "Link List",   icon: "list" },
   { type: "quote",         label: "Quote",       icon: "message-square" },
   { type: "social",        label: "Social",      icon: "share-2" },
   { type: "product_card",  label: "Product",     icon: "shopping-bag" },
@@ -440,7 +441,14 @@ function closePicker() {
 }
 function insertBlock(type) {
   if (!pickerTarget.value) return;
-  if (pickerTarget.value.mode === "child") {
+  if (pickerTarget.value.mode === "column") {
+    editorStore.addBlockToColumn(
+      pickerTarget.value.blockId,
+      pickerTarget.value.colIndex,
+      type,
+      pickerTarget.value.afterIndex,
+    );
+  } else if (pickerTarget.value.mode === "child") {
     editorStore.addChildBlock(pickerTarget.value.parentId, type, pickerTarget.value.afterIndex);
   } else {
     editorStore.addBlock(type, pickerTarget.value.afterIndex);
@@ -453,6 +461,12 @@ function stripIds(block) {
   const { id: _id, ...rest } = block;
   if (rest.children?.length) {
     rest.children = rest.children.map(stripIds);
+  }
+  if (rest.columns?.length) {
+    rest.columns = rest.columns.map(col => ({
+      ...col,
+      blocks: (col.blocks || []).map(stripIds),
+    }));
   }
   return rest;
 }
