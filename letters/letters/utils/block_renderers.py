@@ -1,6 +1,20 @@
 from abc import ABC, abstractmethod
 from html import escape
 from typing import Any
+import re
+
+
+def _hex_to_rgba(hex_color: str, alpha: float) -> str:
+    """Convert a #RRGGBB hex string to an rgba() value safe for all email clients."""
+    hex_color = hex_color.strip().lstrip("#")
+    if len(hex_color) == 3:
+        hex_color = "".join(c * 2 for c in hex_color)
+    if len(hex_color) != 6 or not re.fullmatch(r"[0-9a-fA-F]{6}", hex_color):
+        return f"rgba(0,0,0,{alpha})"
+    r = int(hex_color[0:2], 16)
+    g = int(hex_color[2:4], 16)
+    b = int(hex_color[4:6], 16)
+    return f"rgba({r},{g},{b},{alpha})"
 
 
 def _padding(props: dict, dt: int = 20, dr: int = 32, db: int = 20, dl: int = 32) -> str:
@@ -352,16 +366,33 @@ class ContainerRenderer(BlockRenderer):
             return renderer.render(child) if renderer else ""
 
         if layout == "row":
-            # Side-by-side columns using table cells
-            count     = max(len(children), 1)
-            col_width = round(100 / count)
-            half_gap  = max(gap // 2, 0)
+            # Side-by-side columns using table cells.
+            # Honour per-child width (px or %) and align props, matching the canvas.
+            count    = max(len(children), 1)
+            half_gap = max(gap // 2, 0)
+
+            # Determine explicit widths; children with no explicit width share remaining space equally.
+            def _child_width(child: dict):
+                w = child.get("props", {}).get("width", "")
+                if w and w not in ("auto", "100%", "0px", ""):
+                    return w
+                return None
+
+            explicit_widths = [_child_width(c) for c in children]
+            implicit_count  = sum(1 for w in explicit_widths if w is None)
+
+            # Build valign map from align prop
+            _valign_map = {"left": "top", "center": "middle", "right": "bottom"}
+
             cells = ""
             for idx, child in enumerate(children):
                 left_pad  = 0 if idx == 0 else half_gap
                 right_pad = 0 if idx == len(children) - 1 else half_gap
+                w = explicit_widths[idx]
+                width_attr = f' width="{w}"' if w else ""
+                valign     = _valign_map.get(child.get("props", {}).get("align", ""), "top")
                 cells += (
-                    f'<td width="{col_width}%" valign="top"'
+                    f'<td{width_attr} valign="{valign}"'
                     f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:top;">'
                     f'{render_child(child)}'
                     f'</td>'
@@ -371,17 +402,23 @@ class ContainerRenderer(BlockRenderer):
                 f'<tr>{cells}</tr></table>'
             )
         else:
-            # Column (stacked) — each child is a full-width block
-            parts = []
-            for idx, child in enumerate(children):
-                child_html = render_child(child)
-                if child_html:
-                    margin = f'margin-bottom:{gap}px;' if idx < len(children) - 1 else ''
-                    parts.append(
-                        f'<div style="{margin}">{child_html}</div>'
-                        if margin else child_html
+            # Column (stacked) — each child is a full-width row in a single table.
+            # We use table rows with a spacer row between children instead of
+            # margin/div, because Outlook ignores margin on <div>.
+            rendered = [(render_child(c), c) for c in children]
+            rendered = [(html, c) for html, c in rendered if html]
+            rows = ""
+            for idx, (child_html, _) in enumerate(rendered):
+                rows += f"<tr><td>{child_html}</td></tr>"
+                if idx < len(rendered) - 1 and gap:
+                    rows += (
+                        f'<tr><td style="height:{gap}px;line-height:{gap}px;'
+                        f'font-size:{gap}px;">&nbsp;</td></tr>'
                     )
-            inner = "\n".join(parts)
+            inner = (
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'{rows}</table>'
+            )
 
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
@@ -506,16 +543,19 @@ class SocialRenderer(BlockRenderer):
         align = escape(p.get("align", "center"))
         padding = _padding(p, 20, 32, 20, 32)
 
+        bg_rgba     = _hex_to_rgba(p.get("color", "#374151"), 0.1)
+        border_rgba = _hex_to_rgba(p.get("color", "#374151"), 0.2)
+
         links = []
         for key, label in self._LABELS.items():
             url = p.get(key, "").strip()
             if url:
                 links.append(
                     f'<a href="{escape(url)}" style="display:inline-block;margin:4px;'
-                    f'padding:6px 14px;background-color:{color}1a;color:{color};'
+                    f'padding:6px 14px;background-color:{bg_rgba};color:{color};'
                     f'font-family:Arial,sans-serif;font-size:12px;font-weight:600;'
                     f'text-decoration:none;border-radius:999px;'
-                    f'border:1px solid {color}30;">{label}</a>'
+                    f'border:1px solid {border_rgba};">{label}</a>'
                 )
 
         if not links:
@@ -573,7 +613,7 @@ class ProductCardRenderer(BlockRenderer):
             f'<tr><td style="padding:{pt}px {pr}px {pb}px {pl}px;">'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};border:1px solid {border_color};'
-            f'border-radius:{border_radius};overflow:hidden;">'
+            f'border-radius:{border_radius};">'
             f'<tr><td>{img_html}</td></tr>'
             f'<tr><td style="padding:16px;">'
             f'<p style="margin:0 0 6px;font-family:Arial,sans-serif;font-size:16px;'

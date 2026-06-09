@@ -6,7 +6,7 @@
       isDragOver === 'before' ? 'border-t-blue-500' : '',
       isDragOver === 'after'  ? 'border-b-blue-500' : '',
     ]"
-    :style="spacingStyle"
+    :style="{ ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle }"
     @click.stop="store.selectBlock(block.id)"
     @dragover.prevent="onDragOver"
     @dragleave="isDragOver = null"
@@ -89,13 +89,30 @@
 import { ref, computed } from "vue";
 import { useEditorStore } from "../stores/editor";
 
-const props  = defineProps({ block: Object, index: Number });
+const props  = defineProps({ block: Object, index: Number, extraStyle: { type: Object, default: () => ({}) } });
 const store  = useEditorStore();
 const selected = computed(() => store.selectedBlockId === props.block.id);
 
 // Only top-level blocks (directly in store.blocks) support drag-to-reorder.
 // Child blocks inside containers should not interfere with the top-level order.
 const isTopLevel = computed(() => store.blocks.some((b) => b.id === props.block.id));
+
+// ── Top-level container width + alignment ────────────────────────────────────
+// Width is only applied here when the container is top-level (not inside another
+// container's childFlexStyle). Child containers get their width via the parent's
+// childFlexStyle to avoid double-application (% of % bug).
+const topLevelContainerStyle = computed(() => {
+  if (props.block.type !== "container" || !isTopLevel.value) return {};
+  const w = props.block.props?.width;
+  const a = props.block.props?.align;
+  const hasCustomWidth = w && w !== "100%" && w !== "auto" && w !== "0px";
+  if (!hasCustomWidth) return {};
+  const marginMap = { left: "0 auto 0 0", center: "0 auto", right: "0 0 0 auto" };
+  return {
+    width: w,
+    ...(a && a !== "left" ? { margin: marginMap[a] } : {}),
+  };
+});
 
 // ── Spacing wrapper style ────────────────────────────────────────────────────
 const spacingStyle = computed(() => {
@@ -108,7 +125,9 @@ const spacingStyle = computed(() => {
 });
 
 // ── Drag-to-reorder ──────────────────────────────────────────────────────────
-// Module-level so all instances share the same source
+// _dragSourceIndex is intentionally module-level (not reactive ref) so that all
+// BlockWrapper instances share a single drag source at a time. Only one top-level
+// block can be dragged at once, so this is safe and avoids cross-instance state.
 let _dragSourceIndex = null;
 const isDragOver = ref(null); // 'before' | 'after' | null
 

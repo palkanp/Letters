@@ -8,7 +8,7 @@
           :href="block.props[link.key] || '#'"
           target="_blank"
           class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium no-underline transition-opacity hover:opacity-80 select-none"
-          :style="{ backgroundColor: block.props.color + '15', color: block.props.color, border: `1px solid ${block.props.color}30` }"
+          :style="{ backgroundColor: hexToRgba(block.props.color, 0.08), color: block.props.color, border: `1px solid ${hexToRgba(block.props.color, 0.2)}` }"
           @click.prevent="store.selectBlock(block.id)"
         >
           <span>{{ link.icon }}</span>
@@ -30,6 +30,17 @@ import { usePadding } from "../../composables/usePadding";
 
 const props = defineProps({ block: Object, index: Number });
 const store = useEditorStore();
+
+function hexToRgba(hex, alpha) {
+  if (!hex) return `rgba(0,0,0,${alpha})`;
+  const c = hex.replace("#", "");
+  const full = c.length === 3 ? c.split("").map((x) => x + x).join("") : c;
+  if (full.length !== 6) return `rgba(0,0,0,${alpha})`;
+  const r = parseInt(full.slice(0, 2), 16);
+  const g = parseInt(full.slice(2, 4), 16);
+  const b = parseInt(full.slice(4, 6), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
 
 const blockProps = computed(() => props.block.props);
 const paddingStyle = usePadding(blockProps);
