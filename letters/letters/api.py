@@ -254,13 +254,18 @@ def get_email_groups():
     if not groups:
         return groups
 
-    # Single aggregation query instead of N separate frappe.db.count() calls
-    count_rows = frappe.db.get_all(
-        "Email Group Member",
-        filters={"unsubscribed": 0},
-        fields=["email_group", "count(*) as cnt"],
-        group_by="email_group",
-    )
+    # Single GROUP BY query via the query builder. (Raw SQL functions passed as
+    # field strings — e.g. "count(*) as cnt" — are rejected by recent Frappe for
+    # SQL-injection safety, so we build the aggregate with frappe.qb instead.)
+    from frappe.query_builder.functions import Count
+
+    EGM = frappe.qb.DocType("Email Group Member")
+    count_rows = (
+        frappe.qb.from_(EGM)
+        .select(EGM.email_group, Count(EGM.name).as_("cnt"))
+        .where(EGM.unsubscribed == 0)
+        .groupby(EGM.email_group)
+    ).run(as_dict=True)
     counts = {r["email_group"]: r["cnt"] for r in count_rows}
 
     for g in groups:
