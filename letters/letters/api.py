@@ -77,6 +77,39 @@ def _is_email_field(df):
 
 
 @frappe.whitelist()
+def send_test(blocks=None, subject=None, preview_text=None, name=None):
+    """Send a test email to the currently logged-in user."""
+    from letters.letters.utils.email_compiler import EmailCompiler
+
+    if name and not blocks:
+        doc = frappe.get_doc("Letters Campaign", name)
+        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+        blocks_data = doc.blocks_json or "[]"
+        subject = subject or doc.subject
+        preview_text = preview_text or doc.preview_text
+    else:
+        blocks_data = blocks if isinstance(blocks, list) else json.loads(blocks or "[]")
+
+    try:
+        compiler = EmailCompiler(blocks_data, preview_text=preview_text or "")
+        html = compiler.compile()
+    except Exception as e:
+        frappe.log_error(frappe.get_traceback(), "Letters send_test compile error")
+        frappe.throw(str(e))
+
+    email = frappe.session.user
+    test_subject = f"[TEST] {subject or 'Email Preview'}"
+
+    frappe.sendmail(
+        recipients=[email],
+        subject=test_subject,
+        message=html,
+        now=True,
+    )
+    return {"sent_to": email}
+
+
+@frappe.whitelist()
 def get_doctypes_with_email_fields():
     """Return doctypes that have at least one email field, that the user can read."""
     doctypes = set()

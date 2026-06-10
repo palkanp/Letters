@@ -16,6 +16,42 @@ export const useEditorStore = defineStore("editor", () => {
   function markDirty() { isDirty.value = true; }
   function clearDirty() { isDirty.value = false; }
 
+  // ── Undo / Redo history ──────────────────────────────────────────────────────
+  const _history = [];
+  const _historyIndex = ref(-1);
+  const MAX_HISTORY = 50;
+
+  const canUndo = computed(() => _historyIndex.value > 0);
+  const canRedo = computed(() => _historyIndex.value < _history.length - 1);
+
+  function _pushHistory() {
+    // Drop any redo states beyond current position
+    _history.splice(_historyIndex.value + 1);
+    _history.push(JSON.parse(JSON.stringify(blocks.value)));
+    if (_history.length > MAX_HISTORY) _history.shift();
+    _historyIndex.value = _history.length - 1;
+  }
+
+  function undo() {
+    if (!canUndo.value) return;
+    _historyIndex.value--;
+    blocks.value = JSON.parse(JSON.stringify(_history[_historyIndex.value]));
+    markDirty();
+  }
+
+  function redo() {
+    if (!canRedo.value) return;
+    _historyIndex.value++;
+    blocks.value = JSON.parse(JSON.stringify(_history[_historyIndex.value]));
+    markDirty();
+  }
+
+  function _seedHistory() {
+    _history.length = 0;
+    _history.push(JSON.parse(JSON.stringify(blocks.value)));
+    _historyIndex.value = 0;
+  }
+
   // ── Recursive helpers ────────────────────────────────────────────────────────
   // Search top-level blocks, container children, AND column blocks.
   function findBlock(id, list = blocks.value) {
@@ -41,6 +77,7 @@ export const useEditorStore = defineStore("editor", () => {
 
   // ── Top-level block operations ───────────────────────────────────────────────
   function addBlock(type, afterIndex = null) {
+    _pushHistory();
     const newBlock = _createBlock(type, nextId());
     if (afterIndex === null || afterIndex === undefined) {
       blocks.value.push(newBlock);
@@ -54,6 +91,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function removeBlock(id) {
+    _pushHistory();
     function removeFrom(list) {
       const idx = list.findIndex((b) => b.id === id);
       if (idx !== -1) { list.splice(idx, 1); return true; }
@@ -73,6 +111,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function moveBlock(fromIndex, toIndex) {
+    _pushHistory();
     const item = blocks.value.splice(fromIndex, 1)[0];
     blocks.value.splice(toIndex, 0, item);
     markDirty();
@@ -83,12 +122,14 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function updateBlockProps(id, props) {
+    _pushHistory();
     const block = findBlock(id);
     if (block) { Object.assign(block.props, props); markDirty(); }
   }
 
   // ── Container child operations ───────────────────────────────────────────────
   function addChildBlock(parentId, type, afterIndex = null) {
+    _pushHistory();
     const parent = findBlock(parentId);
     if (!parent) return;
     if (!parent.children) parent.children = [];
@@ -105,6 +146,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function moveChildBlock(parentId, fromIndex, toIndex) {
+    _pushHistory();
     const parent = findBlock(parentId);
     if (!parent?.children) return;
     const item = parent.children.splice(fromIndex, 1)[0];
@@ -114,6 +156,7 @@ export const useEditorStore = defineStore("editor", () => {
 
   // ── Columns child operations ─────────────────────────────────────────────────
   function addBlockToColumn(blockId, colIndex, type, afterIndex = null) {
+    _pushHistory();
     const block = findBlock(blockId);
     if (!block?.columns) return;
     const col = block.columns[colIndex];
@@ -132,6 +175,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function moveBlockInColumn(blockId, colIndex, fromIndex, toIndex) {
+    _pushHistory();
     const block = findBlock(blockId);
     const col = block?.columns?.[colIndex];
     if (!col?.blocks) return;
@@ -141,6 +185,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function setColumnCount(blockId, count) {
+    _pushHistory();
     const block = findBlock(blockId);
     if (!block?.columns) return;
     const current = block.columns.length;
@@ -156,6 +201,7 @@ export const useEditorStore = defineStore("editor", () => {
 
   // ── Cross-level move (layers panel drag) ─────────────────────────────────────
   function moveBlockTo(blockId, targetParentId, targetIndex) {
+    _pushHistory();
     if (targetParentId !== null && _isDescendant(blockId, targetParentId)) return;
 
     let moved = null;
@@ -211,6 +257,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function duplicateBlock(id) {
+    _pushHistory();
     function cloneWithNewIds(b) {
       const clone = JSON.parse(JSON.stringify(b));
       clone.id = nextId();
@@ -255,6 +302,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function setBlockLabel(id, label) {
+    _pushHistory();
     const block = findBlock(id);
     if (!block) return;
     const trimmed = label?.trim();
@@ -301,6 +349,29 @@ export const useEditorStore = defineStore("editor", () => {
     selectedBlockId.value = null;
     blocks.value = _assignIds(doc.blocks || []);
     clearDirty();
+    _seedHistory();
+  }
+
+  /** Replace canvas with a template (array of {type, props?} objects). */
+  function loadTemplate(templateBlocks) {
+    _pushHistory();
+    selectedBlockId.value = null;
+    // Use _createBlock defaults then merge any provided props
+    blocks.value = templateBlocks.map((tpl) => {
+      const b = _createBlock(tpl.type, nextId());
+      if (tpl.props) Object.assign(b.props, tpl.props);
+      if (tpl.type === "columns" && tpl.columns) {
+        b.columns = tpl.columns.map(col => ({
+          blocks: (col.blocks || []).map(cb => {
+            const child = _createBlock(cb.type, nextId());
+            if (cb.props) Object.assign(child.props, cb.props);
+            return child;
+          }),
+        }));
+      }
+      return b;
+    });
+    markDirty();
   }
 
   return {
@@ -311,6 +382,10 @@ export const useEditorStore = defineStore("editor", () => {
     selectedBlockId,
     selectedBlock,
     isDirty,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
     addBlock,
     removeBlock,
     moveBlock,
@@ -326,6 +401,7 @@ export const useEditorStore = defineStore("editor", () => {
     setBlockLabel,
     setRenderedHtml,
     loadFromDoc,
+    loadTemplate,
     findBlock,
     markDirty,
     clearDirty,

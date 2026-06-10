@@ -37,6 +37,30 @@
 
       <!-- Actions -->
       <div class="flex items-center gap-1.5 flex-shrink-0">
+        <!-- Undo / Redo -->
+        <button
+          type="button"
+          class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
+          :class="editorStore.canUndo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
+          :disabled="!editorStore.canUndo"
+          title="Undo (⌘Z)"
+          @click="editorStore.undo()"
+        ><FeatherIcon name="corner-up-left" class="w-3.5 h-3.5" /></button>
+        <button
+          type="button"
+          class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
+          :class="editorStore.canRedo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
+          :disabled="!editorStore.canRedo"
+          title="Redo (⌘⇧Z)"
+          @click="editorStore.redo()"
+        ><FeatherIcon name="corner-up-right" class="w-3.5 h-3.5" /></button>
+
+        <div class="w-px h-4 bg-gray-200 mx-0.5" />
+
+        <Button variant="ghost" size="sm" title="Template Library" @click="showTemplateLibrary = true">
+          <template #prefix><FeatherIcon name="grid" class="w-3.5 h-3.5" /></template>
+          Templates
+        </Button>
         <Button variant="ghost" size="sm" :loading="previewing" title="Preview in new window" aria-label="Preview in new tab" @click="openPreview">
           <template #prefix><FeatherIcon name="external-link" class="w-3.5 h-3.5" /></template>
           Preview
@@ -50,10 +74,18 @@
           </template>
           Save
         </Button>
+
+        <div class="w-px h-4 bg-gray-200 mx-0.5" />
+
         <!-- Recipients button — configure who to send to -->
         <Button variant="ghost" size="sm" :disabled="!editorStore.campaignDoc" @click="showRecipientsModal = true">
           <template #prefix><FeatherIcon name="users" class="w-3.5 h-3.5" /></template>
           Recipients
+        </Button>
+        <!-- Test send — sends to logged-in user only -->
+        <Button variant="ghost" size="sm" :loading="testSending" :disabled="!editorStore.campaignDoc || testSending" title="Send a test to yourself" @click="sendTest">
+          <template #prefix><FeatherIcon name="send" class="w-3.5 h-3.5" /></template>
+          Test
         </Button>
         <!-- Send button — sends directly, no popup -->
         <Button variant="subtle" size="sm" :loading="sending" :disabled="!editorStore.campaignDoc || sending" @click="sendCampaign">Send</Button>
@@ -197,6 +229,12 @@
     @saved="onRecipientsSaved"
   />
 
+  <TemplateLibrary
+    v-if="showTemplateLibrary"
+    @close="showTemplateLibrary = false"
+    @apply="onTemplateApply"
+  />
+
 </template>
 
 <script setup>
@@ -206,6 +244,7 @@ import { useEditorStore } from "../stores/editor";
 import Inspector from "../components/Inspector.vue";
 import LayersPanel from "../components/LayersPanel.vue";
 import RecipientsModal from "../components/RecipientsModal.vue";
+import TemplateLibrary from "../components/TemplateLibrary.vue";
 import BlockAdderRow from "../components/BlockAdderRow.vue";
 import BlockRenderer from "../components/BlockRenderer.vue";
 
@@ -214,8 +253,10 @@ const saving        = ref(false);
 const previewing    = ref(false);
 const loadingCampaign = ref(false);
 const showRecipientsModal = ref(false);
+const showTemplateLibrary = ref(false);
 const recipientConfig = ref(null); // { type, email_group | recipients | (doctype + email_field + filters) }
 const sending = ref(false);
+const testSending = ref(false);
 const subject    = ref("");
 const previewText = ref("");
 
@@ -262,8 +303,43 @@ function beforeUnloadHandler(e) {
     e.returnValue = ""; // required for Chrome
   }
 }
-onMounted(() => window.addEventListener("beforeunload", beforeUnloadHandler));
-onUnmounted(() => window.removeEventListener("beforeunload", beforeUnloadHandler));
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+function keydownHandler(e) {
+  const mod = e.metaKey || e.ctrlKey;
+  if (!mod) return;
+  // Undo: Cmd/Ctrl + Z (without Shift)
+  if (e.key === "z" && !e.shiftKey) {
+    // Only intercept when not inside an input / contenteditable
+    if (document.activeElement?.isContentEditable) return;
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+    e.preventDefault();
+    editorStore.undo();
+    return;
+  }
+  // Redo: Cmd/Ctrl + Shift + Z  or  Ctrl + Y
+  if ((e.key === "z" && e.shiftKey) || (e.key === "y" && !e.shiftKey)) {
+    if (document.activeElement?.isContentEditable) return;
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+    e.preventDefault();
+    editorStore.redo();
+    return;
+  }
+  // Save: Cmd/Ctrl + S
+  if (e.key === "s") {
+    e.preventDefault();
+    saveCampaign();
+  }
+}
+
+onMounted(() => {
+  window.addEventListener("beforeunload", beforeUnloadHandler);
+  window.addEventListener("keydown", keydownHandler);
+});
+onUnmounted(() => {
+  window.removeEventListener("beforeunload", beforeUnloadHandler);
+  window.removeEventListener("keydown", keydownHandler);
+});
 
 // Track subject/previewText/campaignName changes as dirty.
 // _suppressDirty is a counter (not a boolean) so concurrent loadCampaign
@@ -498,6 +574,38 @@ async function sendCampaign() {
 function onRecipientsSaved(config) {
   recipientConfig.value = config;
   showRecipientsModal.value = false;
+}
+
+// ── Test send ─────────────────────────────────────────────────────────────────
+async function sendTest() {
+  if (!editorStore.blocks.length) {
+    toast.warning("Canvas is empty — add some blocks first.");
+    return;
+  }
+  testSending.value = true;
+  try {
+    const res = await frappe.call({
+      method: "letters.letters.api.send_test",
+      args: {
+        name:         editorStore.campaignDoc?.name || null,
+        blocks:       editorStore.campaignDoc?.name ? null : JSON.stringify(editorStore.blocks.map(stripIds)),
+        subject:      subject.value || "Test Email",
+        preview_text: previewText.value,
+      },
+    });
+    toast.success(`Test sent to ${res.message.sent_to}!`);
+  } catch (e) {
+    toast.error("Test send failed: " + describeError(e));
+  } finally {
+    testSending.value = false;
+  }
+}
+
+// ── Template library ──────────────────────────────────────────────────────────
+function onTemplateApply(templateBlocks) {
+  editorStore.loadTemplate(templateBlocks);
+  showTemplateLibrary.value = false;
+  toast.success("Template applied — customize it and save when ready.");
 }
 
 // ── Block picker ──────────────────────────────────────────────────────────────
