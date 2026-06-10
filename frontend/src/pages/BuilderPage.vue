@@ -392,7 +392,7 @@ async function loadCampaign(name) {
     editorStore.loadFromDoc(doc);
     subject.value     = doc.subject || "";
     previewText.value = doc.preview_text || "";
-    document.title = (doc.title || "Untitled Campaign") + " — Letters";
+    document.title = (doc.title || "Untitled Campaign") + " · Letters";
     // Allow one Vue flush cycle before re-enabling dirty tracking
     await Promise.resolve();
   } catch (e) {
@@ -429,7 +429,7 @@ async function saveCampaign() {
     }
     editorStore.clearDirty();
     // Keep browser tab title in sync with the campaign name
-    document.title = (editorStore.campaignName || "Untitled Campaign") + " — Letters";
+    document.title = (editorStore.campaignName || "Untitled Campaign") + " · Letters";
     toast.success("Saved!");
   } catch (e) {
     toast.error("Couldn't save: " + describeError(e));
@@ -445,7 +445,7 @@ async function openPreview() {
   // makes the popup blocker kill it silently.
   const win = window.open("", "_blank");
   if (!win) {
-    toast.warning("Pop-up blocked — allow pop-ups for this site to use Preview.");
+    toast.warning("Pop-up blocked. Allow pop-ups for this site to use Preview.");
     return;
   }
 
@@ -517,7 +517,7 @@ async function openPreview() {
     win.document.open();
     win.document.write(fullHtml);
     win.document.close();
-    win.document.title = rawTitle + " — Preview";
+    win.document.title = rawTitle + " · Preview";
   } catch (e) {
     win.close();
     toast.error("Preview failed: " + describeError(e));
@@ -590,7 +590,7 @@ async function duplicateCampaign() {
       args: { name: editorStore.campaignDoc.name },
     });
     const newName = res.message.name;
-    toast.success(`Duplicated as "${res.message.title}" — opening it now.`);
+    toast.success(`Duplicated as "${res.message.title}". Opening it now.`);
     // Navigate to the new campaign in the same tab
     window.location.href = `/app/letters-builder?name=${encodeURIComponent(newName)}`;
   } catch (e) {
@@ -602,7 +602,7 @@ async function duplicateCampaign() {
 // ── Test send ─────────────────────────────────────────────────────────────────
 async function sendTest() {
   if (!editorStore.blocks.length) {
-    toast.warning("Canvas is empty — add some blocks first.");
+    toast.warning("Canvas is empty. Add some blocks first.");
     return;
   }
   testSending.value = true;
@@ -616,7 +616,7 @@ async function sendTest() {
         preview_text: previewText.value,
       },
     });
-    toast.success(`Test queued to ${res.message.sent_to} — it'll arrive shortly.`);
+    toast.success(`Test queued to ${res.message.sent_to}. It'll arrive shortly.`);
   } catch (e) {
     toast.error("Test send failed: " + describeError(e));
   } finally {
@@ -628,7 +628,7 @@ async function sendTest() {
 function onTemplateApply(templateBlocks) {
   editorStore.loadTemplate(templateBlocks);
   showTemplateLibrary.value = false;
-  toast.success("Template applied — customize it and save when ready.");
+  toast.success("Template applied. Customize it and save when ready.");
 }
 
 // ── Block picker ──────────────────────────────────────────────────────────────

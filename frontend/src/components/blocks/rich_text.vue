@@ -2,7 +2,7 @@
   <BlockWrapper :block="block" :index="index">
     <div :style="paddingStyle">
       <!-- frappe-ui TextEditor (TipTap). A bubble menu provides bold/italic/
-           underline/link/lists on selection — replacing the old execCommand
+           underline/link/lists on selection, replacing the old execCommand
            toolbar and contenteditable. Block-level font + alignment styling is
            applied via the wrapper + editorClass. -->
       <div

@@ -84,7 +84,7 @@
 
             <!-- Filters (shown once doctype + field selected) -->
             <div v-if="selectedDoctype && selectedField && filterFields.length" class="space-y-3">
-              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Filters <span class="font-normal normal-case text-gray-400">(optional — leave blank to include all)</span></p>
+              <p class="text-xs font-semibold text-gray-600 uppercase tracking-wide">Filters <span class="font-normal normal-case text-gray-400">(optional, leave blank to include all)</span></p>
 
               <div v-for="ff in filterFields" :key="ff.fieldname" class="flex items-center gap-3">
                 <label class="w-32 flex-shrink-0 text-xs text-gray-600 font-medium truncate" :title="ff.label">{{ ff.label }}</label>
@@ -95,7 +95,7 @@
                   class="flex-1"
                   size="sm"
                   :model-value="activeFilters[ff.fieldname] || ''"
-                  :options="[{ label: '— Any —', value: '' }, ...ff.options.map(o => ({ label: o, value: o }))]"
+                  :options="[{ label: 'Any', value: '' }, ...ff.options.map(o => ({ label: o, value: o }))]"
                   @update:model-value="setFilter(ff.fieldname, $event)"
                 />
 

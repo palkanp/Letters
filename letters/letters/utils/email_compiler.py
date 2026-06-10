@@ -47,7 +47,7 @@ class EmailCompiler:
         )
 
     def _render_preheader(self) -> str:
-        """Hidden inbox preview line — shown in the inbox list, not in the email body."""
+        """Hidden inbox preview line, shown in the inbox list, not in the email body."""
         if not self._preview_text:
             return ""
         return (

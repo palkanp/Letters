@@ -7,6 +7,13 @@ from frappe import _
 # for your sending infrastructure.
 MAX_RECIPIENTS = 50000
 
+# Background send-job timeout in seconds.
+SEND_JOB_TIMEOUT = 600
+
+# Flush per-recipient progress to the DB every N sends so a worker crash mid-batch
+# loses at most this many recipients' tracked status (they'd resend on retry).
+COMMIT_EVERY = 100
+
 
 @frappe.whitelist()
 def get_campaign(name):
@@ -76,7 +83,7 @@ def render_preview(name=None, blocks=None, preview_text=None):
 
 
 def _is_email_field(df):
-    """Frappe has no dedicated 'Email' fieldtype on most versions — email fields are
+    """Frappe has no dedicated 'Email' fieldtype on most versions; email fields are
     Data fields with options='Email'. We accept both representations to be safe."""
     return df.fieldtype == "Email" or (df.fieldtype == "Data" and (df.options or "") == "Email")
 
@@ -435,7 +442,7 @@ def _enqueue_send(send_doc_name, campaign_name):
     frappe.enqueue(
         "letters.letters.api._execute_send",
         queue="long",
-        timeout=600,
+        timeout=SEND_JOB_TIMEOUT,
         job_name=f"letters_send_{campaign_name}",
         send_doc_name=send_doc_name,
         campaign_name=campaign_name,
@@ -448,7 +455,7 @@ def _execute_send(send_doc_name, campaign_name):
     recording delivery status on each recipient row. Recipients already marked
     Sent are skipped, so a retry resumes from where a previous run stopped.
 
-    Runs in a worker process — must NOT be decorated with @frappe.whitelist().
+    Runs in a worker process; must NOT be decorated with @frappe.whitelist().
     """
     try:
         doc = frappe.get_doc("Letters Campaign", campaign_name)
@@ -495,7 +502,7 @@ def _execute_send(send_doc_name, campaign_name):
                 frappe.log_error(frappe.get_traceback(), "Letters recipient send error")
 
             # Periodically flush so a worker crash doesn't lose progress.
-            if (idx + 1) % 100 == 0:
+            if (idx + 1) % COMMIT_EVERY == 0:
                 frappe.db.commit()
 
         # ── Finalise: derive the batch outcome from per-recipient results ────
