@@ -43,6 +43,14 @@
       "write": 1,
       "create": 1,
       "delete": 1
+    },
+    {
+      "role": "Letters Manager",
+      "read": 1
+    },
+    {
+      "role": "Marketing Manager",
+      "read": 1
     }
   ],
   "sort_field": "modified",

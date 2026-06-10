@@ -247,6 +247,13 @@ class TestSendCampaignValidation:
         with pytest.raises(FrappeValidationError, match="no active subscribers"):
             api_module.send_campaign("CAMP-001", email_group="GROUP-EMPTY")
 
+    def test_throws_when_audience_exceeds_max(self):
+        """H3: an oversized audience must be refused, never silently truncated."""
+        frappe_stub.get_doc.return_value = _campaign_doc()
+        oversized = [f"user{i}@example.com" for i in range(api_module.MAX_RECIPIENTS + 1)]
+        with pytest.raises(FrappeValidationError, match="above the per-campaign limit"):
+            api_module.send_campaign("CAMP-001", recipients=json.dumps(oversized))
+
     def test_recipients_json_string_is_parsed(self):
         doc = _campaign_doc()
         send_doc_mock = MagicMock()

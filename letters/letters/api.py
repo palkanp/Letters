@@ -2,6 +2,11 @@ import json
 import frappe
 from frappe import _
 
+# Hard ceiling on a single campaign's audience. Above this we refuse the send
+# with a clear message rather than silently dropping recipients. Tune as needed
+# for your sending infrastructure.
+MAX_RECIPIENTS = 50000
+
 
 @frappe.whitelist()
 def get_campaign(name):
@@ -343,7 +348,9 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
             frappe.throw(_("doctype_config must include doctype and email_field."))
         frappe.has_permission(dt, "read", throw=True)
         filters[email_fld] = ["!=", ""]
-        rows = frappe.get_all(dt, filters=filters, fields=[email_fld], limit=10000)
+        # Fetch one past the cap so we can detect (and reject) an oversized
+        # audience instead of silently truncating it.
+        rows = frappe.get_all(dt, filters=filters, fields=[email_fld], limit=MAX_RECIPIENTS + 1)
         recipient_list = [r.get(email_fld, "").strip() for r in rows if r.get(email_fld, "").strip()]
         if not recipient_list:
             frappe.throw(_("No records match the selected filters."))
@@ -357,6 +364,13 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
             frappe.throw(_("No recipients provided."))
         email_group = None
         mode = "direct"
+
+    # ── Guard against an oversized audience (no silent truncation) ───────────
+    if len(recipient_list) > MAX_RECIPIENTS:
+        frappe.throw(_(
+            "This audience has more than {0} recipients, which is above the "
+            "per-campaign limit. Narrow your filters or split the send."
+        ).format(MAX_RECIPIENTS))
 
     # ── Claim the send synchronously to prevent a race between two requests ──
     send_doc = frappe.get_doc({
