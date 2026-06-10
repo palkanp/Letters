@@ -489,7 +489,12 @@ class ContainerRenderer(BlockRenderer):
             count    = max(len(children), 1)
             half_gap = max(gap // 2, 0)
 
-            # Determine explicit widths; children with no explicit width share remaining space equally.
+            # Determine explicit widths; children with no explicit width share
+            # the row equally. Every cell MUST get a width attribute: email
+            # clients (Gmail, Outlook) size widthless <td>s by content, which
+            # collapses an image column next to a text-heavy one. Browsers
+            # balance them, which is why the preview looked fine but the inbox
+            # did not.
             def _child_width(child: dict):
                 w = child.get("props", {}).get("width", "")
                 if w and w not in ("auto", "100%", "0px", ""):
@@ -497,7 +502,7 @@ class ContainerRenderer(BlockRenderer):
                 return None
 
             explicit_widths = [_child_width(c) for c in children]
-            implicit_count  = sum(1 for w in explicit_widths if w is None)
+            default_width   = f"{round(100 / count)}%"  # equal share for implicit cells
 
             # Build valign map from align prop
             _valign_map = {"left": "top", "center": "middle", "right": "bottom"}
@@ -506,8 +511,8 @@ class ContainerRenderer(BlockRenderer):
             for idx, child in enumerate(children):
                 left_pad  = 0 if idx == 0 else half_gap
                 right_pad = 0 if idx == len(children) - 1 else half_gap
-                w = explicit_widths[idx]
-                width_attr = f' width="{w}"' if w else ""
+                w = explicit_widths[idx] or default_width
+                width_attr = f' width="{w}"'
                 valign     = _valign_map.get(child.get("props", {}).get("align", ""), "top")
                 cells += (
                     f'<td{width_attr} valign="{valign}"'
