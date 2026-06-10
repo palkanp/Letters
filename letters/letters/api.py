@@ -180,44 +180,6 @@ def get_email_fields(doctype):
 
 
 @frappe.whitelist()
-def get_emails_from_doctype(doctype, email_field, search=None):
-    """Return email values from a doctype's email field, with optional name/email search."""
-    frappe.has_permission(doctype, "read", throw=True)
-
-    meta = frappe.get_meta(doctype)
-    name_field = meta.title_field or "name"
-
-    filters = {email_field: ["!=", ""]}
-    if search:
-        filters[email_field] = ["like", f"%{search}%"]
-
-    try:
-        rows = frappe.get_all(
-            doctype,
-            filters=filters,
-            fields=[name_field, email_field],
-            limit=50,
-            order_by=f"{name_field} asc",
-        )
-    except Exception:
-        # title_field may not exist as an actual column — fall back to name
-        rows = frappe.get_all(
-            doctype,
-            filters=filters,
-            fields=["name", email_field],
-            limit=50,
-        )
-        name_field = "name"
-
-    emails = [
-        {"label": r.get(name_field) or r.get("name"), "email": r.get(email_field)}
-        for r in rows
-        if r.get(email_field)
-    ]
-    return {"emails": emails, "truncated": len(rows) >= 50}
-
-
-@frappe.whitelist()
 def get_doctype_filter_fields(doctype):
     """Return fields suitable as filters for the given doctype.
 
@@ -319,6 +281,13 @@ def _suppressed_emails():
     return {e for e in rows if e}
 
 
+def _valid_emails(emails):
+    """Drop malformed addresses using Frappe's validator (never trust the
+    client). Returns (valid_emails, dropped_count)."""
+    valid = [e for e in emails if frappe.utils.validate_email_address(e, throw=False)]
+    return valid, len(emails) - len(valid)
+
+
 @frappe.whitelist()
 def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     """
@@ -403,6 +372,11 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     if not recipient_list:
         frappe.throw(_("All selected recipients have unsubscribed from this campaign."))
 
+    # ── Drop malformed addresses (server-side, regardless of client) ─────────
+    recipient_list, invalid_count = _valid_emails(recipient_list)
+    if not recipient_list:
+        frappe.throw(_("No valid email addresses to send to."))
+
     # ── Guard against an oversized audience (no silent truncation) ───────────
     if len(recipient_list) > MAX_RECIPIENTS:
         frappe.throw(_(
@@ -432,7 +406,12 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     frappe.db.commit()
 
     _enqueue_send(send_doc.name, name)
-    return {"queued": True, "count": len(recipient_list), "mode": mode}
+    return {
+        "queued": True,
+        "count": len(recipient_list),
+        "mode": mode,
+        "skipped_invalid": invalid_count,
+    }
 
 
 def _resume_send(send_doc_name, campaign_name, campaign_doc):

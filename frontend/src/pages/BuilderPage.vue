@@ -359,15 +359,20 @@ provide("openPicker", openPicker);
 
 // ── Error helper ──────────────────────────────────────────────────────────────
 function describeError(e) {
+  let msg = "";
   try {
     const msgs = e?._server_messages;
     if (msgs) {
       const parsed = JSON.parse(msgs);
       const first = parsed[0];
-      try { return JSON.parse(first).message || first; } catch { return first; }
+      try { msg = JSON.parse(first).message || first; } catch { msg = first; }
     }
   } catch { /* fall through */ }
-  return e?.message || e?.exc || "Something went wrong.";
+  // Deliberately never fall back to e.exc — that's a raw server traceback and
+  // must not be shown to users.
+  if (!msg) msg = e?.message || "Something went wrong. Please try again.";
+  // Frappe messages may contain HTML; strip tags so toasts stay clean.
+  return String(msg).replace(/<[^>]*>/g, "").trim() || "Something went wrong. Please try again.";
 }
 
 // ── Load campaign from URL ?name=xxx ─────────────────────────────────────────
@@ -504,7 +509,11 @@ async function openPreview() {
   }
 <\/script>`;
 
-    const fullHtml = html.replace("</body>", toolbar + "\n</body>");
+    // Inject before </body> when present; otherwise append so the toolbar
+    // never silently vanishes if the compiled HTML lacks a body close tag.
+    const fullHtml = html.includes("</body>")
+      ? html.replace("</body>", toolbar + "\n</body>")
+      : html + toolbar;
     win.document.open();
     win.document.write(fullHtml);
     win.document.close();
@@ -548,7 +557,12 @@ async function sendCampaign() {
       });
     }
     const res = await frappe.call({ method: "letters.letters.api.send_campaign", args });
-    toast.success(`Queued for ${res.message.count} recipient${res.message.count === 1 ? "" : "s"}!`);
+    const { count, skipped_invalid } = res.message;
+    let msg = `Queued for ${count} recipient${count === 1 ? "" : "s"}!`;
+    if (skipped_invalid > 0) {
+      msg += ` (${skipped_invalid} invalid address${skipped_invalid === 1 ? "" : "es"} skipped)`;
+    }
+    toast.success(msg);
   } catch (e) {
     const raw = e?._server_messages;
     let msg = e?.message || "Send failed. Check your outgoing mail settings.";

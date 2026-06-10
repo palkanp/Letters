@@ -104,6 +104,10 @@ def _reset():
     frappe_stub.db.count.return_value = 0
     frappe_stub.enqueue.reset_mock()
     frappe_stub.enqueue.return_value = None
+    # Email validator: by default every address is valid (returns truthy).
+    frappe_stub.utils.validate_email_address.reset_mock()
+    frappe_stub.utils.validate_email_address.side_effect = None
+    frappe_stub.utils.validate_email_address.return_value = "ok@example.com"
     GETALL.clear()
     GETALL["Email Send"] = []          # no prior send → fresh send by default
     GETALL["Email Group Member"] = []
@@ -312,6 +316,33 @@ class TestSendCampaignValidation:
         GETALL["Email Unsubscribe"] = ["gone@b.com"]
         with pytest.raises(FrappeValidationError, match="unsubscribed"):
             api_module.send_campaign("CAMP-001", recipients=json.dumps(["gone@b.com"]))
+
+    def test_invalid_emails_are_dropped_server_side(self):
+        """M2: malformed addresses are filtered out even if the client sent them."""
+        doc = _campaign_doc()
+        send_doc_mock = MagicMock()
+        send_doc_mock.name = "SD-NEW"
+
+        def get_doc_se(arg, *args):
+            return send_doc_mock if isinstance(arg, dict) else doc
+
+        frappe_stub.get_doc.side_effect = get_doc_se
+        # Only addresses containing "@" are considered valid by the stub.
+        frappe_stub.utils.validate_email_address.side_effect = (
+            lambda e, throw=False: e if "@" in e else ""
+        )
+
+        result = api_module.send_campaign(
+            "CAMP-001", recipients=json.dumps(["good@b.com", "notanemail"])
+        )
+        assert result["count"] == 1
+        assert result["skipped_invalid"] == 1
+
+    def test_throws_when_all_emails_invalid(self):
+        frappe_stub.get_doc.return_value = _campaign_doc()
+        frappe_stub.utils.validate_email_address.side_effect = lambda e, throw=False: ""
+        with pytest.raises(FrappeValidationError, match="No valid email"):
+            api_module.send_campaign("CAMP-001", recipients=json.dumps(["nope", "also-nope"]))
 
     def test_recipients_json_string_is_parsed(self):
         doc = _campaign_doc()
