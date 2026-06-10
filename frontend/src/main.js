@@ -2,6 +2,7 @@ import { createApp } from "vue";
 import { createPinia } from "pinia";
 import { FrappeUI } from "frappe-ui";
 import App from "./App.vue";
+import "frappe-ui/editor-style.css";
 import "./style.css";
 
 function mountApp(target) {

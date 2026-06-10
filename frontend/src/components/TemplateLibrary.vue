@@ -1,66 +1,49 @@
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      @click.self="$emit('close')"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-3xl mx-4 flex flex-col max-h-[90vh]">
-
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 class="text-base font-semibold text-gray-900">Template Library</h2>
-            <p class="text-xs text-gray-400 mt-0.5">Pick a starting point — you can change everything</p>
+  <Dialog
+    :model-value="true"
+    title="Template Library"
+    message="Pick a starting point — you can change everything"
+    size="3xl"
+    @update:model-value="(v) => { if (!v) $emit('close') }"
+  >
+    <template #default>
+      <!-- Grid -->
+      <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
+        <button
+          v-for="tpl in templates"
+          :key="tpl.id"
+          type="button"
+          class="group text-left rounded-xl border-2 border-gray-100 hover:border-gray-900 transition-all overflow-hidden focus:outline-none focus:border-gray-900"
+          @click="apply(tpl)"
+        >
+          <!-- Visual thumbnail -->
+          <div class="bg-gray-50 px-4 pt-4 pb-2 space-y-1.5 min-h-[120px] flex flex-col justify-center">
+            <div
+              v-for="(row, i) in tpl.preview"
+              :key="i"
+              class="rounded transition-colors"
+              :class="row.class"
+              :style="row.style"
+            />
           </div>
-          <button
-            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            @click="$emit('close')"
-          ><FeatherIcon name="x" class="w-4 h-4" /></button>
-        </div>
-
-        <!-- Grid -->
-        <div class="flex-1 overflow-y-auto p-6">
-          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <button
-              v-for="tpl in templates"
-              :key="tpl.id"
-              type="button"
-              class="group text-left rounded-xl border-2 border-gray-100 hover:border-gray-900 transition-all overflow-hidden focus:outline-none focus:border-gray-900"
-              @click="apply(tpl)"
-            >
-              <!-- Visual thumbnail -->
-              <div class="bg-gray-50 px-4 pt-4 pb-2 space-y-1.5 min-h-[120px] flex flex-col justify-center">
-                <div
-                  v-for="(row, i) in tpl.preview"
-                  :key="i"
-                  class="rounded transition-colors"
-                  :class="row.class"
-                  :style="row.style"
-                />
-              </div>
-              <!-- Name + description -->
-              <div class="px-4 py-3 border-t border-gray-100">
-                <p class="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{{ tpl.name }}</p>
-                <p class="text-xs text-gray-400 mt-0.5 leading-snug">{{ tpl.description }}</p>
-              </div>
-            </button>
+          <!-- Name + description -->
+          <div class="px-4 py-3 border-t border-gray-100">
+            <p class="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{{ tpl.name }}</p>
+            <p class="text-xs text-gray-400 mt-0.5 leading-snug">{{ tpl.description }}</p>
           </div>
-        </div>
-
-        <!-- Footer note -->
-        <div class="px-6 py-3 border-t border-gray-100 flex-shrink-0">
-          <p class="text-xs text-gray-400">
-            Applying a template will <strong>replace</strong> your current canvas. Your saved campaign is not affected until you save.
-          </p>
-        </div>
-
+        </button>
       </div>
-    </div>
-  </Teleport>
+
+      <!-- Footer note -->
+      <p class="text-xs text-ink-gray-5 mt-5">
+        Applying a template will <strong>replace</strong> your current canvas. Your saved campaign is not affected until you save.
+      </p>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
-import { FeatherIcon } from "frappe-ui";
+import { Dialog } from "frappe-ui";
 
 const emit = defineEmits(["close", "apply"]);
 

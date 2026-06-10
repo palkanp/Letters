@@ -38,22 +38,24 @@
       <!-- Actions -->
       <div class="flex items-center gap-1.5 flex-shrink-0">
         <!-- Undo / Redo -->
-        <button
-          type="button"
-          class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
-          :class="editorStore.canUndo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
-          :disabled="!editorStore.canUndo"
-          title="Undo (⌘Z)"
-          @click="editorStore.undo()"
-        ><FeatherIcon name="corner-up-left" class="w-3.5 h-3.5" /></button>
-        <button
-          type="button"
-          class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
-          :class="editorStore.canRedo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
-          :disabled="!editorStore.canRedo"
-          title="Redo (⌘⇧Z)"
-          @click="editorStore.redo()"
-        ><FeatherIcon name="corner-up-right" class="w-3.5 h-3.5" /></button>
+        <Tooltip text="Undo (⌘Z)">
+          <button
+            type="button"
+            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
+            :class="editorStore.canUndo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
+            :disabled="!editorStore.canUndo"
+            @click="editorStore.undo()"
+          ><FeatherIcon name="corner-up-left" class="w-3.5 h-3.5" /></button>
+        </Tooltip>
+        <Tooltip text="Redo (⌘⇧Z)">
+          <button
+            type="button"
+            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
+            :class="editorStore.canRedo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
+            :disabled="!editorStore.canRedo"
+            @click="editorStore.redo()"
+          ><FeatherIcon name="corner-up-right" class="w-3.5 h-3.5" /></button>
+        </Tooltip>
 
         <div class="w-px h-4 bg-gray-200 mx-0.5" />
 
@@ -193,37 +195,28 @@
     </div>
   </div>
 
-  <!-- ── Block Picker overlay ───────────────────────────────────────────────── -->
-  <Teleport to="body">
-    <div
-      v-if="pickerTarget !== null"
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/25 backdrop-blur-sm"
-      @click.self="closePicker"
-    >
-      <div class="bg-white rounded-2xl shadow-2xl border border-gray-100 p-5 w-80">
-        <div class="flex items-center justify-between mb-4">
-          <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Add a block</span>
-          <button
-            type="button"
-            class="w-6 h-6 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100"
-            @click="closePicker"
-          ><FeatherIcon name="x" class="w-3.5 h-3.5" /></button>
-        </div>
-        <div class="grid grid-cols-3 gap-1.5">
-          <button
-            v-for="b in availableBlocks"
-            :key="b.type"
-            type="button"
-            class="flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-gray-600 hover:bg-gray-900 hover:text-white transition-colors group"
-            @click="insertBlock(b.type)"
-          >
-            <FeatherIcon :name="b.icon" class="w-4 h-4" />
-            <span class="text-xs font-medium leading-none">{{ b.label }}</span>
-          </button>
-        </div>
+  <!-- ── Block Picker (Dialog) ──────────────────────────────────────────────── -->
+  <Dialog
+    :model-value="pickerTarget !== null"
+    title="Add a block"
+    size="md"
+    @update:model-value="(v) => { if (!v) closePicker() }"
+  >
+    <template #default>
+      <div class="grid grid-cols-3 gap-1.5">
+        <button
+          v-for="b in availableBlocks"
+          :key="b.type"
+          type="button"
+          class="flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl text-gray-600 hover:bg-gray-900 hover:text-white transition-colors group"
+          @click="insertBlock(b.type)"
+        >
+          <FeatherIcon :name="b.icon" class="w-4 h-4" />
+          <span class="text-xs font-medium leading-none">{{ b.label }}</span>
+        </button>
       </div>
-    </div>
-  </Teleport>
+    </template>
+  </Dialog>
 
   <RecipientsModal
     v-if="showRecipientsModal"
@@ -243,7 +236,7 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted, watch, provide } from "vue";
-import { Button, TextInput, FeatherIcon, toast } from "frappe-ui";
+import { Button, TextInput, FeatherIcon, Dialog, Tooltip, toast } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import Inspector from "../components/Inspector.vue";
 import LayersPanel from "../components/LayersPanel.vue";

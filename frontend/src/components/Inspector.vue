@@ -65,12 +65,12 @@
                   :style="{ backgroundColor: value(field.key) || '#ffffff' }"
                 ></div>
               </div>
-              <input
+              <TextInput
+                class="flex-1"
+                size="sm"
                 type="text"
-                :value="value(field.key)"
-                @change="set(field.key, $event.target.value)"
-                class="flex-1 border border-gray-200 rounded-lg px-2.5 py-1.5 text-sm text-gray-700 font-mono uppercase focus:outline-none focus:ring-2 focus:ring-gray-300"
-                maxlength="7"
+                :modelValue="value(field.key)"
+                @update:modelValue="set(field.key, $event)"
               />
             </div>
 
@@ -253,22 +253,14 @@
 
       <!-- Block actions: Duplicate + Remove -->
       <div class="px-4 py-4 flex gap-2">
-        <button
-          type="button"
-          class="flex-1 flex items-center justify-center gap-1.5 text-sm text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg py-2 transition-colors border border-gray-200 hover:border-gray-300"
-          @click="store.duplicateBlock(block.id)"
-        >
-          <FeatherIcon name="copy" class="w-3.5 h-3.5" />
-          <span>Duplicate</span>
-        </button>
-        <button
-          type="button"
-          class="flex-1 flex items-center justify-center gap-1.5 text-sm text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg py-2 transition-colors border border-transparent hover:border-red-100"
-          @click="store.removeBlock(block.id)"
-        >
-          <FeatherIcon name="trash-2" class="w-3.5 h-3.5" />
-          <span>Remove</span>
-        </button>
+        <Button class="flex-1" @click="store.duplicateBlock(block.id)">
+          <template #prefix><FeatherIcon name="copy" class="w-3.5 h-3.5" /></template>
+          Duplicate
+        </Button>
+        <Button class="flex-1" theme="red" variant="subtle" @click="store.removeBlock(block.id)">
+          <template #prefix><FeatherIcon name="trash-2" class="w-3.5 h-3.5" /></template>
+          Remove
+        </Button>
       </div>
 
     </div>
@@ -277,7 +269,7 @@
 
 <script setup>
 import { computed, reactive, watch } from "vue";
-import { TextInput, Select, FeatherIcon } from "frappe-ui";
+import { TextInput, Select, Button, FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
 

@@ -1,25 +1,13 @@
 <template>
-  <Teleport to="body">
-    <div
-      class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-      @click.self="$emit('close')"
-    >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl mx-4 flex flex-col max-h-[90vh]">
-
-        <!-- Header -->
-        <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
-          <div>
-            <h2 class="text-base font-semibold text-gray-900">Select Recipients</h2>
-            <p class="text-xs text-gray-400 mt-0.5">{{ campaignName }}</p>
-          </div>
-          <button
-            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            @click="$emit('close')"
-          ><FeatherIcon name="x" class="w-4 h-4" /></button>
-        </div>
-
-        <!-- Body -->
-        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+  <Dialog
+    :model-value="true"
+    title="Select Recipients"
+    :message="campaignName"
+    size="xl"
+    @update:model-value="(v) => { if (!v) $emit('close') }"
+  >
+    <template #default>
+      <div class="space-y-5">
 
           <!-- Mode tabs -->
           <TabButtons
@@ -102,33 +90,34 @@
                 <label class="w-32 flex-shrink-0 text-xs text-gray-600 font-medium truncate" :title="ff.label">{{ ff.label }}</label>
 
                 <!-- Select field -->
-                <select
+                <Select
                   v-if="ff.fieldtype === 'Select'"
-                  class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                  :value="activeFilters[ff.fieldname] || ''"
-                  @change="setFilter(ff.fieldname, $event.target.value)"
-                >
-                  <option value="">— Any —</option>
-                  <option v-for="opt in ff.options" :key="opt" :value="opt">{{ opt }}</option>
-                </select>
+                  class="flex-1"
+                  size="sm"
+                  :model-value="activeFilters[ff.fieldname] || ''"
+                  :options="[{ label: '— Any —', value: '' }, ...ff.options.map(o => ({ label: o, value: o }))]"
+                  @update:model-value="setFilter(ff.fieldname, $event)"
+                />
 
                 <!-- Date/Datetime -->
-                <input
+                <DatePicker
                   v-else-if="ff.fieldtype === 'Date' || ff.fieldtype === 'Datetime'"
-                  type="date"
-                  class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                  :value="activeFilters[ff.fieldname] ? activeFilters[ff.fieldname][1] : ''"
-                  @change="setDateFilter(ff.fieldname, $event.target.value)"
+                  class="flex-1"
+                  size="sm"
+                  placeholder="On or after…"
+                  :model-value="activeFilters[ff.fieldname] ? activeFilters[ff.fieldname][1] : ''"
+                  @update:model-value="setDateFilter(ff.fieldname, $event)"
                 />
 
                 <!-- Link field — free text for now -->
-                <input
+                <TextInput
                   v-else
+                  class="flex-1"
+                  size="sm"
                   type="text"
                   :placeholder="`Filter by ${ff.label}…`"
-                  class="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400"
-                  :value="activeFilters[ff.fieldname] || ''"
-                  @input="setFilter(ff.fieldname, $event.target.value)"
+                  :model-value="activeFilters[ff.fieldname] || ''"
+                  @update:model-value="setFilter(ff.fieldname, $event)"
                 />
 
                 <!-- Clear filter -->
@@ -159,29 +148,28 @@
             </p>
           </div>
 
-        </div>
-
-        <!-- Footer -->
-        <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0 gap-3">
-          <p class="text-xs text-gray-400">
-            <template v-if="summaryText">{{ summaryText }}</template>
-            <template v-else>Configure who will receive this campaign.</template>
-          </p>
-          <Button
-            variant="solid"
-            :disabled="!canConfirm"
-            @click="confirm"
-          >Save recipients</Button>
-        </div>
-
       </div>
-    </div>
-  </Teleport>
+    </template>
+
+    <template #actions>
+      <div class="flex items-center justify-between gap-3 w-full">
+        <p class="text-xs text-ink-gray-5">
+          <template v-if="summaryText">{{ summaryText }}</template>
+          <template v-else>Configure who will receive this campaign.</template>
+        </p>
+        <Button
+          variant="solid"
+          :disabled="!canConfirm"
+          @click="confirm"
+        >Save recipients</Button>
+      </div>
+    </template>
+  </Dialog>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { Button, TabButtons, Textarea, Select, FeatherIcon } from "frappe-ui";
+import { Dialog, Button, TabButtons, Textarea, Select, DatePicker, TextInput, FeatherIcon } from "frappe-ui";
 
 const props = defineProps({ campaignName: String, campaignDoc: Object });
 const emit  = defineEmits(["close", "saved"]);
