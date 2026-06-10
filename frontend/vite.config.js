@@ -27,6 +27,14 @@ export default defineConfig({
       },
     },
   },
+  optimizeDeps: {
+    // frappe-ui ships raw source with `~icons/...` imports that only its vite
+    // plugin can resolve — esbuild's dep-scan must not crawl into it.
+    exclude: ["frappe-ui"],
+    // CJS deps of frappe-ui still need ESM pre-bundling since the exclude
+    // above stops vite from discovering them automatically.
+    include: ["feather-icons", "showdown", "highlight.js/lib/core", "interactjs"],
+  },
   server: {
     port: 8080,
     proxy: {

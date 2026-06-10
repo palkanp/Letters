@@ -39,22 +39,24 @@
       <div class="flex items-center gap-1.5 flex-shrink-0">
         <!-- Undo / Redo -->
         <Tooltip text="Undo (⌘Z)">
-          <button
-            type="button"
-            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
-            :class="editorStore.canUndo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="corner-up-left"
             :disabled="!editorStore.canUndo"
+            aria-label="Undo"
             @click="editorStore.undo()"
-          ><FeatherIcon name="corner-up-left" class="w-3.5 h-3.5" /></button>
+          />
         </Tooltip>
         <Tooltip text="Redo (⌘⇧Z)">
-          <button
-            type="button"
-            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 transition-colors"
-            :class="editorStore.canRedo ? 'hover:text-gray-700 hover:bg-gray-100' : 'opacity-30 cursor-not-allowed'"
+          <Button
+            variant="ghost"
+            size="sm"
+            icon="corner-up-right"
             :disabled="!editorStore.canRedo"
+            aria-label="Redo"
             @click="editorStore.redo()"
-          ><FeatherIcon name="corner-up-right" class="w-3.5 h-3.5" /></button>
+          />
         </Tooltip>
 
         <div class="w-px h-4 bg-gray-200 mx-0.5" />
@@ -94,7 +96,7 @@
           Test
         </Button>
         <!-- Send button — sends directly, no popup -->
-        <Button variant="subtle" size="sm" :loading="sending" :disabled="!editorStore.campaignDoc || sending" @click="sendCampaign">Send</Button>
+        <Button variant="solid" size="sm" :loading="sending" :disabled="!editorStore.campaignDoc || sending" @click="sendCampaign">Send</Button>
       </div>
     </header>
 
@@ -124,24 +126,14 @@
 
         <!-- Add block / Add container buttons pinned to bottom -->
         <div class="flex-shrink-0 p-3 border-t border-gray-100 flex flex-col gap-2">
-          <button
-            type="button"
-            class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
-                   bg-gray-900 text-white text-xs font-semibold
-                   hover:bg-gray-700 transition-colors"
-            @click.stop="onAddBlock"
-          >
-            <FeatherIcon name="plus" class="w-3.5 h-3.5" /> Add block
-          </button>
-          <button
-            type="button"
-            class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
-                   border border-gray-200 text-gray-600 text-xs font-semibold
-                   hover:bg-gray-100 hover:border-gray-300 transition-colors"
-            @click.stop="addContainer"
-          >
-            <FeatherIcon name="box" class="w-3.5 h-3.5" /> Add container
-          </button>
+          <Button variant="solid" class="w-full" @click.stop="onAddBlock">
+            <template #prefix><FeatherIcon name="plus" class="w-3.5 h-3.5" /></template>
+            Add block
+          </Button>
+          <Button variant="outline" class="w-full" @click.stop="addContainer">
+            <template #prefix><FeatherIcon name="box" class="w-3.5 h-3.5" /></template>
+            Add container
+          </Button>
         </div>
       </aside>
 
