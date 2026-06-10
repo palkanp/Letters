@@ -290,6 +290,29 @@ class TestSendCampaignValidation:
         with pytest.raises(FrappeValidationError, match="above the per-campaign limit"):
             api_module.send_campaign("CAMP-001", recipients=json.dumps(oversized))
 
+    def test_unsubscribed_recipients_are_filtered_out(self):
+        """H2: addresses in Email Unsubscribe are dropped before sending."""
+        doc = _campaign_doc()
+        send_doc_mock = MagicMock()
+        send_doc_mock.name = "SD-NEW"
+
+        def get_doc_se(arg, *args):
+            return send_doc_mock if isinstance(arg, dict) else doc
+
+        frappe_stub.get_doc.side_effect = get_doc_se
+        GETALL["Email Unsubscribe"] = ["gone@b.com"]
+
+        result = api_module.send_campaign(
+            "CAMP-001", recipients=json.dumps(["gone@b.com", "stay@b.com"])
+        )
+        assert result["count"] == 1  # only stay@b.com survives
+
+    def test_throws_when_all_recipients_unsubscribed(self):
+        frappe_stub.get_doc.return_value = _campaign_doc()
+        GETALL["Email Unsubscribe"] = ["gone@b.com"]
+        with pytest.raises(FrappeValidationError, match="unsubscribed"):
+            api_module.send_campaign("CAMP-001", recipients=json.dumps(["gone@b.com"]))
+
     def test_recipients_json_string_is_parsed(self):
         doc = _campaign_doc()
         send_doc_mock = MagicMock()
@@ -481,15 +504,12 @@ class TestExecuteSend:
         frappe_stub.db.set_value.assert_any_call("Letters Campaign", "CAMP-001", "status", "Failed")
         frappe_stub.db.set_value.assert_any_call("Email Send", "SD-001", "status", "Failed")
 
-    def test_email_group_mode_passes_unsubscribe_params(self):
-        self._docs(recipients=[_recipient("a@b.com")], send_mode="email_group", email_group="GROUP-A")
+    @pytest.mark.parametrize("send_mode", ["direct", "email_group"])
+    def test_every_mode_sets_campaign_reference_for_unsubscribe(self, send_mode):
+        """H2: every send mode passes a reference doc so Frappe injects the
+        signed unsubscribe footer + confirmation page."""
+        self._docs(recipients=[_recipient("a@b.com")], send_mode=send_mode)
         self._run()
         kw = frappe_stub.sendmail.call_args.kwargs
-        assert "unsubscribe_method" in kw
-        assert kw["unsubscribe_params"] == {"email_group": "GROUP-A"}
-
-    def test_direct_mode_does_not_add_unsubscribe_params(self):
-        self._docs(recipients=[_recipient("a@b.com")], send_mode="direct")
-        self._run()
-        kw = frappe_stub.sendmail.call_args.kwargs
-        assert "unsubscribe_method" not in kw
+        assert kw["reference_doctype"] == "Letters Campaign"
+        assert kw["reference_name"] == "CAMP-001"

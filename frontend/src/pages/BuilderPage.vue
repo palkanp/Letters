@@ -602,7 +602,7 @@ async function sendTest() {
         preview_text: previewText.value,
       },
     });
-    toast.success(`Test sent to ${res.message.sent_to}!`);
+    toast.success(`Test queued to ${res.message.sent_to} — it'll arrive shortly.`);
   } catch (e) {
     toast.error("Test send failed: " + describeError(e));
   } finally {

@@ -125,11 +125,13 @@ def send_test(blocks=None, subject=None, preview_text=None, name=None):
     email = frappe.session.user
     test_subject = f"[TEST] {subject or 'Email Preview'}"
 
+    # Queue rather than send inline (now=False): a slow SMTP server must not
+    # block the web request. The email queue worker delivers it shortly.
     frappe.sendmail(
         recipients=[email],
         subject=test_subject,
         message=html,
-        now=True,
+        now=False,
     )
     return {"sent_to": email}
 
@@ -297,6 +299,26 @@ def get_email_groups():
     return groups
 
 
+def _suppressed_emails():
+    """Addresses that have unsubscribed from Letters (any campaign) or globally.
+
+    Reuses Frappe's native Email Unsubscribe store, which is populated by the
+    signed unsubscribe footer Frappe injects into every campaign email (see the
+    reference_doctype/reference_name passed in _execute_send). Filtering here
+    makes an unsubscribe apply across *all* Letters campaigns, not just resends
+    of the one the recipient clicked from."""
+    rows = frappe.get_all(
+        "Email Unsubscribe",
+        or_filters=[
+            {"reference_doctype": "Letters Campaign"},
+            {"global_unsubscribe": 1},
+        ],
+        pluck="email",
+        distinct=True,
+    )
+    return {e for e in rows if e}
+
+
 @frappe.whitelist()
 def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     """
@@ -374,6 +396,13 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
         email_group = None
         mode = "direct"
 
+    # ── Honour unsubscribes before sending ───────────────────────────────────
+    suppressed = _suppressed_emails()
+    if suppressed:
+        recipient_list = [e for e in recipient_list if e not in suppressed]
+    if not recipient_list:
+        frappe.throw(_("All selected recipients have unsubscribed from this campaign."))
+
     # ── Guard against an oversized audience (no silent truncation) ───────────
     if len(recipient_list) > MAX_RECIPIENTS:
         frappe.throw(_(
@@ -434,12 +463,6 @@ def _enqueue_send(send_doc_name, campaign_name):
     )
 
 
-# Frappe's built-in Email Group unsubscribe endpoint.
-_EMAIL_GROUP_UNSUBSCRIBE = (
-    "/api/method/frappe.email.doctype.email_group.email_group.unsubscribe"
-)
-
-
 def _execute_send(send_doc_name, campaign_name):
     """
     Background job: compile the campaign and send one email per recipient,
@@ -456,27 +479,26 @@ def _execute_send(send_doc_name, campaign_name):
         compiler = EmailCompiler(doc.blocks_json, preview_text=doc.preview_text)
         html = compiler.compile()
 
-        mode        = send_doc.send_mode
-        email_group = send_doc.email_group
-
         sent = failed = 0
         for idx, row in enumerate(send_doc.recipients):
             if row.status == "Sent":
                 sent += 1
                 continue
 
-            kwargs = dict(
-                recipients=[row.email],
-                subject=doc.subject,
-                message=html,
-                now=False,
-            )
-            if mode == "email_group" and email_group:
-                kwargs["unsubscribe_method"] = _EMAIL_GROUP_UNSUBSCRIBE
-                kwargs["unsubscribe_params"] = {"email_group": email_group}
-
             try:
-                frappe.sendmail(**kwargs)
+                # Setting a reference doc makes Frappe inject a signed
+                # unsubscribe footer (with a guest confirmation page) and
+                # auto-suppress Email Unsubscribe matches — for every send mode,
+                # not just Email Groups. Recipients already opted out were
+                # filtered in send_campaign via _suppressed_emails().
+                frappe.sendmail(
+                    recipients=[row.email],
+                    subject=doc.subject,
+                    message=html,
+                    now=False,
+                    reference_doctype="Letters Campaign",
+                    reference_name=campaign_name,
+                )
                 row.status = "Sent"
                 frappe.db.set_value(
                     "Email Send Recipient", row.name, "status", "Sent",
