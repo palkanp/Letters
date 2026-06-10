@@ -77,6 +77,26 @@ def _is_email_field(df):
 
 
 @frappe.whitelist()
+def duplicate_campaign(name):
+    """Create an exact copy of a campaign as a new Draft."""
+    original = frappe.get_doc("Letters Campaign", name)
+    frappe.has_permission("Letters Campaign", "read", doc=original, throw=True)
+    frappe.has_permission("Letters Campaign", "create", throw=True)
+
+    new_doc = frappe.get_doc({
+        "doctype": "Letters Campaign",
+        "title": f"Copy of {original.title}",
+        "subject": original.subject or "",
+        "preview_text": original.preview_text or "",
+        "status": "Draft",
+        "blocks_json": original.blocks_json or "[]",
+    })
+    new_doc.insert()
+    frappe.db.commit()
+    return {"name": new_doc.name, "title": new_doc.title}
+
+
+@frappe.whitelist()
 def send_test(blocks=None, subject=None, preview_text=None, name=None):
     """Send a test email to the currently logged-in user."""
     from letters.letters.utils.email_compiler import EmailCompiler

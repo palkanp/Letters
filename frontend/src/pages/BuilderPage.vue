@@ -74,6 +74,10 @@
           </template>
           Save
         </Button>
+        <Button variant="ghost" size="sm" :loading="duplicating" :disabled="!editorStore.campaignDoc || duplicating" title="Duplicate this campaign" @click="duplicateCampaign">
+          <template #prefix><FeatherIcon name="copy" class="w-3.5 h-3.5" /></template>
+          Duplicate
+        </Button>
 
         <div class="w-px h-4 bg-gray-200 mx-0.5" />
 
@@ -257,6 +261,7 @@ const showTemplateLibrary = ref(false);
 const recipientConfig = ref(null); // { type, email_group | recipients | (doctype + email_field + filters) }
 const sending = ref(false);
 const testSending = ref(false);
+const duplicating = ref(false);
 const subject    = ref("");
 const previewText = ref("");
 
@@ -574,6 +579,25 @@ async function sendCampaign() {
 function onRecipientsSaved(config) {
   recipientConfig.value = config;
   showRecipientsModal.value = false;
+}
+
+// ── Duplicate ─────────────────────────────────────────────────────────────────
+async function duplicateCampaign() {
+  if (!editorStore.campaignDoc?.name) return;
+  duplicating.value = true;
+  try {
+    const res = await frappe.call({
+      method: "letters.letters.api.duplicate_campaign",
+      args: { name: editorStore.campaignDoc.name },
+    });
+    const newName = res.message.name;
+    toast.success(`Duplicated as "${res.message.title}" — opening it now.`);
+    // Navigate to the new campaign in the same tab
+    window.location.href = `/app/letters-builder?name=${encodeURIComponent(newName)}`;
+  } catch (e) {
+    toast.error("Duplicate failed: " + describeError(e));
+    duplicating.value = false;
+  }
 }
 
 // ── Test send ─────────────────────────────────────────────────────────────────
