@@ -372,7 +372,7 @@ async function openPreview() {
   // Open the window BEFORE the async call — browsers only allow window.open
   // inside a synchronous user-gesture handler. Opening it after an await
   // makes the popup blocker kill it silently.
-  const win = window.open("", "_blank", "noopener");
+  const win = window.open("", "_blank");
   if (!win) {
     toast.warning("Pop-up blocked — allow pop-ups for this site to use Preview.");
     return;
