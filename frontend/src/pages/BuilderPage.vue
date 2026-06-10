@@ -50,6 +50,12 @@
           </template>
           Save
         </Button>
+        <!-- Recipients button — configure who to send to -->
+        <Button variant="ghost" size="sm" :disabled="!editorStore.campaignDoc" @click="showRecipientsModal = true">
+          <template #prefix><FeatherIcon name="users" class="w-3.5 h-3.5" /></template>
+          Recipients
+        </Button>
+        <!-- Send button — just sends using configured recipients -->
         <Button variant="subtle" size="sm" :disabled="!editorStore.campaignDoc" @click="openSendModal">Send</Button>
       </div>
     </header>
@@ -58,7 +64,15 @@
     <div class="flex flex-1 overflow-hidden">
 
       <!-- Permanent left sidebar: Layers + Add block -->
-      <aside class="flex-shrink-0 w-52 bg-white border-r border-gray-200 flex flex-col">
+      <aside
+        class="flex-shrink-0 bg-white border-r border-gray-200 flex flex-col relative"
+        :style="{ width: leftPanelWidth + 'px' }"
+      >
+        <!-- Drag handle (right edge) -->
+        <div
+          class="absolute top-0 right-0 h-full w-1 cursor-col-resize hover:bg-blue-400 opacity-0 hover:opacity-100 z-20 transition-opacity"
+          @mousedown="startLeftResize"
+        />
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
           <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Layers</span>
@@ -131,8 +145,14 @@
         </div>
       </main>
 
+      <!-- Drag handle (left edge of Inspector) -->
+      <div
+        class="flex-shrink-0 w-1 bg-transparent hover:bg-blue-400 cursor-col-resize z-20 transition-colors"
+        @mousedown="startRightResize"
+      />
+
       <!-- Right: Inspector -->
-      <Inspector />
+      <Inspector :width="rightPanelWidth" />
 
     </div>
   </div>
@@ -169,12 +189,22 @@
     </div>
   </Teleport>
 
+  <RecipientsModal
+    v-if="showRecipientsModal"
+    :campaign-name="editorStore.campaignName"
+    :campaign-doc="editorStore.campaignDoc"
+    @close="showRecipientsModal = false"
+    @saved="onRecipientsSaved"
+  />
+
   <SendModal
     v-if="showSendModal"
     :campaign-name="editorStore.campaignName"
     :campaign-doc="editorStore.campaignDoc"
+    :recipient-config="recipientConfig"
     @close="showSendModal = false"
     @sent="onSent"
+    @open-recipients="showSendModal = false; showRecipientsModal = true"
   />
 </template>
 
@@ -185,6 +215,7 @@ import { useEditorStore } from "../stores/editor";
 import Inspector from "../components/Inspector.vue";
 import LayersPanel from "../components/LayersPanel.vue";
 import SendModal from "../components/SendModal.vue";
+import RecipientsModal from "../components/RecipientsModal.vue";
 import BlockAdderRow from "../components/BlockAdderRow.vue";
 import BlockRenderer from "../components/BlockRenderer.vue";
 
@@ -193,8 +224,46 @@ const saving        = ref(false);
 const previewing    = ref(false);
 const loadingCampaign = ref(false);
 const showSendModal = ref(false);
+const showRecipientsModal = ref(false);
+const recipientConfig = ref(null); // { type, email_group | recipients | (doctype + email_field + filters) }
 const subject    = ref("");
 const previewText = ref("");
+
+// ── Panel resize ──────────────────────────────────────────────────────────────
+const leftPanelWidth  = ref(208); // 52 * 4px = 208
+const rightPanelWidth = ref(288); // 72 * 4px = 288
+const MIN_PANEL = 160;
+const MAX_PANEL = 480;
+
+function startLeftResize(e) {
+  e.preventDefault();
+  const startX = e.clientX;
+  const startW = leftPanelWidth.value;
+  function onMove(ev) {
+    leftPanelWidth.value = Math.min(MAX_PANEL, Math.max(MIN_PANEL, startW + ev.clientX - startX));
+  }
+  function onUp() {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  }
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+}
+
+function startRightResize(e) {
+  e.preventDefault();
+  const startX = e.clientX;
+  const startW = rightPanelWidth.value;
+  function onMove(ev) {
+    rightPanelWidth.value = Math.min(MAX_PANEL, Math.max(MIN_PANEL, startW - (ev.clientX - startX)));
+  }
+  function onUp() {
+    window.removeEventListener("mousemove", onMove);
+    window.removeEventListener("mouseup", onUp);
+  }
+  window.addEventListener("mousemove", onMove);
+  window.addEventListener("mouseup", onUp);
+}
 
 // ── Unsaved changes protection ────────────────────────────────────────────────
 function beforeUnloadHandler(e) {
@@ -388,6 +457,11 @@ function openSendModal() {
     return;
   }
   showSendModal.value = true;
+}
+
+function onRecipientsSaved(config) {
+  recipientConfig.value = config;
+  showRecipientsModal.value = false;
 }
 
 function onSent() {

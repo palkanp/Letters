@@ -39,7 +39,8 @@ const paddingStyle = usePadding(blockProps);
 
 const { elRef: contentRef, onFocus, onBlur, onPaste, onKeydown } = useContentEditable(
   () => props.block.props.content,
-  (val) => update("content", val)
+  (val) => update("content", val),
+  { multiline: true },
 );
 
 const alignClass = computed(() => ({

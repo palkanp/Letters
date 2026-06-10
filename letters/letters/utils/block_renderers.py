@@ -165,7 +165,7 @@ class HeroRenderer(BlockRenderer):
 class TextRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p = block.get("props", {})
-        content        = escape(p.get("content", ""))
+        raw_content    = p.get("content", "")
         align          = escape(p.get("align", "left"))
         size           = escape(p.get("font_size", "15px"))
         weight         = escape(str(p.get("font_weight", "400")))
@@ -173,13 +173,24 @@ class TextRenderer(BlockRenderer):
         line_height    = escape(str(p.get("line_height", "1.6")))
         letter_spacing = escape(p.get("letter_spacing", "normal"))
 
+        # Content may be plain text or HTML (multiline text blocks save innerHTML).
+        # Detect by presence of any < character and sanitize accordingly.
+        if "<" in raw_content:
+            content = _sanitize_rich_html(raw_content)
+        else:
+            content = escape(raw_content)
+
+        base_style = (
+            f"margin:0;font-family:Arial,sans-serif;font-size:{size};"
+            f"color:{color};line-height:{line_height};text-align:{align};"
+            f"font-weight:{weight};letter-spacing:{letter_spacing};"
+        )
+
         padding = _padding(p, 20, 32, 20, 32)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr><td align="{align}" style="padding:{padding};">'
-            f'<p style="margin:0;font-family:Arial,sans-serif;font-size:{size};'
-            f'color:{color};line-height:{line_height};text-align:{align};'
-            f'font-weight:{weight};letter-spacing:{letter_spacing};">{content}</p>'
+            f'<div style="{base_style}">{content}</div>'
             f'</td></tr></table>'
         )
         return _spacing_wrapper(html, p)

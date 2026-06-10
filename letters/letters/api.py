@@ -158,6 +158,63 @@ def get_emails_from_doctype(doctype, email_field, search=None):
 
 
 @frappe.whitelist()
+def get_doctype_filter_fields(doctype):
+    """Return fields suitable as filters for the given doctype.
+
+    Returns Select, Link, and Date/Datetime fields so the user can
+    narrow recipients by criteria like Status, Territory, or creation date.
+    Also always includes "creation" and "modified" system fields.
+    """
+    frappe.has_permission(doctype, "read", throw=True)
+    meta = frappe.get_meta(doctype)
+
+    FILTER_TYPES = {"Select", "Link", "Date", "Datetime"}
+    fields = []
+    seen = set()
+
+    for df in meta.fields:
+        if df.fieldtype not in FILTER_TYPES:
+            continue
+        if df.fieldname in seen:
+            continue
+        seen.add(df.fieldname)
+        entry = {
+            "fieldname": df.fieldname,
+            "label": df.label or df.fieldname,
+            "fieldtype": df.fieldtype,
+        }
+        if df.fieldtype == "Select" and df.options:
+            entry["options"] = [o for o in df.options.split("\n") if o.strip()]
+        elif df.fieldtype == "Link":
+            entry["options_doctype"] = df.options or ""
+        fields.append(entry)
+
+    # Always offer creation date filter
+    for sys_field in ("creation", "modified"):
+        if sys_field not in seen:
+            fields.append({
+                "fieldname": sys_field,
+                "label": sys_field.capitalize(),
+                "fieldtype": "Datetime",
+            })
+
+    return fields
+
+
+@frappe.whitelist()
+def count_doctype_recipients(doctype, email_field, filters=None):
+    """Preview how many records match the given filter config."""
+    frappe.has_permission(doctype, "read", throw=True)
+    filter_dict = json.loads(filters) if isinstance(filters, str) else (filters or {})
+    filter_dict[email_field] = ["!=", ""]
+    try:
+        count = frappe.db.count(doctype, filter_dict)
+    except Exception:
+        count = 0
+    return {"count": count}
+
+
+@frappe.whitelist()
 def get_email_groups():
     """Return all Email Groups with active member counts (single GROUP BY query)."""
     groups = frappe.get_all(
@@ -183,13 +240,15 @@ def get_email_groups():
 
 
 @frappe.whitelist()
-def send_campaign(name, recipients=None, email_group=None):
+def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     """
     Compile and send a campaign.
 
-    Pass either:
-      - email_group: name of a Frappe Email Group (respects unsubscribes, adds unsubscribe link)
-      - recipients:  JSON string or list of email addresses (direct send, no unsubscribe tracking)
+    Pass one of:
+      - email_group:    name of a Frappe Email Group (respects unsubscribes)
+      - recipients:     JSON string or list of email addresses
+      - doctype_config: JSON string/dict with keys:
+                          doctype, email_field, filters (dict of frappe filter expressions)
 
     The actual per-recipient loop is enqueued as a background job so large lists
     do not block the web request or risk a gunicorn timeout.
@@ -222,6 +281,21 @@ def send_campaign(name, recipients=None, email_group=None):
         if not recipient_list:
             frappe.throw(_("The selected Email Group has no active subscribers."))
         mode = "email_group"
+    elif doctype_config:
+        cfg = json.loads(doctype_config) if isinstance(doctype_config, str) else doctype_config
+        dt         = cfg.get("doctype")
+        email_fld  = cfg.get("email_field")
+        filters    = cfg.get("filters") or {}
+        if not dt or not email_fld:
+            frappe.throw(_("doctype_config must include doctype and email_field."))
+        frappe.has_permission(dt, "read", throw=True)
+        filters[email_fld] = ["!=", ""]
+        rows = frappe.get_all(dt, filters=filters, fields=[email_fld], limit=10000)
+        recipient_list = [r.get(email_fld, "").strip() for r in rows if r.get(email_fld, "").strip()]
+        if not recipient_list:
+            frappe.throw(_("No records match the selected filters."))
+        email_group = None
+        mode = "direct"
     else:
         if isinstance(recipients, str):
             recipients = json.loads(recipients)

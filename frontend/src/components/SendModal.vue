@@ -4,7 +4,7 @@
       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
       @click.self="$emit('close')"
     >
-      <div class="bg-white rounded-xl shadow-2xl w-full max-w-xl mx-4 flex flex-col max-h-[90vh]">
+      <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
 
         <!-- Header -->
         <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between flex-shrink-0">
@@ -12,136 +12,39 @@
             <h2 class="text-base font-semibold text-gray-900">Send Campaign</h2>
             <p class="text-xs text-gray-400 mt-0.5">{{ campaignName }}</p>
           </div>
-          <button class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors" @click="$emit('close')"><FeatherIcon name="x" class="w-4 h-4" /></button>
+          <button
+            class="w-7 h-7 flex items-center justify-center rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            @click="$emit('close')"
+          ><FeatherIcon name="x" class="w-4 h-4" /></button>
         </div>
 
         <!-- Body -->
-        <div class="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+        <div class="px-6 py-5 space-y-4">
 
-          <!-- Mode tabs -->
-          <TabButtons
-            :buttons="tabs.map(t => ({ label: t.label, value: t.id }))"
-            v-model="mode"
-          />
-
-          <!-- ── Tab: Email Group ── -->
-          <div v-if="mode === 'group'" class="space-y-4">
-            <div v-if="loadingGroups" class="text-xs text-gray-400 py-2">Loading groups…</div>
-            <div v-else-if="emailGroups.length === 0" class="rounded-lg border border-dashed border-gray-200 px-4 py-6 text-center">
-              <p class="text-sm text-gray-500 font-medium">No Email Groups found</p>
-              <p class="text-xs text-gray-400 mt-1">
-                Create one by searching for <strong>Email Group</strong> in the Frappe search bar to manage subscriber lists with unsubscribe support.
-              </p>
-            </div>
-            <div v-else class="space-y-2">
-              <label
-                v-for="g in emailGroups"
-                :key="g.name"
-                class="flex items-center gap-3 px-4 py-3 rounded-lg border cursor-pointer transition-colors"
-                :class="selectedGroup === g.name
-                  ? 'border-gray-900 bg-gray-50'
-                  : 'border-gray-200 hover:border-gray-300'"
-              >
-                <input type="radio" v-model="selectedGroup" :value="g.name" class="accent-gray-900" />
-                <div class="flex-1 min-w-0">
-                  <p class="text-sm font-medium text-gray-800">{{ g.title || g.name }}</p>
-                  <p class="text-xs text-gray-400">{{ g.count }} active subscriber{{ g.count === 1 ? "" : "s" }}</p>
-                </div>
-                <span v-if="selectedGroup === g.name" class="text-xs text-gray-500 font-medium">Selected</span>
-              </label>
-            </div>
-            <p class="text-xs text-gray-400">
-              Unsubscribe links are added automatically for Email Group sends.
-            </p>
-          </div>
-
-          <!-- ── Tab: Paste emails ── -->
-          <div v-if="mode === 'paste'" class="space-y-3">
-            <Textarea
-              v-model="pastedEmails"
-              :rows="6"
-              placeholder="one@example.com&#10;two@example.com&#10;three@example.com"
-              size="sm"
-            />
-            <p class="text-xs text-gray-400">One email per line, or comma- or semicolon-separated.</p>
-            <div v-if="parsedPasted.length > 0" class="text-xs text-gray-500 font-medium">
-              {{ parsedPasted.length }} valid email{{ parsedPasted.length === 1 ? "" : "s" }} detected
+          <!-- Recipients summary -->
+          <div v-if="recipientConfig" class="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 flex items-start gap-3">
+            <FeatherIcon name="users" class="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" />
+            <div class="min-w-0">
+              <p class="text-xs font-semibold text-gray-700">{{ recipientSummary }}</p>
+              <button
+                type="button"
+                class="text-xs text-blue-600 hover:underline mt-0.5"
+                @click="$emit('open-recipients')"
+              >Change recipients</button>
             </div>
           </div>
 
-          <!-- ── Tab: Pick from DocType ── -->
-          <div v-if="mode === 'doctype'" class="space-y-3">
-            <!-- DocType select -->
+          <!-- No recipients configured -->
+          <div v-else class="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-3">
+            <FeatherIcon name="alert-circle" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
-              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">DocType</label>
-              <Select
-                v-model="selectedDoctype"
-                :options="doctypes"
-                placeholder="Select DocType"
-                size="sm"
-                @update:modelValue="onDoctypeChange"
-              />
+              <p class="text-xs font-medium text-amber-700">No recipients configured.</p>
+              <button
+                type="button"
+                class="text-xs text-blue-600 hover:underline mt-0.5"
+                @click="$emit('open-recipients')"
+              >Select recipients first</button>
             </div>
-
-            <!-- Email field (only if multiple) -->
-            <div v-if="emailFields.length > 1">
-              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Email field</label>
-              <Select
-                v-model="selectedField"
-                :options="emailFields.map(f => ({ label: `${f.label} (${f.fieldname})`, value: f.fieldname }))"
-                placeholder="Select field"
-                size="sm"
-                @update:modelValue="loadRecords"
-              />
-            </div>
-
-            <!-- Search + records -->
-            <div v-if="selectedDoctype && selectedField">
-              <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide mb-1.5">Pick recipients</label>
-              <input
-                v-model="search"
-                type="text"
-                placeholder="Search by email…"
-                class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-gray-400 mb-2"
-                @input="onSearch"
-              />
-              <div v-if="loadingRecords" class="text-xs text-gray-400 py-2">Loading…</div>
-              <div v-else-if="records.length === 0" class="text-xs text-gray-400 py-2">No records found.</div>
-              <div v-else class="border border-gray-100 rounded-lg overflow-hidden">
-                <label class="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer hover:bg-gray-100">
-                  <input
-                    type="checkbox"
-                    :checked="allSelected"
-                    :indeterminate.prop="someSelected && !allSelected"
-                    class="rounded"
-                    @change="toggleAll"
-                  />
-                  <span class="text-xs font-medium text-gray-600">Select all ({{ records.length }}{{ recordsTruncated ? '+' : '' }})</span>
-                </label>
-                <label
-                  v-for="rec in records"
-                  :key="rec.email"
-                  class="flex items-center gap-3 px-3 py-2 border-b border-gray-50 last:border-0 cursor-pointer hover:bg-gray-50"
-                >
-                  <input type="checkbox" :value="rec.email" v-model="pickedEmails" class="rounded" />
-                  <div class="min-w-0">
-                    <p class="text-sm text-gray-800 truncate">{{ rec.label }}</p>
-                    <p class="text-xs text-gray-400 truncate">{{ rec.email }}</p>
-                  </div>
-                </label>
-              </div>
-              <p v-if="recordsTruncated" class="text-xs text-amber-600 mt-2 flex items-center gap-1.5">
-                <FeatherIcon name="alert-circle" class="w-3 h-3 flex-shrink-0" />
-                Showing first 50 results. Use the search box to narrow results.
-              </p>
-            </div>
-          </div>
-
-          <!-- Recipient summary -->
-          <div v-if="recipientSummary" class="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3">
-            <p class="text-xs font-semibold text-gray-700">
-              {{ recipientSummary }}
-            </p>
           </div>
 
           <!-- Error -->
@@ -152,19 +55,17 @@
             <FeatherIcon name="check" class="w-3.5 h-3.5 flex-shrink-0" />
             Queued for {{ sentCount }} recipient{{ sentCount === 1 ? "" : "s" }}. Campaign marked as Ready.
           </div>
-
         </div>
 
         <!-- Footer -->
-        <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-between flex-shrink-0 gap-3">
-          <p class="text-xs text-gray-400">Sent via your Frappe outgoing mail settings.</p>
+        <div class="px-6 py-4 border-t border-gray-100 flex items-center justify-end gap-3 flex-shrink-0">
+          <Button variant="ghost" size="sm" @click="$emit('close')">Cancel</Button>
           <Button
             variant="solid"
-            :disabled="!canSend || sending"
+            size="sm"
+            :disabled="!recipientConfig || sending || !!sentCount"
             @click="send"
-          >
-            {{ sending ? "Sending…" : sendLabel }}
-          </Button>
+          >{{ sending ? "Sending…" : sendLabel }}</Button>
         </div>
 
       </div>
@@ -173,171 +74,56 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { Button, TabButtons, Textarea, Select, FeatherIcon } from "frappe-ui";
+import { ref, computed } from "vue";
+import { Button, FeatherIcon } from "frappe-ui";
 
 const props = defineProps({
-  campaignName: String,
-  campaignDoc: Object,
+  campaignName:    String,
+  campaignDoc:     Object,
+  recipientConfig: Object,  // { type, email_group | recipients | (doctype + email_field + filters) }
 });
-const emit = defineEmits(["close", "sent"]);
+const emit = defineEmits(["close", "sent", "open-recipients"]);
 
-// ── Tabs ──────────────────────────────────────────────────────────────────────
-const tabs = [
-  { id: "group",   label: "Email Group" },
-  { id: "paste",   label: "Paste Emails" },
-  { id: "doctype", label: "From DocType" },
-];
-const mode = ref("group");
-
-// ── Email Group ───────────────────────────────────────────────────────────────
-const emailGroups   = ref([]);
-const selectedGroup = ref("");
-const loadingGroups = ref(false);
-
-async function loadEmailGroups() {
-  loadingGroups.value = true;
-  try {
-    const res = await frappe.call({ method: "letters.letters.api.get_email_groups" });
-    emailGroups.value = res.message || [];
-  } catch {
-    emailGroups.value = [];
-  } finally {
-    loadingGroups.value = false;
-  }
-}
-
-// ── Paste ─────────────────────────────────────────────────────────────────────
-const pastedEmails = ref("");
-const parsedPasted = computed(() =>
-  pastedEmails.value
-    .split(/[\n,;]/)
-    .map((e) => e.trim().toLowerCase())
-    .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
-);
-
-// ── DocType picker ────────────────────────────────────────────────────────────
-const doctypes        = ref([]);
-const selectedDoctype = ref("");
-const emailFields     = ref([]);
-const selectedField   = ref("");
-const search          = ref("");
-const records         = ref([]);
-const recordsTruncated = ref(false);
-const pickedEmails    = ref([]);
-const loadingRecords  = ref(false);
-
-const allSelected = computed(
-  () => records.value.length > 0 && records.value.every((r) => pickedEmails.value.includes(r.email))
-);
-const someSelected = computed(() => pickedEmails.value.length > 0);
-
-async function loadDoctypes() {
-  try {
-    const res = await frappe.call({ method: "letters.letters.api.get_doctypes_with_email_fields" });
-    doctypes.value = res.message || [];
-  } catch { /* paste still works */ }
-}
-
-async function onDoctypeChange() {
-  selectedField.value = "";
-  records.value = [];
-  pickedEmails.value = [];
-  emailFields.value = [];
-  if (!selectedDoctype.value) return;
-  try {
-    const res = await frappe.call({
-      method: "letters.letters.api.get_email_fields",
-      args: { doctype: selectedDoctype.value },
-    });
-    emailFields.value = res.message || [];
-    if (emailFields.value.length === 1) {
-      selectedField.value = emailFields.value[0].fieldname;
-      await loadRecords();
-    }
-  } catch { emailFields.value = []; }
-}
-
-let searchTimer = null;
-function onSearch() {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(loadRecords, 300);
-}
-
-async function loadRecords() {
-  if (!selectedDoctype.value || !selectedField.value) return;
-  loadingRecords.value = true;
-  try {
-    const res = await frappe.call({
-      method: "letters.letters.api.get_emails_from_doctype",
-      args: { doctype: selectedDoctype.value, email_field: selectedField.value, search: search.value },
-    });
-    const data = res.message || {};
-    records.value = data.emails || data || [];
-    recordsTruncated.value = !!(data.truncated);
-  } catch { records.value = []; recordsTruncated.value = false; }
-  finally { loadingRecords.value = false; }
-}
-
-function toggleAll() {
-  if (allSelected.value) {
-    const toRemove = new Set(records.value.map((r) => r.email));
-    pickedEmails.value = pickedEmails.value.filter((e) => !toRemove.has(e));
-  } else {
-    const existing = new Set(pickedEmails.value);
-    records.value.forEach((r) => existing.add(r.email));
-    pickedEmails.value = [...existing];
-  }
-}
-
-// ── Send state ────────────────────────────────────────────────────────────────
 const sending   = ref(false);
 const sendError = ref("");
 const sentCount = ref(0);
 
-const canSend = computed(() => {
-  if (sentCount.value) return false;
-  if (mode.value === "group")   return !!selectedGroup.value;
-  if (mode.value === "paste")   return parsedPasted.value.length > 0;
-  if (mode.value === "doctype") return pickedEmails.value.length > 0;
-  return false;
-});
-
 const recipientSummary = computed(() => {
-  if (mode.value === "group" && selectedGroup.value) {
-    const g = emailGroups.value.find((x) => x.name === selectedGroup.value);
-    return g ? `Sending to ${g.count} subscriber${g.count === 1 ? "" : "s"} in "${g.title || g.name}"` : null;
+  const cfg = props.recipientConfig;
+  if (!cfg) return "";
+  if (cfg.type === "group") return `Email Group: "${cfg.email_group}"`;
+  if (cfg.type === "paste") return `${cfg.recipients?.length ?? 0} pasted email${cfg.recipients?.length === 1 ? "" : "s"}`;
+  if (cfg.type === "doctype") {
+    const filterCount = Object.keys(cfg.filters || {}).length;
+    return `${cfg.doctype} › ${cfg.email_field}${filterCount ? ` (${filterCount} filter${filterCount === 1 ? "" : "s"})` : " (all)"}`;
   }
-  if (mode.value === "paste" && parsedPasted.value.length > 0) {
-    return `${parsedPasted.value.length} recipient${parsedPasted.value.length === 1 ? "" : "s"} ready`;
-  }
-  if (mode.value === "doctype" && pickedEmails.value.length > 0) {
-    return `${pickedEmails.value.length} recipient${pickedEmails.value.length === 1 ? "" : "s"} selected`;
-  }
-  return null;
+  return "Unknown";
 });
 
 const sendLabel = computed(() => {
-  if (mode.value === "group" && selectedGroup.value) {
-    const g = emailGroups.value.find((x) => x.name === selectedGroup.value);
-    return g ? `Send to ${g.count}` : "Send";
-  }
-  if (mode.value === "paste")   return parsedPasted.value.length ? `Send to ${parsedPasted.value.length}` : "Send";
-  if (mode.value === "doctype") return pickedEmails.value.length ? `Send to ${pickedEmails.value.length}` : "Send";
+  const cfg = props.recipientConfig;
+  if (!cfg) return "Send";
+  if (cfg.type === "paste") return `Send to ${cfg.recipients?.length ?? 0}`;
   return "Send";
 });
 
 async function send() {
-  if (!canSend.value) return;
+  if (!props.recipientConfig || sending.value) return;
   sending.value = true;
   sendError.value = "";
   try {
+    const cfg  = props.recipientConfig;
     const args = { name: props.campaignDoc?.name };
-    if (mode.value === "group") {
-      args.email_group = selectedGroup.value;
-    } else {
-      const list = mode.value === "paste" ? parsedPasted.value : pickedEmails.value;
-      args.recipients = JSON.stringify(list);
+    if (cfg.type === "group") {
+      args.email_group = cfg.email_group;
+    } else if (cfg.type === "paste") {
+      args.recipients = JSON.stringify(cfg.recipients);
+    } else if (cfg.type === "doctype") {
+      args.doctype_config = JSON.stringify({
+        doctype:     cfg.doctype,
+        email_field: cfg.email_field,
+        filters:     cfg.filters || {},
+      });
     }
     const res = await frappe.call({ method: "letters.letters.api.send_campaign", args });
     sentCount.value = res.message.count;
@@ -346,16 +132,11 @@ async function send() {
     const raw = e?._server_messages;
     let msg = e?.message || "Send failed. Check your outgoing mail settings.";
     if (raw) {
-      try { msg = JSON.parse(JSON.parse(raw)[0]).message || msg; } catch { /* keep msg */ }
+      try { msg = JSON.parse(JSON.parse(raw)[0]).message || msg; } catch { /* keep */ }
     }
     sendError.value = msg;
   } finally {
     sending.value = false;
   }
 }
-
-onMounted(() => {
-  loadEmailGroups();
-  loadDoctypes();
-});
 </script>

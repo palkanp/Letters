@@ -1,5 +1,8 @@
 <template>
-  <aside class="w-72 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+  <aside
+    class="flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden"
+    :style="{ width: (width || 288) + 'px' }"
+  >
 
     <!-- Header -->
     <div class="px-4 py-3 border-b border-gray-200 flex items-center gap-2 min-h-[45px]">
@@ -277,6 +280,8 @@ import { computed, reactive, watch } from "vue";
 import { TextInput, Select, FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
+
+defineProps({ width: { type: Number, default: 288 } });
 
 const store = useEditorStore();
 const block = computed(() => store.selectedBlock);

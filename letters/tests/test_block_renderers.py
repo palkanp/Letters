@@ -174,10 +174,13 @@ class TestTextRenderer:
     def test_renders_content(self):
         assert "Hello world" in self._r({"content": "Hello world"})
 
-    def test_xss_content_escaped(self):
+    def test_xss_content_stripped(self):
+        # Content with HTML tags is passed through the rich-html sanitizer.
+        # <img> is not in the allowed set, so the tag is stripped entirely.
         html = self._r({"content": '<img src=x onerror="alert(1)">'})
         assert "<img" not in html
-        assert "&lt;img" in html
+        assert "onerror" not in html
+        # The plain-text content of the img tag (none here) need not appear.
 
     def test_default_font_size(self):
         assert "15px" in self._r({})

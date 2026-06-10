@@ -23,7 +23,8 @@
       "Bash(curl -s \"https://frappe.io/files/page_styles/CSS-3eacf-fc1dd5f243.css\")",
       "Bash(curl -s \"https://frappe.io/files/page_styles/CSS-ff9cd-e3f33dfc51.css\")",
       "Bash(yarn build *)",
-      "Bash(cd ~/frappe-bench && cat apps/letters/frontend/src/pages/BuilderPage.vue | grep -n \"pickerAfterIndex\\\\|blockComponent\\\\|blockComponentCache\" | head -20)"
+      "Bash(cd ~/frappe-bench && cat apps/letters/frontend/src/pages/BuilderPage.vue | grep -n \"pickerAfterIndex\\\\|blockComponent\\\\|blockComponentCache\" | head -20)",
+      "Bash(python3 -m json.tool)"
     ]
   }
 }
