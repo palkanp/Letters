@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import pytest
 from letters.letters.utils.block_renderers import (
     _safe_url,
+    _abs_image_src,
     _hex_to_rgba,
     _padding,
     _spacing_wrapper,
@@ -79,6 +80,34 @@ class TestSafeUrl:
 
     def test_relative_url_passes_through(self):
         assert _safe_url("/about") == "/about"
+
+
+# ── _abs_image_src ────────────────────────────────────────────────────────────
+
+class TestAbsImageSrc:
+    def test_absolute_https_unchanged(self):
+        assert _abs_image_src("https://cdn.example.com/a.png") == "https://cdn.example.com/a.png"
+
+    def test_absolute_http_unchanged(self):
+        assert _abs_image_src("http://example.com/a.png") == "http://example.com/a.png"
+
+    def test_protocol_relative_unchanged(self):
+        assert _abs_image_src("//cdn.example.com/a.png") == "//cdn.example.com/a.png"
+
+    def test_data_uri_unchanged(self):
+        assert _abs_image_src("data:image/png;base64,AAAA") == "data:image/png;base64,AAAA"
+
+    def test_empty_returns_empty(self):
+        assert _abs_image_src("") == ""
+        assert _abs_image_src(None) == ""
+
+    def test_ampersand_in_absolute_url_is_escaped(self):
+        assert "&amp;" in _abs_image_src("https://x.test/a.png?w=1&h=2")
+
+    def test_relative_path_outside_frappe_stays_relative(self):
+        # Without a Frappe runtime get_url() is unavailable, so the path is left
+        # as-is rather than crashing. (In production it becomes absolute.)
+        assert _abs_image_src("/files/x.png") == "/files/x.png"
 
 
 # ── _hex_to_rgba ──────────────────────────────────────────────────────────────

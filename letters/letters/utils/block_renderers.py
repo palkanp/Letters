@@ -13,6 +13,28 @@ def _safe_url(url: str) -> str:
     return escape(url)
 
 
+def _abs_image_src(url: str) -> str:
+    """Make an image src absolute and HTML-escape it.
+
+    Uploaded files are stored as site-relative paths like "/files/x.png". Email
+    clients have no base URL to resolve those against, so a relative src always
+    renders as a broken image in the inbox. Prepend the site's public URL so the
+    image loads. Already-absolute (http/https/protocol-relative/data) URLs and
+    empty values are left untouched.
+    """
+    url = (url or "").strip()
+    if not url or url.startswith(("http://", "https://", "//", "data:")):
+        return escape(url)
+    if url.startswith("/"):
+        try:
+            from frappe.utils import get_url
+            return escape(get_url(url))
+        except Exception:
+            # Outside a Frappe runtime (e.g. unit tests) leave it relative.
+            return escape(url)
+    return escape(url)
+
+
 def _hex_to_rgba(hex_color: str, alpha: float) -> str:
     """Convert a #RRGGBB hex string to an rgba() value safe for all email clients."""
     hex_color = hex_color.strip().lstrip("#")
@@ -199,7 +221,7 @@ class TextRenderer(BlockRenderer):
 class ImageRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p = block.get("props", {})
-        image_url     = escape(p.get("image_url", ""))
+        image_url     = _abs_image_src(p.get("image_url", ""))
         caption       = escape(p.get("caption", ""))
         alt           = escape(p.get("alt", ""))
         bg            = escape(p.get("background_color", "#ffffff"))
@@ -278,7 +300,7 @@ class SectionLabelRenderer(BlockRenderer):
 class ImageTextRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p = block.get("props", {})
-        image_url   = escape(p.get("image_url", ""))
+        image_url   = _abs_image_src(p.get("image_url", ""))
         text        = escape(p.get("text", ""))
         position    = p.get("image_position", "left")
         img_width   = p.get("image_width", "160px")
@@ -670,7 +692,7 @@ class SocialRenderer(BlockRenderer):
 class ProductCardRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
-        image_url     = escape(p.get("image_url", ""))
+        image_url     = _abs_image_src(p.get("image_url", ""))
         title         = escape(p.get("title", ""))
         description   = escape(p.get("description", ""))
         price         = escape(p.get("price", ""))
@@ -731,7 +753,7 @@ class ProductCardRenderer(BlockRenderer):
 class VideoThumbRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
-        thumbnail_url = escape(p.get("thumbnail_url", ""))
+        thumbnail_url = _abs_image_src(p.get("thumbnail_url", ""))
         video_url     = _safe_url(p.get("video_url", "#"))
         caption       = escape(p.get("caption", ""))
         border_radius = escape(p.get("border_radius", "8px"))
@@ -840,7 +862,7 @@ class LinkListRenderer(BlockRenderer):
 class HeaderRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
-        logo_url      = escape(p.get("logo_url", ""))
+        logo_url      = _abs_image_src(p.get("logo_url", ""))
         logo_height   = escape(p.get("logo_height", "40px"))
         tagline       = escape(p.get("tagline", ""))
         bg            = escape(p.get("background_color", "#ffffff"))
