@@ -4,7 +4,7 @@
       <div class="flex items-center gap-1.5">
         <button
           type="button"
-          class="w-6 h-6 rounded flex-shrink-0 border border-gray-200 cursor-pointer hover:scale-105 transition-transform"
+          class="w-5 h-5 rounded flex-shrink-0 border cursor-pointer hover:scale-110 transition-transform focus:outline-none focus-visible:ring focus-visible:ring-outline-gray-3"
           :style="{ backgroundColor: modelValue || '#ffffff' }"
           :title="modelValue || 'Pick a color'"
           @click="togglePopover"
@@ -21,26 +21,57 @@
     </template>
 
     <template #body-main="{ close }">
-      <div class="p-2.5 flex flex-col gap-2" style="width: 222px">
-        <!-- Palette grid: neutrals row + hue rows -->
-        <div class="flex flex-col gap-0.5">
-          <div v-for="(row, ri) in PALETTE" :key="ri" class="flex gap-0.5">
+      <div class="p-2" style="width: 228px">
+
+        <!-- Neutrals -->
+        <div class="text-xs text-ink-gray-5 mb-1">Neutrals</div>
+        <div class="grid grid-cols-10 gap-1">
+          <Tooltip
+            v-for="color in NEUTRALS"
+            :key="color"
+            :text="color"
+            class="flex"
+          >
             <button
-              v-for="color in row"
-              :key="color"
               type="button"
-              class="w-[18px] h-[18px] rounded-sm flex-shrink-0 cursor-pointer border border-black/10 hover:scale-110 transition-transform"
+              :aria-label="color"
+              :aria-pressed="color === modelValue"
+              class="h-5 w-5 rounded border focus:outline-none focus-visible:ring focus-visible:ring-outline-gray-3"
+              :class="color === modelValue ? 'ring-2 ring-outline-gray-4' : ''"
               :style="{ backgroundColor: color }"
-              :title="color"
               @click="pick(color, close)"
             />
+          </Tooltip>
+        </div>
+
+        <!-- Hue rows -->
+        <div class="text-xs text-ink-gray-5 mt-2 mb-1">Colors</div>
+        <div class="flex flex-col gap-1">
+          <div v-for="(row, ri) in HUES" :key="ri" class="grid grid-cols-10 gap-1">
+            <Tooltip
+              v-for="color in row"
+              :key="color"
+              :text="color"
+              class="flex"
+            >
+              <button
+                type="button"
+                :aria-label="color"
+                :aria-pressed="color === modelValue"
+                class="h-5 w-5 rounded border focus:outline-none focus-visible:ring focus-visible:ring-outline-gray-3"
+                :class="color === modelValue ? 'ring-2 ring-outline-gray-4' : ''"
+                :style="{ backgroundColor: color }"
+                @click="pick(color, close)"
+              />
+            </Tooltip>
           </div>
         </div>
 
-        <!-- Custom hex input -->
-        <div class="flex items-center gap-1.5 pt-1.5 border-t border-gray-100">
+        <!-- Custom hex -->
+        <div class="text-xs text-ink-gray-5 mt-2 mb-1">Custom</div>
+        <div class="flex items-center gap-1.5">
           <div
-            class="w-5 h-5 rounded flex-shrink-0 border border-gray-200"
+            class="w-5 h-5 rounded flex-shrink-0 border"
             :style="{ backgroundColor: modelValue || '#ffffff' }"
           />
           <TextInput
@@ -48,7 +79,7 @@
             type="text"
             class="flex-1"
             :modelValue="modelValue"
-            placeholder="Custom hex"
+            placeholder="#000000"
             @update:modelValue="$emit('update:modelValue', $event)"
           />
         </div>
@@ -58,7 +89,7 @@
 </template>
 
 <script setup>
-import { Popover, TextInput } from "frappe-ui";
+import { Popover, TextInput, Tooltip } from "frappe-ui";
 
 defineProps({ modelValue: { type: String, default: "" } });
 const emit = defineEmits(["update:modelValue"]);
@@ -68,10 +99,12 @@ function pick(color, close) {
   close();
 }
 
-// 10 columns × 9 rows (1 neutral + 8 hue families)
-const PALETTE = [
-  // Neutrals
-  ["#ffffff","#f8f8f8","#ededed","#c7c7c7","#999999","#7c7c7c","#525252","#383838","#171717","#0f0f0f"],
+const NEUTRALS = [
+  "#ffffff","#f8f8f8","#ededed","#c7c7c7","#999999",
+  "#7c7c7c","#525252","#383838","#171717","#0f0f0f",
+];
+
+const HUES = [
   // Red
   ["#fff5f5","#ffe7e7","#ffd8d8","#f79596","#e03434","#ce2c2c","#b41d1d","#941f1f","#6b1515","#4c0d0d"],
   // Orange
