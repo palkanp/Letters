@@ -26,7 +26,7 @@
       >
         <template #node="{ node, hasChildren, isCollapsed, toggleCollapsed }">
           <div
-            class="group relative flex items-center gap-1 rounded-md pr-1 my-px cursor-pointer select-none transition-colors"
+            class="group relative flex items-center gap-1.5 rounded-md px-1 py-0.5 cursor-pointer select-none transition-colors"
             :class="rowClass(node)"
             draggable="true"
             @click.stop="store.selectBlock(node.id)"
@@ -85,7 +85,7 @@
             <span
               v-else
               class="flex-1 text-xs truncate"
-              :class="isStructural(node.type) ? 'font-medium' : ''"
+              :class="isStructural(node.type) ? 'font-medium text-ink-gray-8' : ''"
             >{{ node.label || blockLabel(node.type) }}</span>
 
             <!-- Index badge (top-level only) -->
@@ -138,10 +138,10 @@ const openPicker = inject("openPicker", () => {});
 const vFocus = { mounted: (el) => el.focus() };
 
 const treeOptions = {
-  rowHeight: "28px",
-  indentWidth: "14px",
+  rowHeight: "32px",
+  indentWidth: "16px",
   showIndentationGuides: true,
-  defaultCollapsed: false, // layers should read top-down, expanded
+  defaultCollapsed: false,
 };
 
 // Structural blocks (grouping containers) are visually emphasised so the
@@ -153,15 +153,12 @@ const blockIcon = (type) => BLOCK_SCHEMA[type]?.icon || "box";
 const blockLabel = (type) => BLOCK_SCHEMA[type]?.label || type;
 
 function rowClass(node) {
-  if (store.selectedBlockId === node.id) return "bg-blue-50 text-blue-700";
-  return isStructural(node.type)
-    ? "text-ink-gray-8 hover:bg-surface-gray-2"
-    : "text-ink-gray-6 hover:bg-surface-gray-2";
+  if (store.selectedBlockId === node.id) return "bg-surface-gray-2 text-ink-gray-9";
+  return "text-ink-gray-7 hover:bg-surface-gray-2";
 }
 
 function iconClass(node) {
-  if (store.selectedBlockId === node.id) return "";
-  return isStructural(node.type) ? "text-violet-500" : "text-ink-gray-4";
+  return store.selectedBlockId === node.id ? "text-ink-gray-7" : "text-ink-gray-4";
 }
 
 // ── Block metadata: id -> { parentId, index, childrenCount, isContainer } ─────
