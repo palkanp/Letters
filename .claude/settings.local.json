@@ -24,7 +24,12 @@
       "Bash(curl -s \"https://frappe.io/files/page_styles/CSS-ff9cd-e3f33dfc51.css\")",
       "Bash(yarn build *)",
       "Bash(cd ~/frappe-bench && cat apps/letters/frontend/src/pages/BuilderPage.vue | grep -n \"pickerAfterIndex\\\\|blockComponent\\\\|blockComponentCache\" | head -20)",
-      "Bash(python3 -m json.tool)"
+      "Bash(python3 -m json.tool)",
+      "Bash(zsh -i -c 'echo \"node: $\\(node --version\\) @ $\\(which node\\)\"; echo \"yarn: $\\(yarn --version\\)\"')",
+      "Bash(grep -vE \"^$\")",
+      "Bash(node -e \"console.log\\(require.resolve\\('frappe-ui/vite', {paths:['/Users/palkanparsana/Desktop/Letters/frontend']}\\)\\)\")",
+      "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(p.get\\('exports',{}\\).get\\('./vite'\\)\\); print\\('unplugin-icons' in json.dumps\\(p\\)\\)\")",
+      "Bash(python3 -m pytest letters/tests/ -q)"
     ]
   }
 }
