@@ -9,6 +9,7 @@ export const useEditorStore = defineStore("editor", () => {
   const campaignDoc    = ref(null);
   const selectedBlockId = ref(null);
   const isDirty        = ref(false);
+  const clipboard       = ref(null); // holds a deep-cloned block for copy/paste
 
   const _idCounter = ref(0);
   function nextId() { return ++_idCounter.value; }
@@ -301,6 +302,38 @@ export const useEditorStore = defineStore("editor", () => {
     duplicateIn(blocks.value);
   }
 
+  function copyBlock(id) {
+    const block = findBlock(id);
+    if (block) clipboard.value = JSON.parse(JSON.stringify(block));
+  }
+
+  function pasteBlock() {
+    if (!clipboard.value) return;
+    _pushHistory();
+    function cloneWithNewIds(b) {
+      const clone = JSON.parse(JSON.stringify(b));
+      clone.id = nextId();
+      if (clone.children) clone.children = clone.children.map(cloneWithNewIds);
+      if (clone.columns) {
+        clone.columns = clone.columns.map(col => ({
+          ...col,
+          blocks: (col.blocks || []).map(cloneWithNewIds),
+        }));
+      }
+      return clone;
+    }
+    const clone = cloneWithNewIds(clipboard.value);
+    // Paste after selected block, or at end
+    const selIdx = blocks.value.findIndex((b) => b.id === selectedBlockId.value);
+    if (selIdx !== -1) {
+      blocks.value.splice(selIdx + 1, 0, clone);
+    } else {
+      blocks.value.push(clone);
+    }
+    selectedBlockId.value = clone.id;
+    markDirty();
+  }
+
   function setBlockLabel(id, label) {
     _pushHistory();
     const block = findBlock(id);
@@ -398,6 +431,9 @@ export const useEditorStore = defineStore("editor", () => {
     setColumnCount,
     moveBlockTo,
     duplicateBlock,
+    copyBlock,
+    pasteBlock,
+    clipboard,
     setBlockLabel,
     setRenderedHtml,
     loadFromDoc,

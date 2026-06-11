@@ -124,7 +124,7 @@
 </template>
 
 <script setup>
-import { ref, computed, inject } from "vue";
+import { ref, computed, inject, onMounted, onUnmounted } from "vue";
 import { Tree, FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
@@ -255,6 +255,37 @@ function clearDrag() {
   dragId.value    = null;
   dropState.value = null;
 }
+
+// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+function onKeyDown(e) {
+  // Ignore when typing in an input/textarea
+  const tag = document.activeElement?.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
+
+  const isMac = navigator.platform.startsWith("Mac");
+  const mod = isMac ? e.metaKey : e.ctrlKey;
+
+  if (!store.selectedBlockId) return;
+
+  if (e.key === "Delete" || e.key === "Backspace") {
+    e.preventDefault();
+    store.removeBlock(store.selectedBlockId);
+    return;
+  }
+  if (mod && e.key === "c") {
+    e.preventDefault();
+    store.copyBlock(store.selectedBlockId);
+    return;
+  }
+  if (mod && e.key === "v") {
+    e.preventDefault();
+    store.pasteBlock();
+    return;
+  }
+}
+
+onMounted(() => window.addEventListener("keydown", onKeyDown));
+onUnmounted(() => window.removeEventListener("keydown", onKeyDown));
 
 // ── Inline rename ─────────────────────────────────────────────────────────────
 const editingId = ref(null);
