@@ -23,6 +23,13 @@ if (typeof window !== "undefined" && window.frappe && window.frappe.pages) {
     frappe.pages["letters-builder"] || {});
 
   page.on_page_load = function (wrapper) {
+    // frappe-ui's request/upload layer reads window.csrf_token, but Desk only
+    // sets frappe.csrf_token. Without this bridge, POSTs through frappe-ui
+    // (e.g. the image FileUploader) are rejected for a missing CSRF token.
+    if (window.frappe.csrf_token && !window.csrf_token) {
+      window.csrf_token = window.frappe.csrf_token;
+    }
+
     // Reuse the div from letters_builder.html if present, otherwise create one.
     let el = wrapper.querySelector("#letters-builder");
     if (!el) {
