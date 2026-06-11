@@ -69,15 +69,13 @@
 
         <div class="w-px h-4 bg-gray-200 mx-0.5" />
 
-        <Button variant="ghost" size="sm" :loading="saving" :title="editorStore.isDirty ? 'Unsaved changes' : 'Up to date'" @click="saveCampaign">
-          <template #prefix>
-            <span class="relative">
-              <FeatherIcon name="upload-cloud" class="w-3.5 h-3.5" />
-              <span v-if="editorStore.isDirty" class="absolute -top-0.5 -right-0.5 w-1.5 h-1.5 bg-orange-400 rounded-full" />
-            </span>
-          </template>
-          Save
-        </Button>
+        <!-- Auto-save status indicator -->
+        <span class="text-xs text-ink-gray-4 flex items-center gap-1 min-w-[60px]">
+          <span v-if="saving">Saving…</span>
+          <span v-else-if="editorStore.isDirty">Unsaved</span>
+          <span v-else>Saved</span>
+        </span>
+
         <!-- Settings (gear) — opens the Campaign Settings dialog -->
         <Tooltip text="Campaign settings">
           <Button
@@ -448,9 +446,10 @@ function keydownHandler(e) {
     editorStore.redo();
     return;
   }
-  // Save: Cmd/Ctrl + S
+  // Save: Cmd/Ctrl + S (manual trigger alongside auto-save)
   if (e.key === "s") {
     e.preventDefault();
+    clearTimeout(_autoSaveTimer);
     saveCampaign();
   }
 }
@@ -471,6 +470,16 @@ onUnmounted(() => {
 let _suppressDirty = 0;
 watch([subject, previewText, () => editorStore.campaignName], () => {
   if (_suppressDirty === 0) editorStore.markDirty();
+});
+
+// ── Auto-save (debounced 2 s after last change) ───────────────────────────────
+let _autoSaveTimer = null;
+watch(() => editorStore.isDirty, (dirty) => {
+  if (!dirty) return;
+  clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => {
+    if (editorStore.isDirty && editorStore.campaignDoc) saveCampaign();
+  }, 2000);
 });
 
 // pickerTarget: null = closed
