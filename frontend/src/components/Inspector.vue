@@ -1,6 +1,6 @@
 <template>
   <aside
-    class="flex-shrink-0 bg-surface-white border-l border-outline-gray-1 flex flex-col overflow-hidden"
+    class="flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden"
     :style="{ width: (width || 288) + 'px' }"
   >
     <!-- Header -->
