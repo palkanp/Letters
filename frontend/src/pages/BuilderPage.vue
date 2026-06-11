@@ -872,3 +872,10 @@ function onCanvasDrop() {
   }
 }
 </script>
+
+<style>
+/* Ensure frappe-ui Dialog overlay sits above all canvas z-index layers */
+.dialog-overlay {
+  z-index: 9999 !important;
+}
+</style>
