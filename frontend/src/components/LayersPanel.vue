@@ -26,7 +26,7 @@
       >
         <template #node="{ node, hasChildren, isCollapsed, toggleCollapsed }">
           <div
-            class="group relative flex items-center gap-1.5 rounded-md px-1 py-0.5 cursor-pointer select-none transition-colors"
+            class="group relative flex items-center gap-1.5 h-8 rounded-md px-1.5 cursor-pointer select-none transition-colors"
             :class="rowClass(node)"
             draggable="true"
             @click.stop="store.selectBlock(node.id)"
