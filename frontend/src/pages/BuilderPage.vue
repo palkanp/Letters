@@ -121,12 +121,34 @@
         />
         <!-- Header -->
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100 flex-shrink-0">
-          <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Layers</span>
-          <span class="text-xs text-gray-300 tabular-nums">{{ editorStore.blocks.length }}</span>
+          <template v-if="pickerTarget !== null">
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Add Block</span>
+            <button type="button" class="text-gray-400 hover:text-gray-600 transition-colors" @click="closePicker">
+              <FeatherIcon name="x" class="w-3.5 h-3.5" />
+            </button>
+          </template>
+          <template v-else>
+            <span class="text-xs font-semibold text-gray-400 uppercase tracking-widest">Layers</span>
+            <span class="text-xs text-gray-300 tabular-nums">{{ editorStore.blocks.length }}</span>
+          </template>
         </div>
 
-        <!-- Layer list fills remaining space (Add block / container moved to the top bar) -->
-        <div class="flex-1 overflow-y-auto min-h-0">
+        <!-- Block picker list (shown when pickerTarget is set) -->
+        <div v-if="pickerTarget !== null" class="flex-1 overflow-y-auto min-h-0 py-1">
+          <button
+            v-for="b in availableBlocks"
+            :key="b.type"
+            type="button"
+            class="flex items-center gap-2.5 w-full px-4 py-1.5 text-left text-ink-gray-7 hover:bg-surface-gray-2 transition-colors"
+            @click="insertBlock(b.type)"
+          >
+            <FeatherIcon :name="b.icon" class="w-3.5 h-3.5 text-ink-gray-5 flex-shrink-0" />
+            <span class="text-sm">{{ b.label }}</span>
+          </button>
+        </div>
+
+        <!-- Layer list fills remaining space -->
+        <div v-else class="flex-1 overflow-y-auto min-h-0">
           <LayersPanel />
         </div>
       </aside>
@@ -180,29 +202,6 @@
 
     </div>
   </div>
-
-  <!-- ── Block Picker (Dialog) ──────────────────────────────────────────────── -->
-  <Dialog
-    :model-value="pickerTarget !== null"
-    title="Add a block"
-    size="md"
-    @update:model-value="(v) => { if (!v) closePicker() }"
-  >
-    <template #default>
-      <div class="flex flex-col gap-0.5 min-w-[180px]">
-        <button
-          v-for="b in availableBlocks"
-          :key="b.type"
-          type="button"
-          class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-ink-gray-7 hover:bg-surface-gray-3 transition-colors text-left w-full"
-          @click="insertBlock(b.type)"
-        >
-          <FeatherIcon :name="b.icon" class="w-3.5 h-3.5 text-ink-gray-5 flex-shrink-0" />
-          <span class="text-sm">{{ b.label }}</span>
-        </button>
-      </div>
-    </template>
-  </Dialog>
 
   <CampaignSettings
     v-model="showSettings"
@@ -838,7 +837,11 @@ function closePicker() {
   pickerTarget.value = null;
 }
 function insertBlock(type) {
-  if (!pickerTarget.value) return;
+  if (!pickerTarget.value) {
+    // Direct insert (e.g. toolbar buttons) — append to canvas
+    editorStore.addBlock(type, editorStore.blocks.length - 1);
+    return;
+  }
   if (pickerTarget.value.mode === "column") {
     editorStore.addBlockToColumn(
       pickerTarget.value.blockId,
