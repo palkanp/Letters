@@ -5,226 +5,264 @@
       v-if="!store.blocks.length"
       class="flex-1 flex flex-col items-center justify-center px-4 text-center gap-2"
     >
-      <p class="text-xs text-gray-400 leading-relaxed">
+      <p class="text-xs text-ink-gray-4 leading-relaxed">
         No blocks yet. Use <strong>+ Add block</strong> below.
       </p>
     </div>
 
-    <!-- Layer rows (flat tree, all depths) -->
-    <ul v-else class="flex-1 overflow-y-auto py-1.5" @dragover.prevent @drop.prevent="onDropAtEnd">
-      <li
-        v-for="(item, flatIdx) in flatTree"
-        :key="item.block.id"
-        class="relative flex items-center gap-1.5 mr-2 my-0.5 px-2 py-1.5 rounded-lg cursor-pointer transition-colors select-none group"
-        :style="{ paddingLeft: `${8 + item.depth * 16}px` }"
-        :class="store.selectedBlockId === item.block.id
-          ? 'bg-blue-50 text-blue-700'
-          : item.depth === 0 ? 'text-gray-600 hover:bg-gray-100' : 'text-gray-500 hover:bg-gray-100'"
-        draggable="true"
-        @click="store.selectBlock(item.block.id)"
-        @dblclick.stop="startRename(item.block.id)"
-        @dragstart="onDragStart(flatIdx, $event)"
-        @dragover.stop.prevent="onDragOver(flatIdx, $event)"
-        @dragleave.stop="onDragLeave(flatIdx, $event)"
-        @drop.stop.prevent="onDrop(flatIdx, $event)"
-        @dragend="clearDrag"
+    <!-- Layer tree (frappe-ui Tree drives recursion, indent guides + chevrons) -->
+    <div
+      v-else
+      class="flex-1 overflow-y-auto py-1.5 px-1.5"
+      @dragover.prevent
+      @drop.prevent="onDropAtEnd"
+    >
+      <Tree
+        v-for="block in store.blocks"
+        :key="block.id"
+        :node="block"
+        node-key="id"
+        :options="treeOptions"
       >
-        <!-- Drop indicators: line above (before), ring (inside), line below (after) -->
-        <div
-          v-if="dropState?.flatIdx === flatIdx && dropState.zone === 'before'"
-          class="absolute inset-x-2 -top-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10"
-        />
-        <div
-          v-if="dropState?.flatIdx === flatIdx && dropState.zone === 'inside'"
-          class="absolute inset-0 rounded-lg ring-2 ring-blue-400 bg-blue-50/40 pointer-events-none z-10"
-        />
-        <div
-          v-if="dropState?.flatIdx === flatIdx && dropState.zone === 'after'"
-          class="absolute inset-x-2 -bottom-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10"
-        />
+        <template #node="{ node, hasChildren, isCollapsed, toggleCollapsed }">
+          <div
+            class="group relative flex items-center gap-1 rounded-md pr-1 my-px cursor-pointer select-none transition-colors"
+            :class="rowClass(node)"
+            draggable="true"
+            @click.stop="store.selectBlock(node.id)"
+            @dblclick.stop="startRename(node.id)"
+            @dragstart.stop="onDragStart(node.id, $event)"
+            @dragover.stop.prevent="onDragOver(node.id, $event)"
+            @drop.stop.prevent="onDrop(node.id)"
+            @dragend="clearDrag"
+          >
+            <!-- Drop indicators: line above (before), ring (inside), line below (after) -->
+            <div
+              v-if="dropState?.targetId === node.id && dropState.zone === 'before'"
+              class="absolute inset-x-1 -top-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10"
+            />
+            <div
+              v-if="dropState?.targetId === node.id && dropState.zone === 'inside'"
+              class="absolute inset-0 rounded-md ring-2 ring-blue-400 bg-blue-50/40 pointer-events-none z-10"
+            />
+            <div
+              v-if="dropState?.targetId === node.id && dropState.zone === 'after'"
+              class="absolute inset-x-1 -bottom-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10"
+            />
 
-        <!-- Tree connector line for indented items -->
-        <div
-          v-if="item.depth > 0"
-          class="absolute top-0 bottom-0 w-px bg-gray-200 pointer-events-none"
-          :style="{ left: `${8 + (item.depth - 1) * 16 + 8}px` }"
-        />
+            <!-- Chevron (containers) or alignment spacer (leaves) -->
+            <button
+              v-if="hasChildren"
+              type="button"
+              class="flex-shrink-0 w-4 h-4 flex items-center justify-center text-ink-gray-5 hover:text-ink-gray-8"
+              :aria-label="isCollapsed ? 'Expand' : 'Collapse'"
+              @click.stop="toggleCollapsed"
+            >
+              <FeatherIcon :name="isCollapsed ? 'chevron-right' : 'chevron-down'" class="w-3.5 h-3.5" />
+            </button>
+            <span v-else class="flex-shrink-0 w-4" />
 
-        <!-- Drag grip -->
-        <span class="text-gray-300 group-hover:text-gray-400 cursor-grab active:cursor-grabbing flex-shrink-0" title="Drag to reorder">
-          <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-            <circle cx="2" cy="2"  r="1.2"/><circle cx="6" cy="2"  r="1.2"/>
-            <circle cx="2" cy="6"  r="1.2"/><circle cx="6" cy="6"  r="1.2"/>
-            <circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/>
-          </svg>
-        </span>
+            <!-- Block-type icon (structural blocks get a colour accent) -->
+            <FeatherIcon
+              :name="blockIcon(node.type)"
+              class="w-3.5 h-3.5 flex-shrink-0"
+              :class="iconClass(node)"
+            />
 
-        <!-- Block icon -->
-        <FeatherIcon :name="blockIcon(item.block.type)" class="w-3 h-3 flex-shrink-0" :class="item.depth > 0 ? 'opacity-60' : ''" />
+            <!-- Label — inline editable on double-click -->
+            <input
+              v-if="editingId === node.id"
+              v-focus
+              class="flex-1 text-xs bg-transparent border-b border-blue-400 outline-none min-w-0 py-0.5"
+              :value="node.label || blockLabel(node.type)"
+              @blur="finishRename(node.id, $event.target.value)"
+              @keydown.enter.prevent="finishRename(node.id, $event.target.value)"
+              @keydown.esc.prevent="editingId = null"
+              @click.stop
+              @dblclick.stop
+              @dragstart.stop.prevent
+            />
+            <span
+              v-else
+              class="flex-1 text-xs truncate"
+              :class="isStructural(node.type) ? 'font-medium' : ''"
+            >{{ node.label || blockLabel(node.type) }}</span>
 
-        <!-- Label — inline editable on double-click -->
-        <input
-          v-if="editingId === item.block.id"
-          autofocus
-          class="flex-1 text-xs bg-transparent border-b border-blue-400 outline-none min-w-0 py-0.5"
-          :value="item.block.label || blockLabel(item.block.type)"
-          @blur="finishRename(item.block.id, $event.target.value)"
-          @keydown.enter.prevent="finishRename(item.block.id, $event.target.value)"
-          @keydown.esc.prevent="editingId = null"
-          @click.stop
-          @dblclick.stop
-          @dragstart.stop.prevent
-        />
-        <span v-else class="flex-1 text-xs font-medium truncate">
-          {{ item.block.label || blockLabel(item.block.type) }}
-        </span>
+            <!-- Index badge (top-level only) -->
+            <span
+              v-if="topLevelIndex(node.id) !== null"
+              class="text-xs text-ink-gray-3 flex-shrink-0 tabular-nums px-0.5"
+            >{{ topLevelIndex(node.id) + 1 }}</span>
 
-        <!-- Index badge (top-level only) -->
-        <span v-if="item.depth === 0" class="text-xs text-gray-300 flex-shrink-0 tabular-nums">{{ item.index + 1 }}</span>
+            <!-- Add inside (containers only) -->
+            <button
+              v-if="node.type === 'container'"
+              type="button"
+              class="opacity-0 group-hover:opacity-100 text-ink-gray-5 hover:text-blue-600 transition flex-shrink-0 w-4 h-4 flex items-center justify-center rounded hover:bg-blue-50"
+              title="Add block inside"
+              aria-label="Add block inside container"
+              @click.stop="openPicker({ mode: 'child', parentId: node.id, afterIndex: (node.children?.length ?? 1) - 1 })"
+            ><FeatherIcon name="plus" class="w-3 h-3" /></button>
 
-        <!-- Add inside (containers only) -->
-        <button
-          v-if="item.block.type === 'container'"
-          type="button"
-          class="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-blue-500 transition-all text-sm leading-none flex-shrink-0 w-4 h-4 flex items-center justify-center rounded hover:bg-blue-50"
-          title="Add block inside"
-          aria-label="Add block inside container"
-          @click.stop="openPicker({ mode: 'child', parentId: item.block.id, afterIndex: (item.block.children?.length ?? 1) - 1 })"
-        ><FeatherIcon name="plus" class="w-3 h-3" /></button>
-
-        <!-- Remove -->
-        <button
-          type="button"
-          class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all text-xs leading-none flex-shrink-0 w-4 h-4 flex items-center justify-center rounded"
-          title="Remove"
-          aria-label="Remove block"
-          @click.stop="store.removeBlock(item.block.id)"
-        ><FeatherIcon name="x" class="w-3 h-3" /></button>
-      </li>
-    </ul>
+            <!-- Remove -->
+            <button
+              type="button"
+              class="opacity-0 group-hover:opacity-100 text-ink-gray-4 hover:text-red-500 transition flex-shrink-0 w-4 h-4 flex items-center justify-center rounded"
+              title="Remove"
+              aria-label="Remove block"
+              @click.stop="store.removeBlock(node.id)"
+            ><FeatherIcon name="x" class="w-3 h-3" /></button>
+          </div>
+        </template>
+      </Tree>
+    </div>
 
     <!-- Reorder hint -->
     <div v-if="store.blocks.length > 1" class="px-3 py-2 border-t border-gray-100">
-      <p class="text-xs text-gray-300 text-center">Drag to reorder · double-click to rename</p>
+      <p class="text-xs text-ink-gray-3 text-center">Drag to reorder · double-click to rename</p>
     </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, inject } from "vue";
-import { FeatherIcon } from "frappe-ui";
+import { Tree, FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
 
 const store = useEditorStore();
 const openPicker = inject("openPicker", () => {});
 
-// ── Flat tree (all depths) ────────────────────────────────────────────────────
-const flatTree = computed(() => {
-  const result = [];
-  function walk(list, depth, parentId) {
+// Focus the rename input the moment it mounts (native autofocus doesn't fire on
+// v-if insertion).
+const vFocus = { mounted: (el) => el.focus() };
+
+const treeOptions = {
+  rowHeight: "28px",
+  indentWidth: "14px",
+  showIndentationGuides: true,
+  defaultCollapsed: false, // layers should read top-down, expanded
+};
+
+// Structural blocks (grouping containers) are visually emphasised so the
+// hierarchy reads at a glance — the equivalent of Builder's bold/accent rows.
+const STRUCTURAL = new Set(["container", "columns"]);
+const isStructural = (type) => STRUCTURAL.has(type);
+
+const blockIcon = (type) => BLOCK_SCHEMA[type]?.icon || "box";
+const blockLabel = (type) => BLOCK_SCHEMA[type]?.label || type;
+
+function rowClass(node) {
+  if (store.selectedBlockId === node.id) return "bg-blue-50 text-blue-700";
+  return isStructural(node.type)
+    ? "text-ink-gray-8 hover:bg-surface-gray-2"
+    : "text-ink-gray-6 hover:bg-surface-gray-2";
+}
+
+function iconClass(node) {
+  if (store.selectedBlockId === node.id) return "";
+  return isStructural(node.type) ? "text-violet-500" : "text-ink-gray-4";
+}
+
+// ── Block metadata: id -> { parentId, index, childrenCount, isContainer } ─────
+// Drives both the index badge and position-aware drops without needing a flat
+// index into a rendered list.
+const blockMeta = computed(() => {
+  const map = new Map();
+  function walk(list, parentId) {
     list.forEach((block, index) => {
-      result.push({ block, depth, parentId, index });
-      if (block.children?.length) {
-        walk(block.children, depth + 1, block.id);
-      }
+      map.set(block.id, {
+        parentId,
+        index,
+        childrenCount: block.children?.length ?? 0,
+        isContainer: block.type === "container",
+      });
+      if (block.children?.length) walk(block.children, block.id);
     });
   }
-  walk(store.blocks, 0, null);
-  return result;
+  walk(store.blocks, null);
+  return map;
 });
 
-function blockIcon(type) {
-  return BLOCK_SCHEMA[type]?.icon || "box";
-}
-function blockLabel(type) {
-  return BLOCK_SCHEMA[type]?.label || type;
+function topLevelIndex(id) {
+  const m = blockMeta.value.get(id);
+  return m && m.parentId === null ? m.index : null;
 }
 
 // ── Drag-to-reorder (cross-level, position-aware) ────────────────────────────
-// dropState: { flatIdx, zone: 'before' | 'inside' | 'after' } | null
-const dragFlatIdx = ref(null);
-const dropState   = ref(null);
+// dropState: { targetId, zone: 'before' | 'inside' | 'after' } | null
+const dragId    = ref(null);
+const dropState = ref(null);
 
-function onDragStart(flatIdx, e) {
-  dragFlatIdx.value = flatIdx;
+function onDragStart(id, e) {
+  dragId.value = id;
   e.dataTransfer.effectAllowed = "move";
 }
 
 function getZone(e, isContainer) {
   const rect = e.currentTarget.getBoundingClientRect();
   const ratio = (e.clientY - rect.top) / rect.height;
-  if (!isContainer) {
-    return ratio < 0.5 ? "before" : "after";
-  }
+  if (!isContainer) return ratio < 0.5 ? "before" : "after";
   // Container: top 30% = before, middle 40% = inside, bottom 30% = after
   if (ratio < 0.3) return "before";
   if (ratio < 0.7) return "inside";
   return "after";
 }
 
-function onDragOver(flatIdx, e) {
-  if (dragFlatIdx.value === null) return;
-  const item = flatTree.value[flatIdx];
-  if (!item) return;
-  // Don't allow dropping onto self
-  if (dragFlatIdx.value === flatIdx) { dropState.value = null; return; }
-  const zone = getZone(e, item.block.type === "container");
-  dropState.value = { flatIdx, zone };
+// True when `nodeId` sits inside `ancestorId`'s subtree — used to forbid
+// dropping a block into its own descendant (which would detach the subtree).
+function isDescendant(ancestorId, nodeId) {
+  let cur = blockMeta.value.get(nodeId);
+  while (cur && cur.parentId != null) {
+    if (cur.parentId === ancestorId) return true;
+    cur = blockMeta.value.get(cur.parentId);
+  }
+  return false;
 }
 
-function onDragLeave(flatIdx, e) {
-  // Intentionally empty — dropState is updated continuously by onDragOver
-  // and cleared by clearDrag (called on dragend / drop).  Clearing here causes
-  // the indicator to vanish when the pointer crosses a child element boundary,
-  // which makes the drop silently fail.
+function onDragOver(id, e) {
+  if (dragId.value == null || dragId.value === id || isDescendant(dragId.value, id)) {
+    dropState.value = null;
+    return;
+  }
+  const meta = blockMeta.value.get(id);
+  dropState.value = { targetId: id, zone: getZone(e, meta?.isContainer) };
 }
 
-function onDrop(flatIdx, e) {
-  const fromIdx = dragFlatIdx.value;
-  const state   = dropState.value;
+function onDrop(id) {
+  const from  = dragId.value;
+  const state = dropState.value;
   clearDrag();
-  if (fromIdx === null || fromIdx === flatIdx || !state) return;
+  if (from == null || from === id || !state || isDescendant(from, id)) return;
 
-  const src = flatTree.value[fromIdx];
-  const dst = flatTree.value[flatIdx];
-  if (!src || !dst) return;
-
+  const meta = blockMeta.value.get(id);
+  if (!meta) return;
   const { zone } = state;
 
-  if (zone === "inside" && dst.block.type === "container") {
-    // Place as last child of this container
-    store.moveBlockTo(src.block.id, dst.block.id, dst.block.children?.length ?? 0);
+  if (zone === "inside" && meta.isContainer) {
+    store.moveBlockTo(from, id, meta.childrenCount); // append as last child
   } else if (zone === "before") {
-    // Place before dst in dst's parent
-    store.moveBlockTo(src.block.id, dst.parentId, dst.index);
+    store.moveBlockTo(from, meta.parentId, meta.index);
   } else {
-    // "after" — place after dst in dst's parent
-    store.moveBlockTo(src.block.id, dst.parentId, dst.index + 1);
+    store.moveBlockTo(from, meta.parentId, meta.index + 1);
   }
 }
 
 function onDropAtEnd() {
-  const fromIdx = dragFlatIdx.value;
+  const from = dragId.value;
   clearDrag();
-  if (fromIdx === null) return;
-  const src = flatTree.value[fromIdx];
-  if (!src) return;
-  store.moveBlockTo(src.block.id, null, store.blocks.length);
+  if (from == null) return;
+  store.moveBlockTo(from, null, store.blocks.length);
 }
 
 function clearDrag() {
-  dragFlatIdx.value = null;
-  dropState.value   = null;
+  dragId.value    = null;
+  dropState.value = null;
 }
 
 // ── Inline rename ─────────────────────────────────────────────────────────────
 const editingId = ref(null);
-
-function startRename(id) {
-  editingId.value = id;
-}
-
+const startRename  = (id) => { editingId.value = id; };
 function finishRename(id, value) {
   store.setBlockLabel(id, value);
   editingId.value = null;
