@@ -9,7 +9,7 @@
         display: 'flex',
         flexDirection: block.props.layout === 'row' ? 'row' : 'column',
         gap: `${block.props.gap ?? 12}px`,
-        ...innerStyle,
+        height: '100%',
         ...paddingStyle,
       }"
     >
@@ -106,16 +106,9 @@ const paddingStyle = usePadding(blockProps, { top: 16, right: 16, bottom: 16, le
 // Only minHeight lives here since it doesn't affect the parent's sizing.
 const wrapperStyle = computed(() => {
   const h = props.block.props.height;
-  if (!h || h === "auto" || h === "0px") return {};
-  return { minHeight: h };
-});
-
-const innerStyle = computed(() => {
-  const h = props.block.props.height;
-  if (!h || h === "auto" || h === "0px") return { height: "100%" };
-  // Enforce exact height on the inner flex div so children cannot push it taller.
-  // overflow:hidden clips children that exceed this height.
-  return { height: h, maxHeight: h, overflow: "hidden" };
+  return {
+    ...(h && h !== "auto" && h !== "0px" ? { minHeight: h } : {}),
+  };
 });
 
 // ── Child sizing (row flex + column width) ───────────────────────────────────
