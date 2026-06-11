@@ -386,6 +386,31 @@ def _valid_emails(emails):
 
 
 @frappe.whitelist()
+def schedule_campaign(name, scheduled_at):
+    """Mark a campaign to be sent at a future datetime (ISO-8601 string, server timezone)."""
+    doc = frappe.get_doc("Letters Campaign", name)
+    frappe.has_permission("Letters Campaign", "write", doc=doc, throw=True)
+
+    if doc.status in ("Sent", "Sending"):
+        frappe.throw(_("This campaign has already been sent or is currently sending."))
+
+    if not doc.blocks_json:
+        frappe.throw(_("Campaign has no content to send."))
+    if not doc.subject:
+        frappe.throw(_("Campaign has no subject line."))
+
+    from frappe.utils import get_datetime
+    dt = get_datetime(scheduled_at)
+    if dt <= frappe.utils.now_datetime():
+        frappe.throw(_("Scheduled time must be in the future."))
+
+    doc.db_set("scheduled_at", dt)
+    doc.db_set("status", "Scheduled")
+    frappe.db.commit()
+    return {"scheduled_at": str(dt)}
+
+
+@frappe.whitelist()
 def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     """
     Compile and send a campaign.
@@ -626,3 +651,22 @@ def _execute_send(send_doc_name, campaign_name):
             frappe.db.commit()
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Letters _execute_send cleanup error")
+
+
+def process_scheduled_sends():
+    """Scheduled task: fire any campaigns whose scheduled_at has passed."""
+    from frappe.utils import now_datetime
+    due = frappe.get_all(
+        "Letters Campaign",
+        filters={"status": "Scheduled", "scheduled_at": ["<=", now_datetime()]},
+        fields=["name"],
+    )
+    for row in due:
+        try:
+            doc = frappe.get_doc("Letters Campaign", row.name)
+            # Reset to Draft so send_campaign's idempotency guard passes
+            doc.db_set("status", "Draft")
+            frappe.db.commit()
+            send_campaign(row.name)
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Letters scheduled send error: {row.name}")

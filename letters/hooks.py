@@ -12,11 +12,11 @@ required_apps = ["frappe"]
 # Included in standard_queries by default
 
 # Background job queues used
-# scheduler_events = {
-#     "cron": {
-#         "*/5 * * * *": ["letters.tasks.process_scheduled_sends"],
-#     }
-# }
+scheduler_events = {
+    "cron": {
+        "*/5 * * * *": ["letters.letters.api.process_scheduled_sends"],
+    }
+}
 
 # Jinja templates
 # jinja = {

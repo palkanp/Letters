@@ -78,11 +78,6 @@
           </template>
           Save
         </Button>
-        <Button variant="ghost" size="sm" :loading="previewing" title="Preview in new window" aria-label="Preview in new tab" @click="openPreview">
-          <template #prefix><FeatherIcon name="external-link" class="w-3.5 h-3.5" /></template>
-          Preview
-        </Button>
-
         <!-- Settings (gear) — opens the Campaign Settings dialog -->
         <Tooltip text="Campaign settings">
           <Button
@@ -96,13 +91,25 @@
 
         <div class="w-px h-4 bg-gray-200 mx-0.5" />
 
-        <!-- Test send — prompts for a recipient address -->
-        <Button variant="ghost" size="sm" :disabled="!editorStore.campaignDoc" title="Send a test email" @click="openTestModal">
-          <template #prefix><FeatherIcon name="send" class="w-3.5 h-3.5" /></template>
-          Test
-        </Button>
-        <!-- Send button — sends directly, no popup -->
-        <Button variant="solid" size="sm" :loading="sending" :disabled="!editorStore.campaignDoc || sending" @click="sendCampaign">Send</Button>
+        <!-- Preview dropdown -->
+        <Dropdown :options="previewOptions" placement="bottom-end">
+          <template #default="{ open }">
+            <Button variant="ghost" size="sm">
+              Preview
+              <template #suffix><FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="w-3 h-3" /></template>
+            </Button>
+          </template>
+        </Dropdown>
+
+        <!-- Send dropdown -->
+        <Dropdown :options="sendOptions" placement="bottom-end">
+          <template #default="{ open }">
+            <Button variant="solid" size="sm" :disabled="!editorStore.campaignDoc">
+              Send
+              <template #suffix><FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="w-3 h-3" /></template>
+            </Button>
+          </template>
+        </Dropdown>
       </div>
     </header>
 
@@ -251,6 +258,35 @@
     </template>
   </Dialog>
 
+  <!-- Schedule sending dialog -->
+  <Dialog
+    :model-value="showScheduleModal"
+    title="Schedule Sending"
+    message="The campaign will be sent automatically at the chosen time."
+    size="sm"
+    @update:model-value="(v) => { if (!v) showScheduleModal = false }"
+  >
+    <template #default>
+      <label class="block text-xs font-medium text-ink-gray-7 mb-1.5">Send at</label>
+      <TextInput
+        v-model="scheduleAt"
+        type="datetime-local"
+        :min="minScheduleAt"
+      />
+    </template>
+    <template #actions>
+      <div class="flex items-center justify-end gap-2 w-full">
+        <Button @click="showScheduleModal = false">Cancel</Button>
+        <Button
+          variant="solid"
+          :loading="scheduling"
+          :disabled="!scheduleAt || scheduling"
+          @click="scheduleCampaign"
+        >Schedule</Button>
+      </div>
+    </template>
+  </Dialog>
+
 </template>
 
 <script setup>
@@ -308,10 +344,37 @@ const menuOptions = computed(() => [
     ],
   },
 ]);
+const previewOptions = computed(() => [
+  { label: "Preview", icon: "external-link", onClick: openPreview },
+  { label: "Send test email", icon: "send", onClick: openTestModal },
+]);
+
+const sendOptions = computed(() => [
+  {
+    label: "Send now",
+    icon: "send",
+    onClick: sendCampaign,
+    disabled: !editorStore.campaignDoc,
+  },
+  {
+    label: "Schedule sending",
+    icon: "clock",
+    onClick: () => { showScheduleModal.value = true; },
+    disabled: !editorStore.campaignDoc,
+  },
+]);
+
 const recipientConfig = ref(null); // { type, email_group | recipients | (doctype + email_field + filters) }
 const sending = ref(false);
 const testSending = ref(false);
 const showTestModal = ref(false);
+const showScheduleModal = ref(false);
+const scheduleAt = ref("");
+const scheduling = ref(false);
+const minScheduleAt = computed(() => {
+  const d = new Date(Date.now() + 60_000); // at least 1 minute from now
+  return d.toISOString().slice(0, 16);
+});
 // Prefill with the logged-in user's email when it looks like one (it's the
 // most common test target); blank if the session id isn't an email.
 const _sessionUser = (typeof window !== "undefined" && window.frappe?.session?.user) || "";
@@ -662,6 +725,27 @@ async function duplicateCampaign() {
   } catch (e) {
     toast.error("Duplicate failed: " + describeError(e));
     duplicating.value = false;
+  }
+}
+
+// ── Schedule send ─────────────────────────────────────────────────────────────
+async function scheduleCampaign() {
+  if (!scheduleAt.value) return;
+  scheduling.value = true;
+  try {
+    // Convert local datetime-local value to ISO string the server understands
+    const dt = new Date(scheduleAt.value).toISOString().replace("T", " ").slice(0, 19);
+    await frappe.call({
+      method: "letters.letters.api.schedule_campaign",
+      args: { name: editorStore.campaignDoc.name, scheduled_at: dt },
+    });
+    toast.success(`Scheduled for ${new Date(scheduleAt.value).toLocaleString()}`);
+    showScheduleModal.value = false;
+    scheduleAt.value = "";
+  } catch (e) {
+    toast.error("Schedule failed: " + describeError(e));
+  } finally {
+    scheduling.value = false;
   }
 }
 
