@@ -109,8 +109,8 @@ def duplicate_campaign(name):
 
 
 @frappe.whitelist()
-def send_test(blocks=None, subject=None, preview_text=None, name=None):
-    """Send a test email to the currently logged-in user."""
+def send_test(blocks=None, subject=None, preview_text=None, name=None, recipient=None):
+    """Send a test email to the given recipient (defaults to the logged-in user)."""
     from letters.letters.utils.email_compiler import EmailCompiler
 
     if name and not blocks:
@@ -129,7 +129,9 @@ def send_test(blocks=None, subject=None, preview_text=None, name=None):
         frappe.log_error(frappe.get_traceback(), "Letters send_test compile error")
         frappe.throw(str(e))
 
-    email = frappe.session.user
+    email = (recipient or "").strip() or frappe.session.user
+    if not frappe.utils.validate_email_address(email, throw=False):
+        frappe.throw(_("Please enter a valid email address to send the test to."))
     test_subject = f"[TEST] {subject or 'Email Preview'}"
 
     # Queue rather than send inline (now=False): a slow SMTP server must not

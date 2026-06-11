@@ -90,8 +90,8 @@
           <template #prefix><FeatherIcon name="users" class="w-3.5 h-3.5" /></template>
           Recipients
         </Button>
-        <!-- Test send — sends to logged-in user only -->
-        <Button variant="ghost" size="sm" :loading="testSending" :disabled="!editorStore.campaignDoc || testSending" title="Send a test to yourself" @click="sendTest">
+        <!-- Test send — prompts for a recipient address -->
+        <Button variant="ghost" size="sm" :disabled="!editorStore.campaignDoc" title="Send a test email" @click="openTestModal">
           <template #prefix><FeatherIcon name="send" class="w-3.5 h-3.5" /></template>
           Test
         </Button>
@@ -224,6 +224,37 @@
     @apply="onTemplateApply"
   />
 
+  <!-- Test email recipient prompt -->
+  <Dialog
+    :model-value="showTestModal"
+    title="Send Test Email"
+    message="Send a copy of this campaign so you can preview it in a real inbox."
+    size="sm"
+    @update:model-value="(v) => { if (!v) showTestModal = false }"
+  >
+    <template #default>
+      <label class="block text-xs font-medium text-ink-gray-7 mb-1.5">Send to</label>
+      <TextInput
+        v-model="testRecipient"
+        type="email"
+        placeholder="name@example.com"
+        @keyup.enter="sendTest"
+      />
+      <p class="text-xs text-ink-gray-5 mt-2">A copy with a <strong>[TEST]</strong> subject prefix is sent to this address.</p>
+    </template>
+    <template #actions>
+      <div class="flex items-center justify-end gap-2 w-full">
+        <Button @click="showTestModal = false">Cancel</Button>
+        <Button
+          variant="solid"
+          :loading="testSending"
+          :disabled="!testRecipient || testSending"
+          @click="sendTest"
+        >Send test</Button>
+      </div>
+    </template>
+  </Dialog>
+
 </template>
 
 <script setup>
@@ -246,6 +277,11 @@ const showTemplateLibrary = ref(false);
 const recipientConfig = ref(null); // { type, email_group | recipients | (doctype + email_field + filters) }
 const sending = ref(false);
 const testSending = ref(false);
+const showTestModal = ref(false);
+// Prefill with the logged-in user's email when it looks like one (it's the
+// most common test target); blank if the session id isn't an email.
+const _sessionUser = (typeof window !== "undefined" && window.frappe?.session?.user) || "";
+const testRecipient = ref(_sessionUser.includes("@") ? _sessionUser : "");
 const duplicating = ref(false);
 const subject    = ref("");
 const previewText = ref("");
@@ -600,9 +636,18 @@ async function duplicateCampaign() {
 }
 
 // ── Test send ─────────────────────────────────────────────────────────────────
-async function sendTest() {
+function openTestModal() {
   if (!editorStore.blocks.length) {
     toast.warning("Canvas is empty. Add some blocks first.");
+    return;
+  }
+  showTestModal.value = true;
+}
+
+async function sendTest() {
+  const email = testRecipient.value.trim();
+  if (!email) {
+    toast.warning("Enter an email address to send the test to.");
     return;
   }
   testSending.value = true;
@@ -614,9 +659,11 @@ async function sendTest() {
         blocks:       editorStore.campaignDoc?.name ? null : JSON.stringify(editorStore.blocks.map(stripIds)),
         subject:      subject.value || "Test Email",
         preview_text: previewText.value,
+        recipient:    email,
       },
     });
     toast.success(`Test queued to ${res.message.sent_to}. It'll arrive shortly.`);
+    showTestModal.value = false;
   } catch (e) {
     toast.error("Test send failed: " + describeError(e));
   } finally {
