@@ -136,18 +136,20 @@
           </template>
         </div>
 
-        <!-- Block picker list (shown when pickerTarget is set) -->
-        <div v-if="pickerTarget !== null" class="flex-1 overflow-y-auto min-h-0 py-1">
-          <button
-            v-for="b in availableBlocks"
-            :key="b.type"
-            type="button"
-            class="flex items-center gap-2.5 w-full px-4 py-1.5 text-left text-ink-gray-7 hover:bg-surface-gray-2 transition-colors"
-            @click="insertBlock(b.type)"
-          >
-            <FeatherIcon :name="b.icon" class="w-3.5 h-3.5 text-ink-gray-5 flex-shrink-0" />
-            <span class="text-sm">{{ b.label }}</span>
-          </button>
+        <!-- Block picker grid (shown when pickerTarget is set) -->
+        <div v-if="pickerTarget !== null" class="flex-1 overflow-y-auto min-h-0 p-2">
+          <div class="grid grid-cols-2 gap-1.5">
+            <button
+              v-for="b in availableBlocks"
+              :key="b.type"
+              type="button"
+              class="flex flex-col gap-1.5 rounded-lg border border-outline-gray-1 overflow-hidden text-left hover:border-blue-400 hover:shadow-sm transition-all group"
+              @click="insertBlock(b.type)"
+            >
+              <div class="bg-surface-gray-2 group-hover:bg-blue-50 transition-colors w-full flex items-center justify-center p-1" v-html="BLOCK_PREVIEWS[b.type]" />
+              <span class="text-xs text-ink-gray-6 px-2 pb-2 font-medium leading-none">{{ b.label }}</span>
+            </button>
+          </div>
         </div>
 
         <!-- Layer list fills remaining space -->
@@ -796,6 +798,115 @@ function onTemplateApply(templateBlocks) {
   showTemplateLibrary.value = false;
   toast.success("Template applied. Customize it and save when ready.");
 }
+
+// ── Block picker previews (SVG sketches) ──────────────────────────────────────
+const BLOCK_PREVIEWS = {
+  header: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="8" y="18" width="18" height="6" rx="2" fill="#d1d5db"/>
+    <rect x="72" y="19" width="12" height="4" rx="1.5" fill="#e5e7eb"/>
+    <rect x="88" y="19" width="12" height="4" rx="1.5" fill="#e5e7eb"/>
+    <rect x="104" y="18" width="10" height="6" rx="2" fill="#c7d2fe"/>
+  </svg>`,
+  hero: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f3f4f6" rx="3"/>
+    <rect x="30" y="10" width="60" height="8" rx="2" fill="#d1d5db"/>
+    <rect x="38" y="22" width="44" height="5" rx="1.5" fill="#e5e7eb"/>
+    <rect x="45" y="32" width="30" height="8" rx="2" fill="#c7d2fe"/>
+  </svg>`,
+  image_text: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="6" y="8" width="46" height="36" rx="2" fill="#e5e7eb"/>
+    <rect x="62" y="12" width="50" height="5" rx="1.5" fill="#d1d5db"/>
+    <rect x="62" y="22" width="42" height="3.5" rx="1" fill="#e5e7eb"/>
+    <rect x="62" y="29" width="38" height="3.5" rx="1" fill="#e5e7eb"/>
+    <rect x="62" y="36" width="22" height="6" rx="2" fill="#c7d2fe"/>
+  </svg>`,
+  button: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="35" y="18" width="50" height="16" rx="4" fill="#c7d2fe"/>
+    <rect x="51" y="23" width="18" height="5" rx="1.5" fill="#818cf8"/>
+  </svg>`,
+  columns: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="6" y="8" width="51" height="36" rx="2" fill="#e5e7eb"/>
+    <rect x="63" y="8" width="51" height="36" rx="2" fill="#e5e7eb"/>
+    <rect x="12" y="14" width="38" height="5" rx="1.5" fill="#d1d5db"/>
+    <rect x="12" y="23" width="30" height="3.5" rx="1" fill="#e9ebee"/>
+    <rect x="12" y="30" width="34" height="3.5" rx="1" fill="#e9ebee"/>
+    <rect x="69" y="14" width="38" height="5" rx="1.5" fill="#d1d5db"/>
+    <rect x="69" y="23" width="30" height="3.5" rx="1" fill="#e9ebee"/>
+    <rect x="69" y="30" width="34" height="3.5" rx="1" fill="#e9ebee"/>
+  </svg>`,
+  link_list: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="12" y="10" width="40" height="4" rx="1.5" fill="#c7d2fe"/>
+    <line x1="12" y1="15" x2="52" y2="15" stroke="#c7d2fe" stroke-width="0.75"/>
+    <rect x="12" y="21" width="32" height="4" rx="1.5" fill="#c7d2fe"/>
+    <line x1="12" y1="26" x2="44" y2="26" stroke="#c7d2fe" stroke-width="0.75"/>
+    <rect x="12" y="32" width="36" height="4" rx="1.5" fill="#c7d2fe"/>
+    <line x1="12" y1="37" x2="48" y2="37" stroke="#c7d2fe" stroke-width="0.75"/>
+  </svg>`,
+  quote: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <text x="8" y="24" font-size="22" fill="#d1d5db" font-family="Georgia,serif">"</text>
+    <rect x="22" y="12" width="86" height="4" rx="1.5" fill="#d1d5db"/>
+    <rect x="22" y="20" width="72" height="4" rx="1.5" fill="#e5e7eb"/>
+    <rect x="22" y="28" width="60" height="4" rx="1.5" fill="#e5e7eb"/>
+    <rect x="34" y="38" width="28" height="3.5" rx="1" fill="#e5e7eb"/>
+  </svg>`,
+  social: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <circle cx="28" cy="26" r="10" fill="#e5e7eb"/>
+    <circle cx="52" cy="26" r="10" fill="#e5e7eb"/>
+    <circle cx="76" cy="26" r="10" fill="#e5e7eb"/>
+    <circle cx="100" cy="26" r="10" fill="#e5e7eb"/>
+    <circle cx="28" cy="26" r="5" fill="#d1d5db"/>
+    <circle cx="52" cy="26" r="5" fill="#d1d5db"/>
+    <circle cx="76" cy="26" r="5" fill="#d1d5db"/>
+    <circle cx="100" cy="26" r="5" fill="#d1d5db"/>
+  </svg>`,
+  product_card: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="6" y="6" width="46" height="30" rx="2" fill="#e5e7eb"/>
+    <rect x="8" y="38" width="42" height="3.5" rx="1" fill="#d1d5db"/>
+    <rect x="8" y="44" width="20" height="3.5" rx="1" fill="#e5e7eb"/>
+    <rect x="62" y="8" width="50" height="22" rx="2" fill="#e5e7eb"/>
+    <rect x="62" y="34" width="36" height="4" rx="1.5" fill="#d1d5db"/>
+    <rect x="62" y="42" width="16" height="5" rx="1.5" fill="#c7d2fe"/>
+  </svg>`,
+  video_thumb: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#e5e7eb" rx="3"/>
+    <rect width="120" height="52" fill="#d1d5db" rx="3"/>
+    <circle cx="60" cy="26" r="14" fill="white" opacity="0.85"/>
+    <polygon points="55,19 55,33 71,26" fill="#6b7280"/>
+  </svg>`,
+  spacer: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <line x1="10" y1="12" x2="110" y2="12" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="10" y1="40" x2="110" y2="40" stroke="#d1d5db" stroke-width="1" stroke-dasharray="4 3"/>
+    <line x1="60" y1="14" x2="60" y2="38" stroke="#d1d5db" stroke-width="1" stroke-dasharray="3 3"/>
+    <polygon points="56,15 60,10 64,15" fill="#d1d5db"/>
+    <polygon points="56,37 60,42 64,37" fill="#d1d5db"/>
+  </svg>`,
+  section_label: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <rect x="30" y="18" width="60" height="16" rx="8" fill="#e0e7ff"/>
+    <rect x="42" y="23" width="36" height="5" rx="1.5" fill="#a5b4fc"/>
+  </svg>`,
+  divider: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f8f9fa" rx="3"/>
+    <line x1="10" y1="26" x2="110" y2="26" stroke="#d1d5db" stroke-width="1.5"/>
+  </svg>`,
+  footer: `<svg viewBox="0 0 120 52" width="120" height="52" xmlns="http://www.w3.org/2000/svg">
+    <rect width="120" height="52" fill="#f3f4f6" rx="3"/>
+    <rect x="20" y="10" width="80" height="4" rx="1.5" fill="#d1d5db"/>
+    <rect x="30" y="19" width="60" height="3.5" rx="1" fill="#e5e7eb"/>
+    <rect x="35" y="27" width="50" height="3" rx="1" fill="#e9ebee"/>
+    <rect x="40" y="35" width="40" height="3" rx="1" fill="#e9ebee"/>
+    <rect x="45" y="43" width="30" height="3" rx="1" fill="#e9ebee"/>
+  </svg>`,
+};
 
 // ── Block picker ──────────────────────────────────────────────────────────────
 const availableBlocks = [
