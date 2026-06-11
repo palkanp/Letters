@@ -26,7 +26,7 @@
       >
         <template #node="{ node, hasChildren, isCollapsed, toggleCollapsed }">
           <div
-            class="group relative flex items-center gap-1.5 h-8 rounded-md px-1.5 cursor-pointer select-none transition-colors"
+            class="group relative flex items-center gap-1.5 h-[25px] rounded-md px-1.5 cursor-pointer select-none transition-colors"
             :class="rowClass(node)"
             draggable="true"
             @click.stop="store.selectBlock(node.id)"
@@ -73,7 +73,7 @@
             <input
               v-if="editingId === node.id"
               v-focus
-              class="flex-1 text-xs bg-transparent border-b border-blue-400 outline-none min-w-0 py-0.5"
+              class="flex-1 text-sm bg-transparent border-b border-blue-400 outline-none min-w-0 py-0.5"
               :value="node.label || blockLabel(node.type)"
               @blur="finishRename(node.id, $event.target.value)"
               @keydown.enter.prevent="finishRename(node.id, $event.target.value)"
@@ -84,7 +84,7 @@
             />
             <span
               v-else
-              class="flex-1 text-xs truncate"
+              class="flex-1 text-sm truncate"
               :class="isStructural(node.type) ? 'font-medium text-ink-gray-8' : ''"
             >{{ node.label || blockLabel(node.type) }}</span>
 
