@@ -77,11 +77,17 @@ def _spacing_wrapper(inner_html: str, props: dict) -> str:
 
 _RT_ALLOWED = frozenset({
     "p", "br", "strong", "b", "em", "i", "u", "a", "ul", "ol", "li", "span",
+    "s", "del",
 })
 _RT_BLOCK_TO_BR = frozenset({
     "div", "h1", "h2", "h3", "h4", "h5", "h6",
 })
 _RT_VOID = frozenset({"br"})
+# Tags that must be rendered as styled spans for email-client compatibility
+_RT_STYLED_SPAN = {
+    "s": 'text-decoration:line-through;',
+    "del": 'text-decoration:line-through;',
+}
 # Tags whose inner content is entirely suppressed (dangerous)
 _RT_SUPPRESS = frozenset({"script", "style", "head", "meta", "link", "iframe", "object", "embed"})
 
@@ -112,6 +118,8 @@ class _RichTextSanitizer(HTMLParser):
                 self._out.append(
                     f'<a href="{safe}" style="color:#2563eb;" target="_blank">'
                 )
+            elif tag in _RT_STYLED_SPAN:
+                self._out.append(f'<span style="{_RT_STYLED_SPAN[tag]}">')
             elif tag in _RT_VOID:
                 self._out.append(f"<{tag} />")
             else:
@@ -127,7 +135,10 @@ class _RichTextSanitizer(HTMLParser):
         if self._suppress_depth > 0:
             return
         if tag in _RT_ALLOWED and tag not in _RT_VOID:
-            self._out.append(f"</{tag}>")
+            if tag in _RT_STYLED_SPAN:
+                self._out.append("</span>")
+            else:
+                self._out.append(f"</{tag}>")
 
     def handle_data(self, data: str) -> None:
         if self._suppress_depth == 0:

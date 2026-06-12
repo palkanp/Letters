@@ -194,9 +194,13 @@ def send_test(blocks=None, subject=None, preview_text=None, name=None, recipient
         frappe.log_error(frappe.get_traceback(), "Letters send_test compile error")
         frappe.throw(str(e))
 
-    email = (recipient or "").strip() or frappe.session.user
+    session_email = frappe.session.user
+    requested = (recipient or "").strip()
+    if requested and requested != session_email:
+        frappe.throw(_("Test emails can only be sent to your own account ({0}).").format(session_email))
+    email = session_email
     if not frappe.utils.validate_email_address(email, throw=False):
-        frappe.throw(_("Please enter a valid email address to send the test to."))
+        frappe.throw(_("Your account does not have a valid email address."))
     test_subject = f"[TEST] {subject or 'Email Preview'}"
 
     # Queue rather than send inline (now=False): a slow SMTP server must not
@@ -272,10 +276,13 @@ def get_campaign_analytics(name):
         }
 
     send_names = [s.name for s in sends]
-    total = sum((s.total_recipients or 0) for s in sends)
-    sent  = sum((s.sent_count or 0) for s in sends)
+    # Metrics are scoped to the most recent send so open_rate has a stable denominator.
+    # Aggregating across resends produces rates >100% and a misleading denominator.
+    latest_send = sends[0]
+    total = latest_send.total_recipients or 0
+    sent  = latest_send.sent_count or 0
     opened = frappe.db.count(
-        "Email Send Recipient", {"parent": ["in", send_names], "opened": 1}
+        "Email Send Recipient", {"parent": latest_send.name, "opened": 1}
     )
     last_opened = frappe.db.get_value(
         "Email Send Recipient",
@@ -283,11 +290,10 @@ def get_campaign_analytics(name):
         "opened_on", order_by="opened_on desc",
     )
     # Per-recipient status breakdown from the most recent send
-    latest_send = sends[0].name
     status_counts = {}
     for row in frappe.get_all(
         "Email Send Recipient",
-        filters={"parent": latest_send},
+        filters={"parent": latest_send.name},
         fields=["status"],
     ):
         s = row.status or "Pending"

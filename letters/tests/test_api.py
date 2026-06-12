@@ -1059,17 +1059,27 @@ class TestSendTest:
     def setup_method(self):
         _reset()
 
-    def test_sends_to_explicit_recipient(self):
+    def test_sends_to_session_user_when_recipient_matches(self):
+        frappe_stub.session.user = "user@frappe.io"
         with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
             C.return_value.compile.return_value = "<html/>"
             result = api_module.send_test(
-                blocks=json.dumps([]), subject="Hi", recipient="test@example.com"
+                blocks=json.dumps([]), subject="Hi", recipient="user@frappe.io"
             )
-        assert result["sent_to"] == "test@example.com"
+        assert result["sent_to"] == "user@frappe.io"
         frappe_stub.sendmail.assert_called_once()
         kw = frappe_stub.sendmail.call_args.kwargs
-        assert kw["recipients"] == ["test@example.com"]
+        assert kw["recipients"] == ["user@frappe.io"]
         assert kw["subject"].startswith("[TEST]")
+
+    def test_rejects_recipient_that_is_not_session_user(self):
+        frappe_stub.session.user = "user@frappe.io"
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html/>"
+            with pytest.raises(FrappeValidationError, match="own account"):
+                api_module.send_test(
+                    blocks=json.dumps([]), subject="Hi", recipient="other@example.com"
+                )
 
     def test_falls_back_to_session_user_when_no_recipient(self):
         frappe_stub.session.user = "user@frappe.io"
@@ -1086,14 +1096,15 @@ class TestSendTest:
                 api_module.send_test(blocks=json.dumps([]), recipient="notanemail")
 
     def test_loads_from_campaign_when_name_given(self):
+        frappe_stub.session.user = "user@frappe.io"
         doc = _campaign_doc()
         doc.preview_text = ""
         doc.email_width = 600
         frappe_stub.get_doc.return_value = doc
         with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
             C.return_value.compile.return_value = "<html/>"
-            result = api_module.send_test(name="CAMP-001", recipient="r@x.com")
-        assert result["sent_to"] == "r@x.com"
+            result = api_module.send_test(name="CAMP-001")
+        assert result["sent_to"] == "user@frappe.io"
 
 
 # ── get_campaign_analytics ────────────────────────────────────────────────────
