@@ -826,3 +826,47 @@ class TestUrlSafety:
         import socket as _socket
         with patch("socket.getaddrinfo", side_effect=_socket.gaierror):
             assert api_module._url_safety_error("http://nonexistent.invalid/") == "dns resolution failed"
+
+    def test_resolve_returns_pinned_public_ip(self):
+        with patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("93.184.216.34", 443))]):
+            host, ip, port, scheme, error = api_module._resolve_safe_target("https://example.com/x")
+        assert error is None
+        assert host == "example.com"
+        assert ip == "93.184.216.34"
+        assert port == 443
+        assert scheme == "https"
+
+
+class TestHeadPinned:
+    """The probe must connect to the validated IP, never re-resolve (rebind-proof)."""
+
+    def test_connects_to_pinned_ip_not_hostname(self):
+        # getaddrinfo resolves the hostname to a public IP; the actual socket
+        # connection must target that exact IP, proving no second DNS lookup.
+        public_ip = "93.184.216.34"
+        fake_sock = MagicMock()
+        fake_resp = MagicMock(status=200)
+        fake_conn = MagicMock()
+        fake_conn.getresponse.return_value = fake_resp
+        # _head_pinned overrides conn.connect with its pinning closure; mimic
+        # real http.client by invoking that closure when request() is called.
+        fake_conn.request.side_effect = lambda *a, **k: fake_conn.connect()
+
+        with patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", (public_ip, 80))]), \
+             patch("http.client.HTTPConnection", return_value=fake_conn) as conn_cls, \
+             patch("socket.create_connection", return_value=fake_sock) as create_conn:
+            code = api_module._head_pinned("http://example.com/path?q=1", 5)
+            # The socket is dialed against the validated IP, not re-resolved.
+            create_conn.assert_called_once_with((public_ip, 80), 5)
+
+        assert code == 200
+        # Connection object built for the real hostname (Host header / cert).
+        conn_cls.assert_called_once()
+        assert conn_cls.call_args[0][0] == "example.com"
+
+    def test_blocked_url_never_opens_a_socket(self):
+        with patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("127.0.0.1", 80))]), \
+             patch("socket.create_connection") as create_conn:
+            with pytest.raises(ValueError):
+                api_module._head_pinned("http://localhost/admin", 5)
+            create_conn.assert_not_called()

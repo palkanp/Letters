@@ -514,14 +514,32 @@ _LINK_CHECK_TIMEOUT = 5  # per-request, seconds
 _LINK_CHECK_TIME_BUDGET = 25  # total wall-clock across all requests, seconds
 
 
-def _url_safety_error(url):
-    """Return a short reason string if ``url`` is unsafe to fetch server-side,
-    or None if it is a public http(s) URL.
+def _ip_is_public(ip):
+    """True only for globally-routable unicast addresses. Rejects private,
+    loopback, link-local (incl. 169.254.0.0/16 cloud metadata), multicast,
+    reserved, and unspecified ranges (IPv4 and IPv6)."""
+    return not (
+        ip.is_private
+        or ip.is_loopback
+        or ip.is_link_local
+        or ip.is_multicast
+        or ip.is_reserved
+        or ip.is_unspecified
+    )
 
-    Blocks SSRF vectors: non-http(s) schemes, and any hostname that resolves to
-    a private, loopback, link-local (incl. 169.254.0.0/16 cloud metadata),
-    reserved, or multicast address. Every resolved address is checked, so a
-    DNS name pointing at an internal IP is rejected too."""
+
+def _resolve_safe_target(url):
+    """Validate ``url`` for server-side fetching and resolve it to a single,
+    pinned IP address.
+
+    Returns ``(host, ip, port, scheme, error)``. When ``error`` is a non-None
+    reason string the URL must NOT be fetched. On success ``ip`` is the exact
+    address the caller must connect to — every address the host resolves to has
+    been checked, and the connection is later made to this pinned IP (not a
+    fresh lookup), which closes the DNS-rebinding (TOCTOU) window.
+
+    Blocks: non-http(s) schemes, and any hostname where ANY resolved address is
+    non-public (so a DNS name pointing partly at an internal IP is rejected)."""
     import ipaddress
     import socket
     from urllib.parse import urlsplit
@@ -529,37 +547,90 @@ def _url_safety_error(url):
     try:
         parts = urlsplit(url)
     except ValueError:
-        return "invalid url"
+        return None, None, None, None, "invalid url"
 
     if parts.scheme not in ("http", "https"):
-        return "unsupported scheme"
+        return None, None, None, None, "unsupported scheme"
 
     host = parts.hostname
     if not host:
-        return "no host"
+        return None, None, None, None, "no host"
 
-    # Resolve every address the host maps to; reject if ANY is non-public.
+    port = parts.port or (443 if parts.scheme == "https" else 80)
+
     try:
-        infos = socket.getaddrinfo(host, parts.port or (443 if parts.scheme == "https" else 80), proto=socket.IPPROTO_TCP)
+        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
     except socket.gaierror:
-        return "dns resolution failed"
+        return None, None, None, None, "dns resolution failed"
 
+    pinned_ip = None
     for info in infos:
         ip_str = info[4][0]
         try:
             ip = ipaddress.ip_address(ip_str)
         except ValueError:
-            return "unresolvable address"
-        if (
-            ip.is_private
-            or ip.is_loopback
-            or ip.is_link_local
-            or ip.is_multicast
-            or ip.is_reserved
-            or ip.is_unspecified
-        ):
-            return "private or reserved address"
-    return None
+            return None, None, None, None, "unresolvable address"
+        if not _ip_is_public(ip):
+            # Reject the whole host if ANY address is non-public — a partially
+            # internal result set is a classic rebinding trick.
+            return None, None, None, None, "private or reserved address"
+        if pinned_ip is None:
+            pinned_ip = ip_str
+
+    return host, pinned_ip, port, parts.scheme, None
+
+
+def _url_safety_error(url):
+    """Back-compat thin wrapper: just the error reason (None when safe)."""
+    return _resolve_safe_target(url)[4]
+
+
+def _head_pinned(url, timeout):
+    """Issue a HEAD request to ``url`` connecting to the pre-validated pinned IP.
+
+    Redirects are NOT followed (a 3xx Location could point back at an internal
+    host); the raw status code is returned. TLS uses the original hostname for
+    SNI and certificate verification even though the socket targets the pinned
+    IP, so security is preserved without a second DNS lookup.
+
+    Returns the HTTP status code (int). Raises on connection/HTTP errors."""
+    import http.client
+    import socket
+    import ssl
+    from urllib.parse import urlsplit
+
+    host, ip, port, scheme, error = _resolve_safe_target(url)
+    if error:
+        raise ValueError(error)
+
+    parts = urlsplit(url)
+    path = parts.path or "/"
+    if parts.query:
+        path = f"{path}?{parts.query}"
+
+    if scheme == "https":
+        ctx = ssl.create_default_context()
+        conn = http.client.HTTPSConnection(host, port=port, timeout=timeout, context=ctx)
+    else:
+        conn = http.client.HTTPConnection(host, port=port, timeout=timeout)
+
+    # Pin the socket to the validated IP. We override the address the socket
+    # connects to (the pinned IP) while leaving conn.host as the real hostname
+    # so the Host header, SNI, and cert validation all use the hostname.
+    def _connect():
+        sock = socket.create_connection((ip, port), timeout)
+        if scheme == "https":
+            conn.sock = ctx.wrap_socket(sock, server_hostname=host)
+        else:
+            conn.sock = sock
+
+    conn.connect = _connect
+    try:
+        conn.request("HEAD", path, headers={"User-Agent": "Mozilla/5.0", "Host": host})
+        resp = conn.getresponse()
+        return resp.status
+    finally:
+        conn.close()
 
 
 @frappe.whitelist()
@@ -567,11 +638,12 @@ def check_links(blocks=None, name=None):
     """Extract all hrefs from compiled email HTML and check if they resolve.
 
     URLs are validated against an SSRF allowlist before any fetch: only public
-    http(s) hosts are probed (see _url_safety_error). Internal/loopback/cloud-
+    http(s) hosts are probed (see _resolve_safe_target). The probe connects to
+    the exact IP that passed validation (no second DNS lookup), so DNS
+    rebinding cannot redirect us to an internal host. Internal/loopback/cloud-
     metadata targets are reported as blocked, never requested."""
     import re
     import time
-    import urllib.request
 
     if name:
         doc = frappe.get_doc("Letters Campaign", name)
@@ -603,18 +675,18 @@ def check_links(blocks=None, name=None):
 
         # SSRF guard: never let a user-supplied URL make us probe an internal
         # host. Validate (scheme + resolved IP ranges) before any network call.
-        unsafe = _url_safety_error(url)
-        if unsafe:
+        if _url_safety_error(url):
             results.append({"url": url, "status": "blocked", "code": None})
             continue
 
         checked += 1
         try:
-            req = urllib.request.Request(url, method="HEAD", headers={"User-Agent": "Mozilla/5.0"})
-            with urllib.request.urlopen(req, timeout=_LINK_CHECK_TIMEOUT) as resp:
-                results.append({"url": url, "status": "ok", "code": resp.status})
-        except urllib.error.HTTPError as e:
-            results.append({"url": url, "status": "error", "code": e.code})
+            code = _head_pinned(url, _LINK_CHECK_TIMEOUT)
+            # Treat 4xx/5xx as broken; 2xx/3xx as reachable.
+            if code >= 400:
+                results.append({"url": url, "status": "error", "code": code})
+            else:
+                results.append({"url": url, "status": "ok", "code": code})
         except Exception:
             results.append({"url": url, "status": "error", "code": None})
 
