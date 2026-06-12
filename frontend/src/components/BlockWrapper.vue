@@ -8,8 +8,9 @@
     :style="{
       ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle,
       ...blockBorderStyle,
-      outline: selected ? '2px solid #3b82f6' : (isHovered && !store.selectedBlockId ? '1.5px solid #bfdbfe' : 'none'),
-      outlineOffset: '-2px',
+      boxShadow: selected
+        ? 'inset 0 0 0 2px #3b82f6'
+        : (isHovered && !store.selectedBlockId ? 'inset 0 0 0 1.5px #bfdbfe' : 'none'),
     }"
     :data-block-id="block.id"
     @mouseenter="isHovered = true"
