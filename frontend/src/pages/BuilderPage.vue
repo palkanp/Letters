@@ -50,29 +50,6 @@
 
       <!-- Actions -->
       <div class="flex items-center gap-1.5 flex-shrink-0">
-        <!-- Undo / Redo -->
-        <Tooltip text="Undo (⌘Z)">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon="corner-up-left"
-            :disabled="!editorStore.canUndo"
-            aria-label="Undo"
-            @click="editorStore.undo()"
-          />
-        </Tooltip>
-        <Tooltip text="Redo (⌘⇧Z)">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon="corner-up-right"
-            :disabled="!editorStore.canRedo"
-            aria-label="Redo"
-            @click="editorStore.redo()"
-          />
-        </Tooltip>
-
-        <div class="w-px h-4 bg-gray-200 mx-0.5" />
 
         <!-- Settings (gear) — opens the Campaign Settings dialog -->
         <Tooltip text="Campaign settings">
@@ -307,7 +284,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch, provide } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch, provide, nextTick } from "vue";
 import { Button, TextInput, FeatherIcon, Dialog, Dropdown, Tooltip, toast } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
@@ -923,11 +900,8 @@ function hideBlockPreview() {
 }
 function insertBlock(type) {
   if (!pickerTarget.value) {
-    // Direct insert (e.g. toolbar buttons) — append to canvas
     editorStore.addBlock(type, editorStore.blocks.length - 1);
-    return;
-  }
-  if (pickerTarget.value.mode === "column") {
+  } else if (pickerTarget.value.mode === "column") {
     editorStore.addBlockToColumn(
       pickerTarget.value.blockId,
       pickerTarget.value.colIndex,
@@ -940,6 +914,16 @@ function insertBlock(type) {
     editorStore.addBlock(type, pickerTarget.value.afterIndex);
   }
   closePicker();
+  scrollToSelected();
+}
+
+function scrollToSelected() {
+  nextTick(() => {
+    const id = editorStore.selectedBlockId;
+    if (!id) return;
+    const el = document.querySelector(`[data-block-id="${id}"]`);
+    el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  });
 }
 
 // ── Strip runtime IDs before saving (recursive for nested children) ──────────
@@ -971,5 +955,12 @@ function onCanvasDrop() {
 /* Ensure frappe-ui Dialog overlay sits above all canvas z-index layers */
 .dialog-overlay {
   z-index: 9999 !important;
+}
+
+/* Placeholder text for contenteditable fields */
+.editable-placeholder:empty::before {
+  content: attr(data-placeholder);
+  color: #d1d5db;
+  pointer-events: none;
 }
 </style>

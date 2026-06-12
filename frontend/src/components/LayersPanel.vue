@@ -47,7 +47,7 @@ const blockLabel = (type) => BLOCK_SCHEMA[type]?.label || type;
 
 function rowClass(node) {
   return store.selectedBlockId === node.id
-    ? "bg-surface-elevation-3 shadow-sm"
+    ? "bg-blue-50 ring-1 ring-blue-200"
     : "hover:bg-surface-gray-2";
 }
 
@@ -219,7 +219,7 @@ const LayerNode = defineComponent({
             }, [h(FeatherIcon, { name: isOpen ? "chevron-down" : "chevron-right", class: "w-3.5 h-3.5" })])
           : h("span", { class: "flex-shrink-0 w-4" }),
 
-        h(FeatherIcon, { name: blockIcon(b.type), class: "w-3.5 h-3.5 flex-shrink-0 text-ink-gray-6" }),
+        h(FeatherIcon, { name: blockIcon(b.type), class: "w-3.5 h-3.5 flex-shrink-0 " + (store.selectedBlockId === b.id ? "text-blue-500" : "text-ink-gray-6") }),
 
         editingId.value === b.id
           ? h("input", {
@@ -235,7 +235,7 @@ const LayerNode = defineComponent({
               onDragstart:(e) => { e.stopPropagation(); e.preventDefault(); },
               ref: (el) => el?.focus(),
             })
-          : h("span", { class: "flex-1 text-sm text-ink-gray-6 truncate" }, b.label || blockLabel(b.type)),
+          : h("span", { class: "flex-1 text-sm truncate " + (store.selectedBlockId === b.id ? "text-blue-700 font-medium" : "text-ink-gray-6") }, b.label || blockLabel(b.type)),
 
         idx !== null
           ? h("span", { class: "text-xs text-ink-gray-4 flex-shrink-0 tabular-nums px-0.5" }, idx + 1)

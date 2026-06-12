@@ -63,5 +63,5 @@ const store = useEditorStore();
 function update(key, val) { store.updateBlockProps(props.block.id, { [key]: val }); }
 
 const blockProps = computed(() => props.block.props);
-const paddingStyle = usePadding(blockProps, { top: 20, right: 32, bottom: 20, left: 32 });
+const paddingStyle = usePadding(blockProps, { top: 20, right: 16, bottom: 20, left: 16 });
 </script>

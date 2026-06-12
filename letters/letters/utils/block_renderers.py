@@ -50,7 +50,7 @@ def _hex_to_rgba(hex_color: str, alpha: float) -> str:
     return f"rgba({r},{g},{b},{alpha})"
 
 
-def _padding(props: dict, dt: int = 20, dr: int = 32, db: int = 20, dl: int = 32) -> str:
+def _padding(props: dict, dt: int = 20, dr: int = 16, db: int = 20, dl: int = 16) -> str:
     """Return a CSS padding shorthand from block props, falling back to supplied defaults."""
     t = int(props.get("padding_top",    dt))
     r = int(props.get("padding_right",  dr))
@@ -172,17 +172,23 @@ class HeroRenderer(BlockRenderer):
         text_align      = escape(p.get("text_align", "center"))
         heading_font    = font_stack(p, "Georgia,'Times New Roman',serif")
         subheading_font = font_stack(p, "Arial,sans-serif")
-        padding         = _padding(p, 40, 32, 40, 32)
+        padding         = _padding(p, 40, 16, 40, 16)
+
+        heading_html = (
+            f'<h1 style="margin:0 0 12px;font-family:{heading_font};'
+            f'font-size:{heading_size};font-weight:bold;color:{heading_color};'
+            f'line-height:1.2;text-align:{text_align};">{heading}</h1>'
+        ) if heading else ""
+        subheading_html = (
+            f'<p style="margin:0;font-family:{subheading_font};font-size:16px;'
+            f'color:{subheading_color};line-height:1.5;text-align:{text_align};">{subheading}</p>'
+        ) if subheading else ""
 
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
             f'<tr><td align="{text_align}" style="padding:{padding};">'
-            f'<h1 style="margin:0 0 12px;font-family:{heading_font};'
-            f'font-size:{heading_size};font-weight:bold;color:{heading_color};'
-            f'line-height:1.2;text-align:{text_align};">{heading}</h1>'
-            f'<p style="margin:0;font-family:{subheading_font};font-size:16px;'
-            f'color:{subheading_color};line-height:1.5;text-align:{text_align};">{subheading}</p>'
+            f'{heading_html}{subheading_html}'
             f'</td></tr></table>'
         )
         return _spacing_wrapper(html, p)
@@ -213,7 +219,7 @@ class TextRenderer(BlockRenderer):
             f"font-weight:{weight};letter-spacing:{letter_spacing};"
         )
 
-        padding = _padding(p, 20, 32, 20, 32)
+        padding = _padding(p, 20, 16, 20, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr><td align="{align}" style="padding:{padding};">'
@@ -260,7 +266,7 @@ class ImageRenderer(BlockRenderer):
                 f'font-size:12px;color:{caption_color};line-height:1.4;">{caption}</td></tr>'
             )
 
-        padding = _padding(p, 16, 32, 16, 32)
+        padding = _padding(p, 16, 16, 16, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
@@ -289,7 +295,7 @@ class SectionLabelRenderer(BlockRenderer):
         above_line = line_html if line_position == "above" else ""
         below_line = line_html if line_position in ("below", "") or not line_position else ""
 
-        padding = _padding(p, 12, 32, 12, 32)
+        padding = _padding(p, 12, 16, 12, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr><td style="padding:{padding};" align="{align}">'
@@ -388,7 +394,7 @@ class ButtonRenderer(BlockRenderer):
         btn_padding_key = p.get("button_padding", "normal")
         btn_padding    = self._BTN_PADDING.get(btn_padding_key, self._BTN_PADDING["normal"])
 
-        padding = _padding(p, 20, 32, 20, 32)
+        padding = _padding(p, 20, 16, 20, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr><td align="{align}" style="padding:{padding};">'
@@ -411,7 +417,7 @@ class DividerRenderer(BlockRenderer):
         align     = p.get("align", "center")
         text_align = "left" if align == "left" else "right" if align == "right" else "center"
 
-        padding = _padding(p, 16, 32, 16, 32)
+        padding = _padding(p, 16, 16, 16, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr><td style="padding:{padding};" align="{text_align}">'
@@ -570,7 +576,7 @@ class FooterRenderer(BlockRenderer):
         color = escape(p.get("text_color", "#6b7280"))
         font  = font_stack(p, "Arial,sans-serif")
 
-        padding = _padding(p, 20, 32, 20, 32)
+        padding = _padding(p, 20, 16, 20, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
@@ -609,7 +615,7 @@ class QuoteRenderer(BlockRenderer):
         bg           = escape(p.get("background_color", "#f9fafb"))
         quote_font   = font_stack(p, "Georgia,'Times New Roman',serif")
         meta_font    = font_stack(p, "Arial,sans-serif")
-        padding      = _padding(p, 24, 32, 24, 32)
+        padding      = _padding(p, 24, 16, 24, 16)
 
         if style == "centered":
             inner = (
@@ -675,7 +681,7 @@ class SocialRenderer(BlockRenderer):
         color = escape(p.get("color", "#374151"))
         bg    = escape(p.get("background_color", "#ffffff"))
         align = escape(p.get("align", "center"))
-        padding = _padding(p, 20, 32, 20, 32)
+        padding = _padding(p, 20, 16, 20, 16)
 
         bg_rgba     = _hex_to_rgba(p.get("color", "#374151"), 0.1)
         border_rgba = _hex_to_rgba(p.get("color", "#374151"), 0.2)
@@ -774,7 +780,7 @@ class VideoThumbRenderer(BlockRenderer):
         video_url     = _safe_url(p.get("video_url", "#"))
         caption       = escape(p.get("caption", ""))
         border_radius = escape(p.get("border_radius", "8px"))
-        padding       = _padding(p, 16, 32, 16, 32)
+        padding       = _padding(p, 16, 16, 16, 16)
 
         if not thumbnail_url:
             return ""
@@ -812,7 +818,7 @@ class LinkListRenderer(BlockRenderer):
         accent_color = escape(p.get("accent_color", "#9ca3af"))
         bg          = escape(p.get("background_color", "#ffffff"))
         font        = font_stack(p, "Arial,sans-serif")
-        padding     = _padding(p, 20, 32, 20, 32)
+        padding     = _padding(p, 20, 16, 20, 16)
 
         if not items:
             return ""
@@ -888,7 +894,7 @@ class HeaderRenderer(BlockRenderer):
         tagline_color = escape(p.get("tagline_color", "#6b7280"))
         border_bottom = p.get("border_bottom", True)
         font          = font_stack(p, "Arial,sans-serif")
-        padding       = _padding(p, 20, 32, 20, 32)
+        padding       = _padding(p, 20, 16, 20, 16)
 
         h_px = logo_height.replace("px", "")
         if logo_url:
@@ -935,7 +941,7 @@ class RichTextRenderer(BlockRenderer):
         line_height    = escape(str(p.get("line_height", "1.6")))
         letter_spacing = escape(str(p.get("letter_spacing", "")))
         font           = font_stack(p, "Arial,sans-serif")
-        padding        = _padding(p, 20, 32, 20, 32)
+        padding        = _padding(p, 20, 16, 20, 16)
 
         ls_style = f"letter-spacing:{letter_spacing};" if letter_spacing and letter_spacing != "normal" else ""
         html = (

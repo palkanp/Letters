@@ -31,15 +31,15 @@ export const BLOCK_SCHEMA = {
     label: "Hero",
     icon: "layout",
     defaults: {
-      heading: "Your heading",
-      subheading: "Your subheading",
+      heading: "",
+      subheading: "",
       background_color: "#ffffff",
       text_align: "center",
       heading_color: "#111827",
       heading_size: "30px",
       subheading_color: "#6b7280",
       font_family: "Georgia",
-      padding_top: 40, padding_right: 32, padding_bottom: 40, padding_left: 32,
+      padding_top: 40, padding_right: 16, padding_bottom: 40, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -76,7 +76,7 @@ export const BLOCK_SCHEMA = {
       font_weight: "400",
       text_color: "#374151",
       line_height: "1.6",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -117,7 +117,7 @@ export const BLOCK_SCHEMA = {
       background_color: "#ffffff",
       border: "none",
       border_radius: "0",
-      padding_top: 16, padding_right: 32, padding_bottom: 16, padding_left: 32,
+      padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16,
       spacing_top: 0, spacing_bottom: 0,
       ...borderDefaults,
     },
@@ -156,7 +156,7 @@ export const BLOCK_SCHEMA = {
       line_position: "below",
       align: "left",
       font_family: "Arial",
-      padding_top: 12, padding_right: 32, padding_bottom: 12, padding_left: 32,
+      padding_top: 12, padding_right: 16, padding_bottom: 12, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -206,7 +206,7 @@ export const BLOCK_SCHEMA = {
       layout_mode: "side",
       background_color: "#ffffff",
       font_family: "Arial",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -261,7 +261,7 @@ export const BLOCK_SCHEMA = {
       font_family: "Arial",
       font_size: "14px",
       button_padding: "normal",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -313,7 +313,7 @@ export const BLOCK_SCHEMA = {
       style: "solid",
       width: "100%",
       align: "center",
-      padding_top: 16, padding_right: 32, padding_bottom: 16, padding_left: 32,
+      padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -412,7 +412,7 @@ export const BLOCK_SCHEMA = {
       accent_color: "#9ca3af",
       background_color: "#ffffff",
       font_family: "Arial",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -492,7 +492,7 @@ export const BLOCK_SCHEMA = {
       background_color: "#f9fafb",
       text_color: "#6b7280",
       font_family: "Arial",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -550,7 +550,7 @@ export const BLOCK_SCHEMA = {
       border_color: "#e5e7eb",
       background_color: "#f9fafb",
       font_family: "Georgia",
-      padding_top: 24, padding_right: 32, padding_bottom: 24, padding_left: 32,
+      padding_top: 24, padding_right: 16, padding_bottom: 24, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -592,7 +592,7 @@ export const BLOCK_SCHEMA = {
       color: "#374151",
       background_color: "#ffffff",
       align: "center",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -637,7 +637,7 @@ export const BLOCK_SCHEMA = {
       title_color: "#111827",
       text_color: "#6b7280",
       font_family: "Arial",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -676,7 +676,7 @@ export const BLOCK_SCHEMA = {
       border_bottom: true,
       tagline_color: "#6b7280",
       font_family: "Arial",
-      padding_top: 20, padding_right: 32, padding_bottom: 20, padding_left: 32,
+      padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
     sections: [
@@ -723,7 +723,7 @@ export const BLOCK_SCHEMA = {
       play_icon_color: "#111827",
       overlay_color: "rgba(0,0,0,0.3)",
       border_radius: "0",
-      padding_top: 16, padding_right: 32, padding_bottom: 16, padding_left: 32,
+      padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16,
       ...borderDefaults,
     },
     sections: [

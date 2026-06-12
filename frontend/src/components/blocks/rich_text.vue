@@ -42,7 +42,7 @@ const props = defineProps({ block: Object, index: Number });
 const store = useEditorStore();
 
 const blockProps   = computed(() => props.block.props);
-const paddingStyle = usePadding(blockProps, { top: 20, right: 32, bottom: 20, left: 32 });
+const paddingStyle = usePadding(blockProps, { top: 20, right: 16, bottom: 20, left: 16 });
 
 const isSelected = computed(() => store.selectedBlockId === props.block.id);
 

@@ -46,7 +46,7 @@ const store = useEditorStore();
 function update(key, val) { store.updateBlockProps(props.block.id, { [key]: val }); }
 
 const blockProps = computed(() => props.block.props);
-const paddingStyle = usePadding(blockProps, { top: 12, right: 32, bottom: 12, left: 32 });
+const paddingStyle = usePadding(blockProps, { top: 12, right: 16, bottom: 12, left: 16 });
 
 const alignClass = computed(() => ({
   "text-left":   !props.block.props.align || props.block.props.align === "left",

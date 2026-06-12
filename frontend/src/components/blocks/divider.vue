@@ -22,7 +22,7 @@ import { usePadding } from "../../composables/usePadding";
 const props = defineProps({ block: Object, index: Number });
 
 const blockProps = computed(() => props.block.props);
-const paddingStyle = usePadding(blockProps, { top: 16, right: 32, bottom: 16, left: 32 });
+const paddingStyle = usePadding(blockProps, { top: 16, right: 16, bottom: 16, left: 16 });
 
 const alignClass = computed(() => {
   const a = props.block.props.align || "center";

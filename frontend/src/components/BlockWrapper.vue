@@ -11,6 +11,7 @@
       outline: selected ? '2px solid #111827' : 'none',
       outlineOffset: '1px',
     }"
+    :data-block-id="block.id"
     @click.stop="store.selectBlock(block.id)"
     @dragover.prevent="onDragOver"
     @dragleave="isDragOver = null"
@@ -214,7 +215,7 @@ function showTip(msg) {
   _tipTimer = setTimeout(() => (paddingTip.value = null), 1200);
 }
 
-const DEFAULT_PADDING = { top: 20, right: 32, bottom: 20, left: 32 };
+const DEFAULT_PADDING = { top: 20, right: 16, bottom: 20, left: 16 };
 
 function startPaddingDrag(edge, e) {
   store.selectBlock(props.block.id);

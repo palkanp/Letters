@@ -9,7 +9,8 @@
     >
       <div
         ref="headingRef"
-        class="font-bold outline-none mb-2 leading-tight"
+        class="font-bold outline-none mb-2 leading-tight editable-placeholder"
+        data-placeholder="Heading…"
         :style="{ color: block.props.heading_color, fontSize: block.props.heading_size || '30px', fontFamily: fontStack(block.props.font_family, 'Georgia, \'Times New Roman\', serif') }"
         contenteditable="true"
         @focus="onHeadingFocus"
@@ -20,7 +21,8 @@
       />
       <div
         ref="subheadingRef"
-        class="text-base outline-none leading-relaxed"
+        class="text-base outline-none leading-relaxed editable-placeholder"
+        data-placeholder="Subheading…"
         :style="{ color: block.props.subheading_color, fontFamily: fontStack(block.props.font_family, 'Arial, Helvetica, sans-serif') }"
         contenteditable="true"
         @focus="onSubheadingFocus"
@@ -46,7 +48,7 @@ const store = useEditorStore();
 function update(key, val) { store.updateBlockProps(props.block.id, { [key]: val }); }
 
 const blockProps = computed(() => props.block.props);
-const paddingStyle = usePadding(blockProps, { top: 40, right: 32, bottom: 40, left: 32 });
+const paddingStyle = usePadding(blockProps, { top: 40, right: 16, bottom: 40, left: 16 });
 
 const {
   elRef: headingRef,

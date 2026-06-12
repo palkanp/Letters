@@ -29,10 +29,10 @@
         </template>
       </ImageUploader>
 
-      <!-- Caption -->
+      <!-- Caption — always visible in editor; hidden in email output when empty -->
       <EditableDiv
-        v-if="block.props.caption"
-        class="mt-2 text-xs outline-none"
+        class="mt-2 text-xs outline-none editable-placeholder"
+        data-placeholder="Add a caption…"
         :style="{ color: block.props.caption_color || '#9ca3af' }"
         :model-value="block.props.caption"
         @update:model-value="update('caption', $event)"
@@ -55,5 +55,5 @@ const store = useEditorStore();
 function update(key, val) { store.updateBlockProps(props.block.id, { [key]: val }); }
 
 const blockProps = computed(() => props.block.props);
-const paddingStyle = usePadding(blockProps, { top: 16, right: 32, bottom: 16, left: 32 });
+const paddingStyle = usePadding(blockProps, { top: 16, right: 16, bottom: 16, left: 16 });
 </script>
