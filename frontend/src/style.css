@@ -28,6 +28,32 @@ html, body {
   background-color: rgb(43 43 43) !important;
 }
 
+/* Canvas: always render with light-mode tokens — resets all CSS vars that dark
+   mode flips, so email content (text, backgrounds, images) looks accurate */
+[data-theme="dark"] .letters-email-canvas {
+  --text-ink-gray-1: 237 237 237;
+  --text-ink-gray-2: 226 226 226;
+  --text-ink-gray-3: 199 199 199;
+  --text-ink-gray-4: 153 153 153;
+  --text-ink-gray-5: 124 124 124;
+  --text-ink-gray-6: 82 82 82;
+  --text-ink-gray-7: 82 82 82;
+  --text-ink-gray-8: 56 56 56;
+  --text-ink-gray-9: 23 23 23;
+  --surface-white: 255 255 255;
+  --surface-gray-1: 248 248 248;
+  --surface-gray-2: 243 243 243;
+  --surface-gray-3: 237 237 237;
+  --surface-gray-4: 226 226 226;
+  --surface-gray-5: 82 82 82;
+  --surface-gray-6: 56 56 56;
+  --surface-gray-7: 23 23 23;
+}
+/* Remove any image brightness filter Frappe Desk applies in dark mode */
+[data-theme="dark"] .letters-email-canvas img {
+  filter: none !important;
+}
+
 /* Thin themed scrollbars — matches Frappe Builder */
 .letters-builder *::-webkit-scrollbar {
   width: 8px;

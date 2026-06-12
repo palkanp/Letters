@@ -204,7 +204,7 @@
         </div>
 
         <div
-          class="mx-auto bg-white origin-top transition-transform shadow-sm"
+          class="mx-auto bg-white origin-top transition-transform shadow-sm letters-email-canvas"
           :style="{ maxWidth: editorStore.emailWidth + 'px', minHeight: '200px', transform: `scale(${canvasZoom})`, transformOrigin: 'top center', marginBottom: canvasZoom < 1 ? `calc((${canvasZoom} - 1) * 100%)` : undefined, color: '#374151', colorScheme: 'light' }"
         >
 
