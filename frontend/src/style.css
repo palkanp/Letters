@@ -25,7 +25,7 @@ html, body {
   background-color: rgb(15 15 15) !important;
 }
 [data-theme="dark"] .letters-builder > div > main {
-  background-color: rgb(22 22 22) !important;
+  background-color: rgb(43 43 43) !important;
 }
 
 /* Thin themed scrollbars — matches Frappe Builder */
