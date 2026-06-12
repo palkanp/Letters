@@ -1,6 +1,5 @@
 <template>
   <div class="flex flex-col h-full">
-    <!-- Empty state -->
     <div
       v-if="!store.blocks.length"
       class="flex-1 flex flex-col items-center justify-center px-4 text-center gap-2"
@@ -10,7 +9,6 @@
       </p>
     </div>
 
-    <!-- Layer tree -->
     <div
       v-else
       class="flex-1 overflow-y-auto py-1 flex flex-col"
@@ -22,11 +20,9 @@
         :key="block.id"
         :block="block"
         :depth="0"
-        :is-last="block === store.blocks[store.blocks.length - 1]"
       />
     </div>
 
-    <!-- Reorder hint -->
     <div v-if="store.blocks.length > 1" class="px-3 py-2 border-t border-gray-100">
       <p class="text-xs text-ink-gray-3 text-center">Drag to reorder · double-click to rename</p>
     </div>
@@ -39,18 +35,26 @@ import { FeatherIcon } from "frappe-ui";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
 
-const store = useEditorStore();
+const store    = useEditorStore();
 const openPicker = inject("openPicker", () => {});
 
-const vFocus = { mounted: (el) => el.focus() };
+// INDENT_W: px per depth level. Chevron is 16px wide, so line sits at depth*INDENT_W + 8 + INDENT_W/2
+const INDENT_W = 16;
+const BASE_PAD = 8; // px-2 equivalent
 
-const STRUCTURAL = new Set(["container", "columns"]);
-const blockIcon  = (type) => BLOCK_SCHEMA[type]?.icon || "box";
+const blockIcon  = (type) => BLOCK_SCHEMA[type]?.icon  || "box";
 const blockLabel = (type) => BLOCK_SCHEMA[type]?.label || type;
 
 function rowClass(node) {
-  if (store.selectedBlockId === node.id) return "bg-surface-elevation-3 shadow-sm";
-  return "hover:bg-surface-gray-2";
+  return store.selectedBlockId === node.id
+    ? "bg-surface-elevation-3 shadow-sm"
+    : "hover:bg-surface-gray-2";
+}
+
+function getChildren(block) {
+  if (block.children?.length) return block.children;
+  if (block.columns?.length)  return block.columns.flatMap((col) => col.blocks || []);
+  return [];
 }
 
 // ── Block metadata ────────────────────────────────────────────────────────────
@@ -80,7 +84,7 @@ function topLevelIndex(id) {
 
 // ── Inline rename ─────────────────────────────────────────────────────────────
 const editingId = ref(null);
-const startRename  = (id) => { editingId.value = id; };
+function startRename(id)  { editingId.value = id; }
 function finishRename(id, value) {
   store.setBlockLabel(id, value);
   editingId.value = null;
@@ -96,7 +100,7 @@ function onDragStart(id, e) {
 }
 
 function getZone(e, isContainer) {
-  const rect = e.currentTarget.getBoundingClientRect();
+  const rect  = e.currentTarget.getBoundingClientRect();
   const ratio = (e.clientY - rect.top) / rect.height;
   if (!isContainer) return ratio < 0.5 ? "before" : "after";
   if (ratio < 0.3) return "before";
@@ -115,8 +119,7 @@ function isDescendant(ancestorId, nodeId) {
 
 function onDragOver(id, e) {
   if (dragId.value == null || dragId.value === id || isDescendant(dragId.value, id)) {
-    dropState.value = null;
-    return;
+    dropState.value = null; return;
   }
   const meta = blockMeta.value.get(id);
   dropState.value = { targetId: id, zone: getZone(e, meta?.isContainer) };
@@ -127,14 +130,11 @@ function onDrop(id) {
   const state = dropState.value;
   clearDrag();
   if (from == null || from === id || !state || isDescendant(from, id)) return;
-
   const meta = blockMeta.value.get(id);
   if (!meta) return;
-  const { zone } = state;
-
-  if (zone === "inside" && meta.isContainer) {
+  if (state.zone === "inside" && meta.isContainer) {
     store.moveBlockTo(from, id, meta.childrenCount);
-  } else if (zone === "before") {
+  } else if (state.zone === "before") {
     store.moveBlockTo(from, meta.parentId, meta.index);
   } else {
     store.moveBlockTo(from, meta.parentId, meta.index + 1);
@@ -148,53 +148,38 @@ function onDropAtEnd() {
   store.moveBlockTo(from, null, store.blocks.length);
 }
 
-function clearDrag() {
-  dragId.value    = null;
-  dropState.value = null;
-}
+function clearDrag() { dragId.value = null; dropState.value = null; }
 
-// ── Keyboard shortcuts ────────────────────────────────────────────────────────
+// ── Keyboard ──────────────────────────────────────────────────────────────────
 function onKeyDown(e) {
   const tag = document.activeElement?.tagName;
   if (tag === "INPUT" || tag === "TEXTAREA" || document.activeElement?.isContentEditable) return;
-
-  const isMac = navigator.platform.startsWith("Mac");
-  const mod = isMac ? e.metaKey : e.ctrlKey;
+  const mod = navigator.platform.startsWith("Mac") ? e.metaKey : e.ctrlKey;
   if (!store.selectedBlockId) return;
-
-  if (e.key === "Delete" || e.key === "Backspace") {
-    e.preventDefault();
-    store.removeBlock(store.selectedBlockId);
-    return;
-  }
+  if (e.key === "Delete" || e.key === "Backspace") { e.preventDefault(); store.removeBlock(store.selectedBlockId); return; }
   if (mod && e.key === "c") { e.preventDefault(); store.copyBlock(store.selectedBlockId); return; }
   if (mod && e.key === "v") { e.preventDefault(); store.pasteBlock(); return; }
 }
-
-onMounted(() => window.addEventListener("keydown", onKeyDown));
+onMounted(()  => window.addEventListener("keydown", onKeyDown));
 onUnmounted(() => window.removeEventListener("keydown", onKeyDown));
 
-// ── LayerNode: recursive component ───────────────────────────────────────────
-// Gets children from block.children (containers) OR block.columns[].blocks (columns).
-function getChildren(block) {
-  if (block.children?.length) return block.children;
-  if (block.columns?.length) return block.columns.flatMap((col) => col.blocks || []);
-  return [];
-}
-
+// ── Collapse state ────────────────────────────────────────────────────────────
 const collapsed = ref(new Set());
 function toggleCollapse(id) {
-  if (collapsed.value.has(id)) collapsed.value.delete(id);
-  else collapsed.value.add(id);
-  collapsed.value = new Set(collapsed.value); // trigger reactivity
+  const next = new Set(collapsed.value);
+  next.has(id) ? next.delete(id) : next.add(id);
+  collapsed.value = next;
 }
 
+// ── LayerNode ─────────────────────────────────────────────────────────────────
+// All indentation is driven by `depth` on each row's paddingLeft.
+// A single absolute-positioned vertical line is drawn for each expanded parent,
+// placed at the horizontal center of the parent's chevron.
 const LayerNode = defineComponent({
   name: "LayerNode",
   props: {
-    block:  { type: Object, required: true },
-    depth:  { type: Number, default: 0 },
-    isLast: { type: Boolean, default: false },
+    block: { type: Object, required: true },
+    depth: { type: Number, default: 0 },
   },
   setup(props) {
     return () => {
@@ -202,37 +187,30 @@ const LayerNode = defineComponent({
       const children = getChildren(b);
       const hasKids  = children.length > 0;
       const isOpen   = !collapsed.value.has(b.id);
-      const idx      = topLevelIndex(b.id);
       const dState   = dropState.value;
+      const idx      = topLevelIndex(b.id);
 
-      // ── Row ──
+      // Row left padding grows with depth
+      const rowPaddingLeft = BASE_PAD + props.depth * INDENT_W;
+
       const row = h("div", {
-        class: [
-          "group relative flex items-center gap-1.5 px-2 py-1 mx-1 rounded-md cursor-pointer select-none transition-colors",
-          rowClass(b),
-        ].join(" "),
+        class: "group relative flex items-center gap-1.5 pr-2 py-1 mx-1 rounded-md cursor-pointer select-none transition-colors " + rowClass(b),
+        style: { paddingLeft: rowPaddingLeft + "px" },
         draggable: true,
-        onClick: (e) => { e.stopPropagation(); store.selectBlock(b.id); },
+        onClick:    (e) => { e.stopPropagation(); store.selectBlock(b.id); },
         onDblclick: (e) => { e.stopPropagation(); startRename(b.id); },
-        onDragstart: (e) => { e.stopPropagation(); onDragStart(b.id, e); },
-        onDragover:  (e) => { e.stopPropagation(); e.preventDefault(); onDragOver(b.id, e); },
-        onDrop:      (e) => { e.stopPropagation(); e.preventDefault(); onDrop(b.id); },
-        onDragend:   () => clearDrag(),
+        onDragstart:(e) => { e.stopPropagation(); onDragStart(b.id, e); },
+        onDragover: (e) => { e.stopPropagation(); e.preventDefault(); onDragOver(b.id, e); },
+        onDrop:     (e) => { e.stopPropagation(); e.preventDefault(); onDrop(b.id); },
+        onDragend:  ()  => clearDrag(),
       }, [
-        // Drop: line above
         dState?.targetId === b.id && dState.zone === "before"
-          ? h("div", { class: "absolute inset-x-1 -top-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10" })
-          : null,
-        // Drop: ring inside
+          ? h("div", { class: "absolute inset-x-1 -top-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10" }) : null,
         dState?.targetId === b.id && dState.zone === "inside"
-          ? h("div", { class: "absolute inset-0 rounded-md ring-2 ring-blue-400 bg-blue-50/40 pointer-events-none z-10" })
-          : null,
-        // Drop: line below
+          ? h("div", { class: "absolute inset-0 rounded-md ring-2 ring-blue-400 bg-blue-50/40 pointer-events-none z-10" }) : null,
         dState?.targetId === b.id && dState.zone === "after"
-          ? h("div", { class: "absolute inset-x-1 -bottom-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10" })
-          : null,
+          ? h("div", { class: "absolute inset-x-1 -bottom-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-10" }) : null,
 
-        // Chevron or spacer
         hasKids
           ? h("button", {
               type: "button",
@@ -241,17 +219,15 @@ const LayerNode = defineComponent({
             }, [h(FeatherIcon, { name: isOpen ? "chevron-down" : "chevron-right", class: "w-3.5 h-3.5" })])
           : h("span", { class: "flex-shrink-0 w-4" }),
 
-        // Icon
         h(FeatherIcon, { name: blockIcon(b.type), class: "w-3.5 h-3.5 flex-shrink-0 text-ink-gray-6" }),
 
-        // Label (editable on dblclick)
         editingId.value === b.id
           ? h("input", {
               class: "flex-1 text-sm bg-transparent border-b border-blue-400 outline-none min-w-0 py-0.5",
               value: b.label || blockLabel(b.type),
               onBlur:    (e) => finishRename(b.id, e.target.value),
               onKeydown: (e) => {
-                if (e.key === "Enter") { e.preventDefault(); finishRename(b.id, e.target.value); }
+                if (e.key === "Enter")  { e.preventDefault(); finishRename(b.id, e.target.value); }
                 if (e.key === "Escape") { e.preventDefault(); editingId.value = null; }
               },
               onClick:    (e) => e.stopPropagation(),
@@ -261,12 +237,10 @@ const LayerNode = defineComponent({
             })
           : h("span", { class: "flex-1 text-sm text-ink-gray-6 truncate" }, b.label || blockLabel(b.type)),
 
-        // Top-level index badge
         idx !== null
           ? h("span", { class: "text-xs text-ink-gray-4 flex-shrink-0 tabular-nums px-0.5" }, idx + 1)
           : null,
 
-        // Add inside (containers only)
         b.type === "container"
           ? h("button", {
               type: "button",
@@ -276,7 +250,6 @@ const LayerNode = defineComponent({
             }, [h(FeatherIcon, { name: "plus", class: "w-3 h-3" })])
           : null,
 
-        // Remove
         h("button", {
           type: "button",
           class: "opacity-0 group-hover:opacity-100 text-ink-gray-4 hover:text-red-500 transition flex-shrink-0 w-4 h-4 flex items-center justify-center rounded",
@@ -287,26 +260,20 @@ const LayerNode = defineComponent({
 
       if (!hasKids || !isOpen) return row;
 
-      // ── Children with guide line ──
-      const childNodes = children.map((child, i) =>
-        h(LayerNode, {
-          key: child.id,
-          block: child,
-          depth: props.depth + 1,
-          isLast: i === children.length - 1,
-        })
-      );
+      // Guide line: absolute, left = mx-1(4px) + paddingLeft + half chevron(8px)
+      const lineLeft = 4 + rowPaddingLeft + 8;
 
-      const guide = h("div", {
-        class: "flex",
-        style: { paddingLeft: (props.depth * 16 + 20) + "px" },
-      }, [
-        // Vertical guide line
-        h("div", { class: "w-px bg-gray-200 flex-shrink-0 mx-1 my-0.5" }),
-        h("div", { class: "flex flex-col flex-1 min-w-0" }, childNodes),
+      const childrenSection = h("div", { class: "relative" }, [
+        h("div", {
+          class: "absolute top-0 bottom-0 w-px bg-gray-200",
+          style: { left: lineLeft + "px" },
+        }),
+        ...children.map((child) =>
+          h(LayerNode, { key: child.id, block: child, depth: props.depth + 1 })
+        ),
       ]);
 
-      return h("div", {}, [row, guide]);
+      return h("div", [row, childrenSection]);
     };
   },
 });
