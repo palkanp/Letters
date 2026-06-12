@@ -8,9 +8,6 @@
     :style="{
       ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle,
       ...blockBorderStyle,
-      boxShadow: selected
-        ? 'inset 0 0 0 2px #3b82f6'
-        : (isHovered && !store.selectedBlockId ? 'inset 0 0 0 1.5px #bfdbfe' : 'none'),
     }"
     :data-block-id="block.id"
     @mouseenter="isHovered = true"
@@ -113,6 +110,16 @@
     <div :style="contentClipStyle">
       <slot />
     </div>
+
+    <!-- Selection / hover ring — absolute overlay so it always renders above content backgrounds -->
+    <div
+      v-if="selected || (isHovered && !store.selectedBlockId)"
+      class="absolute inset-0 pointer-events-none z-20"
+      :style="{
+        boxShadow: selected ? 'inset 0 0 0 2px #3b82f6' : 'inset 0 0 0 1.5px #bfdbfe',
+        borderRadius: blockBorderStyle.borderRadius,
+      }"
+    />
   </div>
 </template>
 
