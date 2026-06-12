@@ -2,7 +2,7 @@
   <div class="letters-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-    <header class="flex-shrink-0 h-12 bg-surface-white border-b border-outline-gray-2 flex items-center px-4 gap-3">
+    <header class="flex-shrink-0 h-12 bg-surface-white border-b border-outline-gray-1 flex items-center px-4 gap-3">
 
       <!-- Brand + page menu (Frappe Builder-style left dropdown) -->
       <Dropdown :options="menuOptions" placement="bottom-start">
@@ -125,7 +125,7 @@
 
       <!-- Permanent left sidebar: Layers + Add block -->
       <aside
-        class="flex-shrink-0 bg-surface-white border-r border-outline-gray-2 flex flex-col relative"
+        class="flex-shrink-0 bg-surface-white border-r border-outline-gray-1 flex flex-col relative"
         :style="{ width: leftPanelWidth + 'px' }"
       >
         <!-- Drag handle (right edge) -->
@@ -134,7 +134,7 @@
           @mousedown="startLeftResize"
         />
         <!-- Header -->
-        <div class="flex items-center justify-between px-4 py-3 border-b border-outline-gray-1 flex-shrink-0">
+        <div class="flex items-center justify-between px-4 py-3.5 border-b border-outline-gray-1 flex-shrink-0">
           <template v-if="pickerTarget !== null">
             <span class="text-xs font-semibold text-ink-gray-4 uppercase tracking-widest">Add Block</span>
             <button type="button" class="text-ink-gray-4 hover:text-ink-gray-7 transition-colors" @click="closePicker">
@@ -204,7 +204,7 @@
         </div>
 
         <div
-          class="mx-auto bg-white shadow-2xl origin-top transition-transform"
+          class="mx-auto bg-white origin-top transition-transform"
           :style="{ maxWidth: editorStore.emailWidth + 'px', minHeight: '200px', transform: `scale(${canvasZoom})`, transformOrigin: 'top center', marginBottom: canvasZoom < 1 ? `calc((${canvasZoom} - 1) * 100%)` : undefined }"
         >
 

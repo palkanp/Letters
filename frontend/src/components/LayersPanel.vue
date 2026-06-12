@@ -194,7 +194,7 @@ const LayerNode = defineComponent({
       const rowPaddingLeft = BASE_PAD + props.depth * INDENT_W;
 
       const row = h("div", {
-        class: "group relative flex items-center gap-1.5 pr-2 py-1 mx-1 rounded cursor-pointer select-none transition-colors " + rowClass(b),
+        class: "group relative flex items-center gap-1.5 pr-2 py-1.5 mx-1 rounded cursor-pointer select-none transition-colors " + rowClass(b),
         style: { paddingLeft: rowPaddingLeft + "px" },
         draggable: true,
         onClick:    (e) => { e.stopPropagation(); store.selectBlock(b.id); },
