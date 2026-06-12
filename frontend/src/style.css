@@ -18,3 +18,17 @@ html, body {
 [contenteditable]:focus {
   outline: none;
 }
+
+/* Thin themed scrollbars — matches Frappe Builder */
+.letters-builder *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+  background: var(--surface-gray-1);
+}
+.letters-builder *::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: var(--surface-gray-3);
+}
+.letters-builder *::-webkit-scrollbar-thumb:hover {
+  background: var(--surface-gray-4);
+}

@@ -1,5 +1,5 @@
 <template>
-  <div class="letters-builder flex flex-col bg-surface-gray-2 font-sans overflow-hidden" style="height: 100vh">
+  <div class="letters-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
     <header class="flex-shrink-0 h-12 bg-surface-white border-b border-outline-gray-2 flex items-center px-4 gap-3">
@@ -204,7 +204,7 @@
         </div>
 
         <div
-          class="mx-auto bg-white shadow-sm origin-top transition-transform"
+          class="mx-auto bg-white shadow-2xl origin-top transition-transform"
           :style="{ maxWidth: editorStore.emailWidth + 'px', minHeight: '200px', transform: `scale(${canvasZoom})`, transformOrigin: 'top center', marginBottom: canvasZoom < 1 ? `calc((${canvasZoom} - 1) * 100%)` : undefined }"
         >
 
