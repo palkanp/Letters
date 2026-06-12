@@ -163,11 +163,11 @@
 
       <!-- Actions -->
       <div class="px-3 py-3 flex gap-2">
-        <Button class="flex-1" size="sm" @click="store.duplicateBlock(block.id)">
+        <Button class="flex-1" size="sm" variant="outline" @click="store.duplicateBlock(block.id)">
           <template #prefix><FeatherIcon name="copy" class="w-3.5 h-3.5" /></template>
           Duplicate
         </Button>
-        <Button class="flex-1" size="sm" theme="red" variant="subtle" @click="store.removeBlock(block.id)">
+        <Button class="flex-1" size="sm" theme="red" variant="outline" @click="store.removeBlock(block.id)">
           <template #prefix><FeatherIcon name="trash-2" class="w-3.5 h-3.5" /></template>
           Remove
         </Button>
