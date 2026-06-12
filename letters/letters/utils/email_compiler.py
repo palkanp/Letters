@@ -19,9 +19,7 @@ _HTML_WRAPPER = """\
 @media (prefers-color-scheme: dark) {{
   body, .body-wrap td {{ background-color: #111827 !important; }}
   .email-card {{ background-color: #1f2937 !important; }}
-  .email-card td {{ color: #f3f4f6; }}
   a {{ color: #93c5fd !important; }}
-  img {{ filter: brightness(0.9); }}
 }}
 </style>
 </head>

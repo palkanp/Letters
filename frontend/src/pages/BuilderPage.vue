@@ -191,7 +191,7 @@
 
       <!-- Canvas -->
       <main
-        class="flex-1 overflow-y-auto p-6 relative"
+        class="flex-1 overflow-y-auto p-6 relative bg-surface-gray-2"
         @dragover.prevent
         @drop="onCanvasDrop"
         @click="editorStore.selectBlock(null)"
@@ -204,8 +204,8 @@
         </div>
 
         <div
-          class="mx-auto bg-white origin-top transition-transform"
-          :style="{ maxWidth: editorStore.emailWidth + 'px', minHeight: '200px', transform: `scale(${canvasZoom})`, transformOrigin: 'top center', marginBottom: canvasZoom < 1 ? `calc((${canvasZoom} - 1) * 100%)` : undefined }"
+          class="mx-auto bg-white origin-top transition-transform shadow-sm"
+          :style="{ maxWidth: editorStore.emailWidth + 'px', minHeight: '200px', transform: `scale(${canvasZoom})`, transformOrigin: 'top center', marginBottom: canvasZoom < 1 ? `calc((${canvasZoom} - 1) * 100%)` : undefined, color: '#374151', colorScheme: 'light' }"
         >
 
           <!-- Loading skeleton (while fetching a saved campaign) -->
