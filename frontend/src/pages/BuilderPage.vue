@@ -2,7 +2,7 @@
   <div class="letters-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-    <header class="flex-shrink-0 h-12 bg-surface-white border-b border-outline-gray-1 flex items-center px-4 gap-3">
+    <header class="flex-shrink-0 h-12 bg-white border-b border-outline-gray-1 flex items-center px-4 gap-3">
 
       <!-- Brand + page menu (Frappe Builder-style left dropdown) -->
       <Dropdown :options="menuOptions" placement="bottom-start">
@@ -125,7 +125,7 @@
 
       <!-- Permanent left sidebar: Layers + Add block -->
       <aside
-        class="flex-shrink-0 bg-surface-white border-r border-outline-gray-1 flex flex-col relative"
+        class="flex-shrink-0 bg-white border-r border-outline-gray-1 flex flex-col relative"
         :style="{ width: leftPanelWidth + 'px' }"
       >
         <!-- Drag handle (right edge) -->
