@@ -922,3 +922,284 @@ class TestHeadPinned:
             with pytest.raises(ValueError):
                 api_module._head_pinned("http://localhost/admin", 5)
             create_conn.assert_not_called()
+
+
+# ── save_campaign ─────────────────────────────────────────────────────────────
+
+class TestSaveCampaign:
+    def setup_method(self):
+        _reset()
+
+    def test_updates_existing_campaign_fields(self):
+        doc = _campaign_doc()
+        frappe_stub.get_doc.return_value = doc
+        result = api_module.save_campaign(
+            name="CAMP-001", title="New Title", subject="New Subject",
+            preview_text="Preview", blocks=json.dumps([]),
+        )
+        assert result["name"] == "CAMP-001"
+        assert doc.title == "New Title"
+        assert doc.subject == "New Subject"
+        assert doc.preview_text == "Preview"
+        doc.save.assert_called_once()
+
+    def test_creates_new_campaign_when_no_name(self):
+        new_doc = MagicMock()
+        new_doc.name = "CAMP-NEW"
+        new_doc.title = "Untitled Campaign"
+        new_doc.status = "Draft"
+        frappe_stub.get_doc.return_value = new_doc
+        result = api_module.save_campaign(title="Brand New", blocks=json.dumps([]))
+        new_doc.insert.assert_called_once()
+        assert result["name"] == "CAMP-NEW"
+
+    def test_normalize_recipient_config_clears_on_null_string(self):
+        assert api_module._normalize_recipient_config("null") == ""
+        assert api_module._normalize_recipient_config("{}") == ""
+        assert api_module._normalize_recipient_config("") == ""
+
+    def test_normalize_recipient_config_serializes_dict(self):
+        cfg = {"type": "group", "email_group": "G1"}
+        result = api_module._normalize_recipient_config(cfg)
+        assert json.loads(result) == cfg
+
+    def test_normalize_recipient_config_none_means_leave_unchanged(self):
+        assert api_module._normalize_recipient_config(None) is None
+
+    def test_updates_email_width_as_int(self):
+        doc = _campaign_doc()
+        frappe_stub.get_doc.return_value = doc
+        api_module.save_campaign(name="CAMP-001", email_width="720", blocks=json.dumps([]))
+        assert doc.email_width == 720
+
+    def test_ignores_non_numeric_email_width(self):
+        doc = _campaign_doc()
+        frappe_stub.get_doc.return_value = doc
+        old_width = getattr(doc, "email_width", None)
+        api_module.save_campaign(name="CAMP-001", email_width="bad", blocks=json.dumps([]))
+        assert doc.email_width == old_width
+
+
+# ── render_preview ────────────────────────────────────────────────────────────
+
+class TestRenderPreview:
+    def setup_method(self):
+        _reset()
+
+    def test_renders_blocks_passed_directly(self):
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html>hi</html>"
+            result = api_module.render_preview(blocks=json.dumps([]))
+        assert result["html"] == "<html>hi</html>"
+
+    def test_loads_blocks_from_campaign_when_name_given(self):
+        doc = _campaign_doc(blocks_json=json.dumps([{"type": "text", "props": {}}]))
+        doc.preview_text = "preview"
+        doc.email_width = 600
+        frappe_stub.get_doc.return_value = doc
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html/>"
+            result = api_module.render_preview(name="CAMP-001")
+        assert result["html"] == "<html/>"
+
+    def test_compile_error_is_rethrown(self):
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.side_effect = ValueError("bad block")
+            with pytest.raises(Exception):
+                api_module.render_preview(blocks=json.dumps([]))
+
+
+# ── duplicate_campaign ────────────────────────────────────────────────────────
+
+class TestDuplicateCampaign:
+    def setup_method(self):
+        _reset()
+
+    def test_creates_copy_with_new_title(self):
+        original = _campaign_doc(name="CAMP-001")
+        original.title = "Summer Sale"
+        original.recipient_config = json.dumps({"type": "group", "email_group": "G"})
+        original.email_width = 600
+
+        new_doc = MagicMock()
+        new_doc.name = "CAMP-002"
+        new_doc.title = "Copy of Summer Sale"
+
+        call_count = [0]
+        def get_doc_se(arg, *a):
+            call_count[0] += 1
+            return original if call_count[0] == 1 else new_doc
+        frappe_stub.get_doc.side_effect = get_doc_se
+
+        result = api_module.duplicate_campaign("CAMP-001")
+        new_doc.insert.assert_called_once()
+        assert result["name"] == "CAMP-002"
+
+    def test_copy_is_always_draft(self):
+        original = _campaign_doc(name="CAMP-001", status="Sent")
+        original.email_width = 600
+        new_doc = MagicMock()
+        new_doc.name = "CAMP-COPY"
+        new_doc.title = "Copy"
+
+        call_count = [0]
+        def get_doc_se(arg, *a):
+            call_count[0] += 1
+            return original if call_count[0] == 1 else new_doc
+        frappe_stub.get_doc.side_effect = get_doc_se
+
+        api_module.duplicate_campaign("CAMP-001")
+        inserted_data = frappe_stub.get_doc.call_args_list[1][0][0]
+        assert inserted_data["status"] == "Draft"
+
+
+# ── send_test ─────────────────────────────────────────────────────────────────
+
+class TestSendTest:
+    def setup_method(self):
+        _reset()
+
+    def test_sends_to_explicit_recipient(self):
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html/>"
+            result = api_module.send_test(
+                blocks=json.dumps([]), subject="Hi", recipient="test@example.com"
+            )
+        assert result["sent_to"] == "test@example.com"
+        frappe_stub.sendmail.assert_called_once()
+        kw = frappe_stub.sendmail.call_args.kwargs
+        assert kw["recipients"] == ["test@example.com"]
+        assert kw["subject"].startswith("[TEST]")
+
+    def test_falls_back_to_session_user_when_no_recipient(self):
+        frappe_stub.session.user = "user@frappe.io"
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html/>"
+            result = api_module.send_test(blocks=json.dumps([]), subject="Hi")
+        assert result["sent_to"] == "user@frappe.io"
+
+    def test_rejects_invalid_email(self):
+        frappe_stub.utils.validate_email_address.return_value = None
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html/>"
+            with pytest.raises(Exception):
+                api_module.send_test(blocks=json.dumps([]), recipient="notanemail")
+
+    def test_loads_from_campaign_when_name_given(self):
+        doc = _campaign_doc()
+        doc.preview_text = ""
+        doc.email_width = 600
+        frappe_stub.get_doc.return_value = doc
+        with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
+            C.return_value.compile.return_value = "<html/>"
+            result = api_module.send_test(name="CAMP-001", recipient="r@x.com")
+        assert result["sent_to"] == "r@x.com"
+
+
+# ── get_campaign_analytics ────────────────────────────────────────────────────
+
+class TestGetCampaignAnalytics:
+    def setup_method(self):
+        _reset()
+
+    def _doc(self):
+        doc = _campaign_doc()
+        frappe_stub.get_doc.return_value = doc
+        return doc
+
+    def test_returns_zeros_when_no_sends(self):
+        self._doc()
+        GETALL["Email Send"] = []
+        result = api_module.get_campaign_analytics("CAMP-001")
+        assert result["total"] == 0
+        assert result["sent"] == 0
+        assert result["open_rate"] == 0
+
+    def test_computes_open_rate(self):
+        self._doc()
+        GETALL["Email Send"] = [
+            FrappeDict(
+                name="SD-1", status="Sent", total_recipients=10,
+                sent_count=10, creation="2024-01-01",
+            )
+        ]
+        frappe_stub.db.count.return_value = 4
+        frappe_stub.db.get_value.return_value = "2024-01-02 10:00:00"
+        GETALL["Email Send Recipient"] = [FrappeDict(status="Sent")] * 10
+
+        result = api_module.get_campaign_analytics("CAMP-001")
+        assert result["open_rate"] == 40.0
+        assert result["opened"] == 4
+
+    def test_open_rate_is_zero_when_no_sends_count(self):
+        self._doc()
+        GETALL["Email Send"] = [
+            FrappeDict(
+                name="SD-1", status="Sending", total_recipients=5,
+                sent_count=0, creation="2024-01-01",
+            )
+        ]
+        frappe_stub.db.count.return_value = 0
+        GETALL["Email Send Recipient"] = []
+        result = api_module.get_campaign_analytics("CAMP-001")
+        assert result["open_rate"] == 0
+
+
+# ── get_campaign_recipients ───────────────────────────────────────────────────
+
+class TestGetCampaignRecipients:
+    def setup_method(self):
+        _reset()
+
+    def test_returns_empty_when_no_send(self):
+        frappe_stub.get_doc.return_value = _campaign_doc()
+        frappe_stub.db.get_value.return_value = None
+        result = api_module.get_campaign_recipients("CAMP-001")
+        assert result == []
+
+    def test_returns_recipient_rows(self):
+        frappe_stub.get_doc.return_value = _campaign_doc()
+        frappe_stub.db.get_value.return_value = "SD-001"
+        GETALL["Email Send Recipient"] = [
+            FrappeDict(email="a@b.com", status="Sent", opened=1, opened_on="2024-01-01")
+        ]
+        result = api_module.get_campaign_recipients("CAMP-001")
+        assert len(result) == 1
+
+
+# ── _bulk_insert_recipients ───────────────────────────────────────────────────
+
+class TestBulkInsertRecipients:
+    def setup_method(self):
+        _reset()
+
+    def _get_values(self):
+        ca = frappe_stub.db.bulk_insert.call_args
+        # _bulk_insert_recipients calls frappe.db.bulk_insert(doctype, fields=..., values=...)
+        # The first positional arg is the doctype; fields and values are kwargs.
+        assert ca.args[0] == "Email Send Recipient"
+        return list(ca.kwargs["values"])
+
+    def test_inserts_all_recipients_as_pending(self):
+        frappe_stub.db.bulk_insert.reset_mock()
+        api_module._bulk_insert_recipients("SD-001", ["a@x.com", "b@x.com"])
+        frappe_stub.db.bulk_insert.assert_called_once()
+        values = self._get_values()
+        assert len(values) == 2
+        emails = [v[-2] for v in values]
+        assert "a@x.com" in emails
+        assert "b@x.com" in emails
+        assert all(v[-1] == "Pending" for v in values)
+
+    def test_idx_is_one_based_and_sequential(self):
+        frappe_stub.db.bulk_insert.reset_mock()
+        api_module._bulk_insert_recipients("SD-001", ["x@x.com", "y@y.com", "z@z.com"])
+        values = self._get_values()
+        idxs = [v[6] for v in values]
+        assert idxs == [1, 2, 3]
+
+    def test_parent_field_is_send_doc_name(self):
+        frappe_stub.db.bulk_insert.reset_mock()
+        api_module._bulk_insert_recipients("SEND-XYZ", ["r@r.com"])
+        values = self._get_values()
+        assert values[0][7] == "SEND-XYZ"

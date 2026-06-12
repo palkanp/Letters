@@ -854,3 +854,119 @@ class TestFontInRenderers:
             {"type": "button", "props": {"label": "Go", "font_family": "Courier New"}}
         )
         assert "'Courier New', Courier, monospace" in html
+
+
+# ── _sanitize_rich_html — suppressed-tag nesting, void tags ──────────────────
+
+class TestSanitizeRichHtml:
+    def test_script_tags_and_content_are_stripped(self):
+        result = _sanitize_rich_html('<p>Hello</p><script>alert(1)</script><p>World</p>')
+        assert "<script" not in result
+        assert "alert" not in result
+        assert "Hello" in result
+        assert "World" in result
+
+    def test_nested_script_does_not_leak_inner_tags(self):
+        # Depth > 1: inner tags inside a suppressed block must still be suppressed.
+        result = _sanitize_rich_html('<script><b>inner</b>txt</script>after')
+        assert "<b>" not in result
+        assert "inner" not in result
+        assert "after" in result
+
+    def test_void_tags_self_closed(self):
+        result = _sanitize_rich_html('<p>line1<br>line2</p>')
+        assert '<br />' in result
+
+    def test_entity_ref_preserved(self):
+        result = _sanitize_rich_html('<p>&amp;</p>')
+        assert '&amp;' in result
+
+    def test_char_ref_preserved(self):
+        result = _sanitize_rich_html('<p>&#169;</p>')
+        assert '&#169;' in result
+
+    def test_div_converted_to_br(self):
+        result = _sanitize_rich_html('<div>line</div>')
+        assert '<br>' in result
+
+
+# ── _safe_url — get_url path with mock ───────────────────────────────────────
+
+class TestSafeUrlWithGetUrl:
+    def test_absolute_path_left_relative_outside_frappe_runtime(self):
+        # In a test environment frappe is a MagicMock, not a real package, so
+        # `from frappe.utils import get_url` raises ModuleNotFoundError. _safe_url
+        # catches that and returns the path unchanged (the fallback branch).
+        # The production path (get_url prefixes the site host) is exercised only
+        # inside a running Frappe bench — verified manually on letters.localhost.
+        result = _safe_url("/files/img.png")
+        assert result == "/files/img.png"
+
+
+# ── ContainerRenderer — stacked layout with gap row ─────────────────────────
+
+class TestContainerStackedLayout:
+    def test_gap_row_inserted_between_children_in_stacked_layout(self):
+        block = {
+            "type": "container",
+            "props": {"layout": "column", "gap": 16},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>A</p>"}},
+                {"type": "text", "props": {"html_content": "<p>B</p>"}},
+            ],
+        }
+        html = ContainerRenderer().render(block)
+        # A spacer row (height:16px) must appear between the two content rows.
+        assert "height:16px" in html
+
+    def test_no_gap_row_when_gap_is_zero(self):
+        block = {
+            "type": "container",
+            "props": {"layout": "column", "gap": 0},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>A</p>"}},
+                {"type": "text", "props": {"html_content": "<p>B</p>"}},
+            ],
+        }
+        html = ContainerRenderer().render(block)
+        assert "height:0px" not in html
+
+    def test_last_child_has_no_right_pad(self):
+        block = {
+            "type": "container",
+            "props": {"layout": "row", "gap": 20},
+            "children": [
+                {"type": "text", "props": {"html_content": "L"}},
+                {"type": "text", "props": {"html_content": "R"}},
+            ],
+        }
+        html = ContainerRenderer().render(block)
+        # Last cell: right_pad=0, left_pad=half_gap=10.
+        assert "padding:0 0px 0 10px" in html
+
+
+# ── ProductCardRenderer ───────────────────────────────────────────────────────
+
+class TestProductCardRenderer:
+    def test_renders_title_and_price(self):
+        html = ProductCardRenderer().render({
+            "type": "product_card",
+            "props": {"title": "Widget", "price": "$9.99"},
+        })
+        assert "Widget" in html
+        assert "$9.99" in html
+
+    def test_button_absent_when_no_label(self):
+        html = ProductCardRenderer().render({
+            "type": "product_card",
+            "props": {"title": "Widget", "button_label": "", "button_url": "#"},
+        })
+        # No button anchor when label is empty.
+        assert "display:inline-block" not in html
+
+    def test_image_absent_when_no_url(self):
+        html = ProductCardRenderer().render({
+            "type": "product_card",
+            "props": {"title": "Widget", "image_url": ""},
+        })
+        assert "<img" not in html
