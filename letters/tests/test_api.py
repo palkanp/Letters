@@ -423,6 +423,39 @@ class TestSendCampaignEnqueue:
         result = self._run(recipients=["a@b.com", "c@d.com"])
         assert result["count"] == 2
 
+    def test_recipients_written_via_bulk_insert(self):
+        """Child rows go in one batched INSERT, not the per-row ORM path, so a
+        large audience cannot trip the web-request (gunicorn) timeout."""
+        frappe_stub.db.bulk_insert.reset_mock()
+        self._run(recipients=["a@b.com", "c@d.com", "e@f.com"])
+        frappe_stub.db.bulk_insert.assert_called_once()
+        kwargs = frappe_stub.db.bulk_insert.call_args.kwargs
+        args = frappe_stub.db.bulk_insert.call_args.args
+        assert args[0] == "Email Send Recipient"
+        # 3 recipients -> 3 value tuples, all Pending.
+        values = kwargs.get("values") if "values" in kwargs else args[2]
+        values = list(values)
+        assert len(values) == 3
+        assert all(v[-1] == "Pending" for v in values)
+
+    def test_parent_doc_carries_no_inline_recipients(self):
+        """The Email Send parent is inserted empty; recipients are bulk-inserted
+        separately. A doc dict with an inline 50k-row child list is exactly the
+        slow path we are avoiding."""
+        captured = {}
+
+        def get_doc_se(arg, *a):
+            if isinstance(arg, dict):
+                captured["doc"] = arg
+                m = MagicMock()
+                m.name = "SD-NEW"
+                return m
+            return _campaign_doc()
+
+        frappe_stub.get_doc.side_effect = get_doc_se
+        api_module.send_campaign("CAMP-001", recipients=json.dumps(["a@b.com"]))
+        assert "recipients" not in captured["doc"]
+
     def test_email_group_mode_returns_correct_count(self):
         result = self._run(email_group="GROUP-A")
         assert result["count"] == 1
@@ -504,20 +537,26 @@ class TestExecuteSend:
         assert frappe_stub.sendmail.call_args.kwargs["recipients"] == ["new@b.com"]
 
     def test_marks_send_doc_sent_on_full_success(self):
-        _, send_doc = self._docs(recipients=[_recipient("a@b.com")])
+        self._docs(recipients=[_recipient("a@b.com")])
         self._run()
-        assert send_doc.status == "Sent"
-        assert send_doc.sent_count == 1
-        send_doc.save.assert_called()
+        # Finalised via a targeted parent-only set_value (no full child rewrite).
+        frappe_stub.db.set_value.assert_any_call(
+            "Email Send", "SD-001",
+            {"status": "Sent", "sent_count": 1},
+            update_modified=False,
+        )
 
     def test_marks_campaign_sent_on_full_success(self):
-        campaign, _ = self._docs(recipients=[_recipient("a@b.com")])
+        self._docs(recipients=[_recipient("a@b.com")])
         self._run()
-        assert campaign.status == "Sent"
+        frappe_stub.db.set_value.assert_any_call(
+            "Letters Campaign", "CAMP-001", "status", "Sent",
+            update_modified=False,
+        )
 
     def test_partial_failure_marks_send_partial_and_campaign_failed(self):
         rows = [_recipient("good@b.com"), _recipient("bad@b.com")]
-        campaign, send_doc = self._docs(recipients=rows)
+        self._docs(recipients=rows)
 
         def sendmail_se(**kw):
             if kw["recipients"] == ["bad@b.com"]:
@@ -526,19 +565,32 @@ class TestExecuteSend:
         frappe_stub.sendmail.side_effect = sendmail_se
         self._run()
 
-        assert send_doc.status == "Partial"
-        assert send_doc.sent_count == 1
-        assert campaign.status == "Failed"
+        frappe_stub.db.set_value.assert_any_call(
+            "Email Send", "SD-001",
+            {"status": "Partial", "sent_count": 1},
+            update_modified=False,
+        )
+        frappe_stub.db.set_value.assert_any_call(
+            "Letters Campaign", "CAMP-001", "status", "Failed",
+            update_modified=False,
+        )
         assert rows[0].status == "Sent"
         assert rows[1].status == "Failed"
 
     def test_all_fail_marks_send_and_campaign_failed(self):
         rows = [_recipient("a@b.com"), _recipient("c@d.com")]
-        campaign, send_doc = self._docs(recipients=rows)
+        self._docs(recipients=rows)
         frappe_stub.sendmail.side_effect = Exception("SMTP down")
         self._run()
-        assert send_doc.status == "Failed"
-        assert campaign.status == "Failed"
+        frappe_stub.db.set_value.assert_any_call(
+            "Email Send", "SD-001",
+            {"status": "Failed", "sent_count": 0},
+            update_modified=False,
+        )
+        frappe_stub.db.set_value.assert_any_call(
+            "Letters Campaign", "CAMP-001", "status", "Failed",
+            update_modified=False,
+        )
 
     def test_recipient_failure_is_logged(self):
         self._docs(recipients=[_recipient("a@b.com")])

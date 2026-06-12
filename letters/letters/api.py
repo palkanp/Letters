@@ -832,7 +832,10 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
 
     # ── Claim the send synchronously to prevent a race between two requests ──
     # Each recipient becomes a child row with its own status, so the background
-    # job (and any later retry) can track delivery per address.
+    # job (and any later retry) can track delivery per address. The parent is
+    # inserted empty (cheap) and the child rows are written with a single bulk
+    # INSERT — a per-row ORM insert of a large audience would otherwise run for
+    # minutes inside the web request and trip the gunicorn worker timeout.
     send_doc = frappe.get_doc({
         "doctype": "Email Send",
         "campaign": name,
@@ -841,9 +844,9 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
         "email_group": email_group or "",
         "total_recipients": len(recipient_list),
         "sent_count": 0,
-        "recipients": [{"email": e, "status": "Pending"} for e in recipient_list],
     })
     send_doc.insert(ignore_permissions=True)
+    _bulk_insert_recipients(send_doc.name, recipient_list)
     frappe.db.commit()  # flush so the background job can read the send_doc
 
     # Mark campaign as Sending before returning so any re-submit attempt is blocked
@@ -874,6 +877,32 @@ def _resume_send(send_doc_name, campaign_name, campaign_doc):
 
     _enqueue_send(send_doc_name, campaign_name)
     return {"queued": True, "count": unsent, "resumed": True}
+
+
+def _bulk_insert_recipients(send_doc_name, recipient_list):
+    """Write the per-recipient child rows for an Email Send in one batched
+    INSERT instead of an ORM insert per address.
+
+    For a large audience the ORM path (Document with N child rows) issues N
+    individual INSERTs and validates each — minutes of work that, run inside
+    the synchronous web request, exceeds the gunicorn worker timeout. A single
+    chunked bulk INSERT keeps the request bounded regardless of audience size.
+    The rows land Pending, exactly as the ORM path produced them, so resume and
+    progress tracking are unchanged."""
+    now = frappe.utils.now()
+    user = frappe.session.user
+    fields = [
+        "name", "creation", "modified", "modified_by", "owner", "docstatus",
+        "idx", "parent", "parentfield", "parenttype", "email", "status",
+    ]
+    values = [
+        (
+            frappe.generate_hash(length=10), now, now, user, user, 0,
+            idx + 1, send_doc_name, "recipients", "Email Send", email, "Pending",
+        )
+        for idx, email in enumerate(recipient_list)
+    ]
+    frappe.db.bulk_insert("Email Send Recipient", fields=fields, values=values)
 
 
 def _enqueue_send(send_doc_name, campaign_name):
@@ -957,11 +986,19 @@ def _execute_send(send_doc_name, campaign_name):
         else:
             send_status, campaign_status = "Partial", "Failed"
 
-        send_doc.status = send_status
-        send_doc.sent_count = sent
-        send_doc.save(ignore_permissions=True)
-        doc.status = campaign_status
-        doc.save(ignore_permissions=True)
+        # Persist the parent fields directly instead of send_doc.save(): the
+        # per-recipient statuses were already written via set_value, so a full
+        # save would needlessly rewrite the entire (up to MAX_RECIPIENTS) child
+        # table a second time.
+        frappe.db.set_value(
+            "Email Send", send_doc_name,
+            {"status": send_status, "sent_count": sent},
+            update_modified=False,
+        )
+        frappe.db.set_value(
+            "Letters Campaign", campaign_name, "status", campaign_status,
+            update_modified=False,
+        )
         frappe.db.commit()
 
     except Exception:
