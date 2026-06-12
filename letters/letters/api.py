@@ -1030,10 +1030,17 @@ def process_scheduled_sends():
     )
     for row in due:
         try:
-            doc = frappe.get_doc("Letters Campaign", row.name)
-            # Reset to Draft so send_campaign's idempotency guard passes
-            doc.db_set("status", "Draft")
+            # Atomic claim: only the worker that flips Scheduled -> Draft wins.
+            # Concurrent workers reading the same due list will find status no
+            # longer "Scheduled" and claim nothing, preventing duplicate sends.
+            claimed = frappe.db.sql(
+                "UPDATE `tabLetters Campaign` SET status = 'Draft'"
+                " WHERE name = %s AND status = 'Scheduled'",
+                row.name,
+            )
             frappe.db.commit()
+            if not claimed:
+                continue
             send_campaign(row.name)
         except Exception:
             # The send didn't start (e.g. no saved recipients, compile error).

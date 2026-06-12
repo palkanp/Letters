@@ -20,6 +20,7 @@ from letters.letters.utils.block_renderers import (
     _sanitize_rich_html,
     HeroRenderer,
     ImageRenderer,
+    ImageTextRenderer,
     ButtonRenderer,
     ColumnsRenderer,
     ContainerRenderer,
@@ -944,3 +945,59 @@ class TestProductCardRenderer:
             "props": {"title": "Widget", "image_url": ""},
         })
         assert "<img" not in html
+
+
+# ── ImageTextRenderer padding ─────────────────────────────────────────────────
+
+def _image_text_block(position="left", pl=32, pr=32, pt=20, pb=20):
+    return {
+        "type": "image_text",
+        "props": {
+            "image_url": "https://example.com/img.jpg",
+            "text": "Hello",
+            "image_position": position,
+            "layout_mode": "side",
+            "padding_left": pl, "padding_right": pr,
+            "padding_top": pt, "padding_bottom": pb,
+        },
+    }
+
+
+class TestImageTextRendererPadding:
+    """Outer padding must stay on the outer edge regardless of image position."""
+
+    def test_position_left_img_has_outer_left_padding(self):
+        # Image on left: img cell's left padding == pl (outer), right == gap (inner)
+        html = ImageTextRenderer().render(_image_text_block(position="left", pl=40, pr=24))
+        tds = html.split("<td")
+        img_td = next(t for t in tds if "display:block" in t or "Image</div>" in t or "img.jpg" in t)
+        assert "padding:20px 8px 20px 40px" in img_td, img_td
+
+    def test_position_left_text_has_outer_right_padding(self):
+        # Text on right: text cell's right padding == pr (outer), left == gap (inner)
+        html = ImageTextRenderer().render(_image_text_block(position="left", pl=40, pr=24))
+        tds = html.split("<td")
+        text_td = next(t for t in tds if "Hello" in t)
+        assert "padding:20px 24px 20px 8px" in text_td, text_td
+
+    def test_position_right_text_has_outer_left_padding(self):
+        # Image on right, text on left: text cell's left padding == pl (outer), right == gap
+        html = ImageTextRenderer().render(_image_text_block(position="right", pl=40, pr=24))
+        tds = html.split("<td")
+        text_td = next(t for t in tds if "Hello" in t)
+        assert "padding:20px 8px 20px 40px" in text_td, text_td
+
+    def test_position_right_img_has_outer_right_padding(self):
+        # Image on right: img cell's right padding == pr (outer), left == gap
+        html = ImageTextRenderer().render(_image_text_block(position="right", pl=40, pr=24))
+        tds = html.split("<td")
+        img_td = next(t for t in tds if "img.jpg" in t)
+        assert "padding:20px 24px 20px 8px" in img_td, img_td
+
+    def test_position_left_column_order(self):
+        html = ImageTextRenderer().render(_image_text_block(position="left"))
+        assert html.index("img.jpg") < html.index("Hello")
+
+    def test_position_right_column_order(self):
+        html = ImageTextRenderer().render(_image_text_block(position="right"))
+        assert html.index("Hello") < html.index("img.jpg")

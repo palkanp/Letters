@@ -298,14 +298,10 @@
     @update:model-value="(v) => { if (!v) showTestModal = false }"
   >
     <template #default>
-      <label class="block text-xs font-medium text-ink-gray-7 mb-1.5">Send to</label>
-      <TextInput
-        v-model="testRecipient"
-        type="email"
-        placeholder="name@example.com"
-        @keyup.enter="sendTest"
-      />
-      <p class="text-xs text-ink-gray-5 mt-2">A copy with a <strong>[TEST]</strong> subject prefix is sent to this address.</p>
+      <p class="text-xs text-ink-gray-5">
+        A copy with a <strong>[TEST]</strong> subject prefix will be sent to your account:
+      </p>
+      <p class="text-sm font-medium text-ink-gray-8 mt-1">{{ testRecipient }}</p>
     </template>
     <template #actions>
       <div class="flex items-center justify-end gap-2 w-full">

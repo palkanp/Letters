@@ -817,6 +817,9 @@ class TestScheduleCampaign:
 class TestProcessScheduledSends:
     def setup_method(self):
         _reset()
+        # frappe.db.sql returns a truthy value to simulate a successful atomic claim
+        frappe_stub.db.sql.reset_mock()
+        frappe_stub.db.sql.return_value = 1
 
     def test_marks_failed_when_send_raises(self):
         """A due campaign whose send can't start (e.g. no saved audience) is
@@ -834,6 +837,21 @@ class TestProcessScheduledSends:
         frappe_stub.db.set_value.assert_any_call(
             "Letters Campaign", "CAMP-DUE", "status", "Failed"
         )
+
+    def test_skips_campaign_when_atomic_claim_fails(self):
+        """If another worker already claimed the campaign (sql returns falsy),
+        send_campaign must not be called for that row."""
+        import datetime
+        GETALL["Letters Campaign"] = [FrappeDict(name="CAMP-RACE")]
+        frappe_stub.db.sql.return_value = 0  # claim lost
+        frappe_stub.utils.now_datetime = lambda: datetime.datetime(2099, 1, 1)
+
+        with _frappe_utils_importable():
+            api_module.process_scheduled_sends()
+
+        # get_doc / enqueue should never be touched when the claim failed
+        frappe_stub.get_doc.assert_not_called()
+        frappe_stub.enqueue.assert_not_called()
 
 
 class TestUrlSafety:

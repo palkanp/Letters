@@ -325,19 +325,27 @@ class ImageTextRenderer(BlockRenderer):
         else:
             # Side-by-side (default)
             gap = 8
+            # Outer padding goes on the edge facing away from the other cell;
+            # the inner gap goes on the edge facing toward the other cell.
+            if position == "left":
+                img_pad  = f"{pt}px {gap}px {pb}px {pl}px"   # img left: outer-left, gap-right
+                text_pad = f"{pt}px {pr}px {pb}px {gap}px"   # text right: gap-left, outer-right
+            else:
+                text_pad = f"{pt}px {gap}px {pb}px {pl}px"   # text left: outer-left, gap-right
+                img_pad  = f"{pt}px {pr}px {pb}px {gap}px"   # img right: gap-left, outer-right
             img_cell = (
-                f'<td width="{img_px}" valign="top" style="padding:{pt}px {gap}px {pb}px {pl}px;">'
+                f'<td width="{img_px}" valign="top" style="padding:{img_pad};">'
                 f'<img src="{image_url}" width="{img_px}" style="display:block;border:0;" alt="" />'
                 f'</td>'
             ) if image_url else (
-                f'<td width="{img_px}" valign="top" style="padding:{pt}px {gap}px {pb}px {pl}px;">'
+                f'<td width="{img_px}" valign="top" style="padding:{img_pad};">'
                 f'<div style="width:{img_px}px;height:100px;background:#eeeeee;'
                 f'font-family:Arial,sans-serif;font-size:12px;color:#999;text-align:center;'
                 f'padding-top:40px;">Image</div>'
                 f'</td>'
             )
             text_cell = (
-                f'<td valign="top" style="padding:{pt}px {pr}px {pb}px {gap}px;">'
+                f'<td valign="top" style="padding:{text_pad};">'
                 f'<p style="margin:0;font-family:{font};font-size:15px;'
                 f'color:#333333;line-height:1.6;">{text}</p>'
                 f'</td>'
