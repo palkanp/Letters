@@ -421,6 +421,7 @@
       <div class="flex gap-2">
         <DatePicker
           v-model="scheduleDate"
+          format="D MMM YYYY"
           placeholder="Pick a date"
           :min="minScheduleDate"
           class="flex-1"
@@ -739,6 +740,13 @@ watch([subject, previewText, () => editorStore.campaignName], () => {
   if (_suppressDirty === 0) editorStore.markDirty();
 });
 
+// Recipient selection is persisted on the campaign (so scheduled sends and
+// reloads know the audience). Deep-watch it and mark dirty so autosave flushes
+// the change like any other edit.
+watch(recipientConfig, () => {
+  if (_suppressDirty === 0) editorStore.markDirty();
+}, { deep: true });
+
 // ── Auto-save (debounced 800ms — avoids saving on every drag pixel) ───────────
 let _autoSaveTimer = null;
 watch(() => editorStore.isDirty, (dirty) => {
@@ -804,8 +812,9 @@ async function loadCampaign(name) {
     const res = await frappe.call({ method: "letters.letters.api.get_campaign", args: { name } });
     const doc = res.message;
     editorStore.loadFromDoc(doc);
-    subject.value     = doc.subject || "";
-    previewText.value = doc.preview_text || "";
+    subject.value         = doc.subject || "";
+    previewText.value     = doc.preview_text || "";
+    recipientConfig.value = doc.recipient_config || null;
     document.title = (doc.title || "Untitled Campaign") + " · Letters";
     // Allow one Vue flush cycle before re-enabling dirty tracking
     await Promise.resolve();
@@ -831,6 +840,7 @@ async function saveCampaign() {
         preview_text: previewText.value,
         email_width:  editorStore.emailWidth,
         blocks:       JSON.stringify(editorStore.blocks.map(stripIds)),
+        recipient_config: JSON.stringify(recipientConfig.value),
       },
     });
     const saved = res.message;
@@ -1096,8 +1106,27 @@ async function duplicateCampaign() {
 // ── Schedule send ─────────────────────────────────────────────────────────────
 async function scheduleCampaign() {
   if (!scheduleDate.value || !scheduleTime.value) return;
+  if (!subject.value?.trim()) {
+    showScheduleModal.value = false;
+    showSettings.value = true;
+    toast.warning("Add a subject line before scheduling.");
+    return;
+  }
+  if (!recipientConfig.value) {
+    showScheduleModal.value = false;
+    showSettings.value = true;
+    toast.warning("Choose recipients before scheduling.");
+    return;
+  }
   scheduling.value = true;
   try {
+    // The scheduled send reads content + audience from the saved campaign, so
+    // flush any pending edits before scheduling — otherwise the fire could run
+    // against a stale (or recipient-less) saved state.
+    if (editorStore.isDirty) {
+      clearTimeout(_autoSaveTimer);
+      await saveCampaign();
+    }
     // Combine date (YYYY-MM-DD) + time (HH:mm or HH:mm:ss) into local datetime
     // string — Frappe server works in local time so no UTC conversion needed.
     const dt = `${scheduleDate.value} ${scheduleTime.value}`;
@@ -1105,6 +1134,11 @@ async function scheduleCampaign() {
       method: "letters.letters.api.schedule_campaign",
       args: { name: editorStore.campaignDoc.name, scheduled_at: dt },
     });
+    // Reflect the new status locally so the toolbar shows the Scheduled badge.
+    if (editorStore.campaignDoc) {
+      editorStore.campaignDoc.status = "Scheduled";
+      editorStore.campaignDoc.scheduled_at = dt;
+    }
     toast.success(`Scheduled for ${scheduleDate.value} at ${scheduleTime.value}`);
     showScheduleModal.value = false;
     scheduleDate.value = "";

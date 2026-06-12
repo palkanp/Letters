@@ -55,6 +55,21 @@ frappe_stub._         = lambda s: s  # translation no-op
 
 sys.modules["frappe"] = frappe_stub
 
+# `from frappe.utils import get_datetime` (inside schedule_campaign /
+# process_scheduled_sends) needs frappe.utils registered as a module. We do NOT
+# register it globally — that would leak into other test files (e.g. the
+# renderer tests rely on `from frappe.utils import get_url` raising to keep
+# relative paths relative). Instead the few tests that need it wrap the call in
+# this context manager so sys.modules is restored afterwards.
+from contextlib import contextmanager
+
+
+@contextmanager
+def _frappe_utils_importable():
+    from unittest.mock import patch as _patch
+    with _patch.dict(sys.modules, {"frappe.utils": frappe_stub.utils}):
+        yield
+
 # Now we can import api with a functional frappe mock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 import importlib
@@ -633,3 +648,137 @@ class TestCampaignAnalytics:
         GETALL["Email Send"] = []
         api_module.get_campaign_analytics("CAMP-001")
         frappe_stub.has_permission.assert_called_with("Letters Campaign", "read", doc=doc, throw=True)
+
+
+# ── send_campaign — saved recipient_config fallback (C1 / H1) ──────────────────
+# When no explicit recipient source is passed (scheduled sends, server-side
+# callers), send_campaign must resolve the audience from the campaign's saved
+# recipient_config. Without this, scheduled sends silently have no recipients.
+
+class TestRecipientConfigFallback:
+    def setup_method(self):
+        _reset()
+
+    def _new_send_doc(self):
+        send_doc_mock = MagicMock()
+        send_doc_mock.name = "SD-NEW"
+        return send_doc_mock
+
+    def test_falls_back_to_saved_group(self):
+        doc = _campaign_doc()
+        doc.recipient_config = json.dumps({"type": "group", "email_group": "G1"})
+        GETALL["Email Group Member"] = [FrappeDict(email="a@b.com"), FrappeDict(email="c@d.com")]
+        send_doc_mock = self._new_send_doc()
+        frappe_stub.get_doc.side_effect = lambda arg, *a: send_doc_mock if isinstance(arg, dict) else doc
+
+        result = api_module.send_campaign("CAMP-001")  # no explicit recipients
+
+        assert result["queued"] is True
+        assert result["count"] == 2
+        assert result["mode"] == "email_group"
+
+    def test_falls_back_to_saved_paste(self):
+        doc = _campaign_doc()
+        doc.recipient_config = json.dumps({"type": "paste", "recipients": ["x@y.com", "z@w.com"]})
+        send_doc_mock = self._new_send_doc()
+        frappe_stub.get_doc.side_effect = lambda arg, *a: send_doc_mock if isinstance(arg, dict) else doc
+
+        result = api_module.send_campaign("CAMP-001")
+
+        assert result["queued"] is True
+        assert result["count"] == 2
+        assert result["mode"] == "direct"
+
+    def test_falls_back_to_saved_doctype(self):
+        doc = _campaign_doc()
+        doc.recipient_config = json.dumps({
+            "type": "doctype", "doctype": "Contact", "email_field": "email_id", "filters": {},
+        })
+        GETALL["Contact"] = [FrappeDict(email_id="a@b.com")]
+        send_doc_mock = self._new_send_doc()
+        frappe_stub.get_doc.side_effect = lambda arg, *a: send_doc_mock if isinstance(arg, dict) else doc
+
+        result = api_module.send_campaign("CAMP-001")
+
+        assert result["queued"] is True
+        assert result["count"] == 1
+        assert result["mode"] == "direct"
+
+    def test_throws_when_no_args_and_no_saved_config(self):
+        doc = _campaign_doc()
+        doc.recipient_config = ""  # nothing saved
+        frappe_stub.get_doc.return_value = doc
+        with pytest.raises(FrappeValidationError, match="no saved recipients"):
+            api_module.send_campaign("CAMP-001")
+
+    def test_explicit_recipients_still_win_over_saved_config(self):
+        """Passing recipients explicitly (Send now) must not be overridden by the
+        saved config."""
+        doc = _campaign_doc()
+        doc.recipient_config = json.dumps({"type": "group", "email_group": "G1"})
+        send_doc_mock = self._new_send_doc()
+        frappe_stub.get_doc.side_effect = lambda arg, *a: send_doc_mock if isinstance(arg, dict) else doc
+
+        result = api_module.send_campaign("CAMP-001", recipients=json.dumps(["only@me.com"]))
+
+        assert result["mode"] == "direct"
+        assert result["count"] == 1
+
+
+# ── schedule_campaign ─────────────────────────────────────────────────────────
+
+class TestScheduleCampaign:
+    def setup_method(self):
+        _reset()
+
+    def test_throws_when_no_saved_recipients(self):
+        doc = _campaign_doc()
+        doc.recipient_config = ""
+        frappe_stub.get_doc.return_value = doc
+        with pytest.raises(FrappeValidationError, match="Choose recipients"):
+            api_module.schedule_campaign("CAMP-001", "2099-01-01 10:00:00")
+
+    def test_throws_when_already_sent(self):
+        doc = _campaign_doc(status="Sent")
+        doc.recipient_config = json.dumps({"type": "group", "email_group": "G1"})
+        frappe_stub.get_doc.return_value = doc
+        with pytest.raises(FrappeValidationError, match="already been sent"):
+            api_module.schedule_campaign("CAMP-001", "2099-01-01 10:00:00")
+
+    def test_schedules_when_recipients_saved(self):
+        import datetime
+        doc = _campaign_doc()
+        doc.recipient_config = json.dumps({"type": "group", "email_group": "G1"})
+        frappe_stub.get_doc.return_value = doc
+        frappe_stub.utils.get_datetime = lambda s: datetime.datetime(2099, 1, 1, 10, 0, 0)
+        frappe_stub.utils.now_datetime = lambda: datetime.datetime(2020, 1, 1)
+
+        with _frappe_utils_importable():
+            result = api_module.schedule_campaign("CAMP-001", "2099-01-01 10:00:00")
+
+        assert "scheduled_at" in result
+        doc.db_set.assert_any_call("status", "Scheduled")
+
+
+# ── process_scheduled_sends — failure surfacing ───────────────────────────────
+
+class TestProcessScheduledSends:
+    def setup_method(self):
+        _reset()
+
+    def test_marks_failed_when_send_raises(self):
+        """A due campaign whose send can't start (e.g. no saved audience) is
+        marked Failed, not left silently reverted to Draft."""
+        import datetime
+        GETALL["Letters Campaign"] = [FrappeDict(name="CAMP-DUE")]
+        doc = _campaign_doc(name="CAMP-DUE")
+        doc.recipient_config = ""  # send_campaign will raise
+        frappe_stub.get_doc.return_value = doc
+        frappe_stub.utils.now_datetime = lambda: datetime.datetime(2099, 1, 1)
+
+        with _frappe_utils_importable():
+            api_module.process_scheduled_sends()
+
+        frappe_stub.db.set_value.assert_any_call(
+            "Letters Campaign", "CAMP-DUE", "status", "Failed"
+        )

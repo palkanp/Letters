@@ -54,6 +54,14 @@
       "options": "JSON",
       "description": "Structured design tree for the visual editor",
       "hidden": 1
+    },
+    {
+      "fieldname": "recipient_config",
+      "fieldtype": "Code",
+      "label": "Recipient Config",
+      "options": "JSON",
+      "description": "Saved audience selection (group / pasted list / doctype query) so scheduled sends and reloads know who to send to",
+      "hidden": 1
     }
   ],
   "permissions": [

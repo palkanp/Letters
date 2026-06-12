@@ -66,6 +66,13 @@ html, body {
   filter: none !important;
 }
 
+/* Reka UI popper (DatePicker/TimePicker calendar) must clear the dialog overlay
+   z-index (9999). The wrapper has position:fixed + z-index:auto, which paints
+   below our 9999 overlay and buries the calendar. Force it above everything. */
+[data-reka-popper-content-wrapper] {
+  z-index: 10000 !important;
+}
+
 /* Thin themed scrollbars — matches Frappe Builder */
 .letters-builder *::-webkit-scrollbar {
   width: 8px;

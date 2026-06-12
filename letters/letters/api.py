@@ -28,12 +28,60 @@ def get_campaign(name):
         "scheduled_at": str(doc.scheduled_at) if doc.scheduled_at else None,
         "email_width": getattr(doc, "email_width", None) or 600,
         "blocks": json.loads(doc.blocks_json) if doc.blocks_json else [],
+        "recipient_config": _load_recipient_config(doc),
     }
 
 
+def _load_recipient_config(doc):
+    """Parse the campaign's saved audience selection into a dict (or None)."""
+    raw = getattr(doc, "recipient_config", None)
+    if not raw:
+        return None
+    try:
+        cfg = json.loads(raw) if isinstance(raw, str) else raw
+    except (ValueError, TypeError):
+        return None
+    return cfg if isinstance(cfg, dict) else None
+
+
+def _normalize_recipient_config(value):
+    """Coerce an incoming recipient_config (object or JSON string) to a stored
+    JSON string, or "" to clear it. Returns None to mean 'leave unchanged'."""
+    if value is None:
+        return None
+    if isinstance(value, (dict, list)):
+        return json.dumps(value)
+    text = str(value).strip()
+    if text in ("", "null", "{}"):
+        return ""
+    return text
+
+
+def _recipient_args_from_config(doc):
+    """Translate the campaign's saved recipient_config into the (recipients,
+    email_group, doctype_config) triple that send_campaign resolves. Returns
+    (None, None, None) when nothing usable is stored."""
+    cfg = _load_recipient_config(doc)
+    if not cfg:
+        return None, None, None
+    ctype = cfg.get("type")
+    if ctype == "group" and cfg.get("email_group"):
+        return None, cfg["email_group"], None
+    if ctype == "paste" and cfg.get("recipients"):
+        return cfg["recipients"], None, None
+    if ctype == "doctype" and cfg.get("doctype") and cfg.get("email_field"):
+        return None, None, {
+            "doctype":     cfg["doctype"],
+            "email_field": cfg["email_field"],
+            "filters":     cfg.get("filters") or {},
+        }
+    return None, None, None
+
+
 @frappe.whitelist()
-def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks=None, email_width=None):
+def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks=None, email_width=None, recipient_config=None):
     blocks_json = json.dumps(blocks if isinstance(blocks, list) else json.loads(blocks or "[]"))
+    normalized_config = _normalize_recipient_config(recipient_config)
 
     if name:
         doc = frappe.get_doc("Letters Campaign", name)
@@ -49,6 +97,8 @@ def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks
                 doc.email_width = int(email_width)
             except (AttributeError, TypeError, ValueError):
                 pass
+        if normalized_config is not None:
+            doc.recipient_config = normalized_config
         doc.blocks_json = blocks_json
         doc.save()
     else:
@@ -61,6 +111,7 @@ def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks
             "status": "Draft",
             "email_width": int(email_width) if email_width else 600,
             "blocks_json": blocks_json,
+            "recipient_config": normalized_config or "",
         })
         doc.insert()
 
@@ -113,6 +164,7 @@ def duplicate_campaign(name):
         "status": "Draft",
         "email_width": getattr(original, "email_width", None) or 600,
         "blocks_json": original.blocks_json or "[]",
+        "recipient_config": getattr(original, "recipient_config", None) or "",
     })
     new_doc.insert()
     frappe.db.commit()
@@ -508,6 +560,13 @@ def schedule_campaign(name, scheduled_at):
     if not doc.subject:
         frappe.throw(_("Campaign has no subject line."))
 
+    # A scheduled send runs with no UI present, so the audience must already be
+    # saved on the campaign — otherwise the send would silently have no one to
+    # go to when it fires.
+    recip = _recipient_args_from_config(doc)
+    if not any(recip):
+        frappe.throw(_("Choose recipients before scheduling this campaign."))
+
     from frappe.utils import get_datetime
     dt = get_datetime(scheduled_at)
     if dt <= frappe.utils.now_datetime():
@@ -558,6 +617,15 @@ def send_campaign(name, recipients=None, email_group=None, doctype_config=None):
     )
     if existing and existing[0].status in ("Failed", "Partial"):
         return _resume_send(existing[0].name, name, doc)
+
+    # ── Fall back to the campaign's saved audience when no explicit source ───
+    # is passed. Scheduled sends (process_scheduled_sends) and any server-side
+    # caller rely on this: the recipient selection is persisted on the campaign
+    # so the send no longer depends on transient UI state.
+    if not (email_group or doctype_config or recipients):
+        recipients, email_group, doctype_config = _recipient_args_from_config(doc)
+        if not (email_group or doctype_config or recipients):
+            frappe.throw(_("This campaign has no saved recipients. Open it and choose an audience before sending."))
 
     # ── Resolve recipient list synchronously so we can fail fast ─────────────
     if email_group:
@@ -778,4 +846,12 @@ def process_scheduled_sends():
             frappe.db.commit()
             send_campaign(row.name)
         except Exception:
+            # The send didn't start (e.g. no saved recipients, compile error).
+            # Mark Failed rather than leaving it silently reverted to Draft, so
+            # the failure is visible and the user can fix and retry.
             frappe.log_error(frappe.get_traceback(), f"Letters scheduled send error: {row.name}")
+            try:
+                frappe.db.set_value("Letters Campaign", row.name, "status", "Failed")
+                frappe.db.commit()
+            except Exception:
+                frappe.log_error(frappe.get_traceback(), f"Letters scheduled send cleanup error: {row.name}")

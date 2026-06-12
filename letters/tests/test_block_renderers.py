@@ -134,7 +134,8 @@ class TestHexToRgba:
 
 class TestPadding:
     def test_defaults(self):
-        assert _padding({}) == "20px 32px 20px 32px"
+        # _padding(props, dt=20, dr=16, db=20, dl=16) — the signature's own defaults
+        assert _padding({}) == "20px 16px 20px 16px"
 
     def test_custom_values(self):
         props = {"padding_top": 10, "padding_right": 8, "padding_bottom": 6, "padding_left": 4}
@@ -285,7 +286,9 @@ class TestColumnsRenderer:
         return {"type": "columns", "props": props, "columns": columns}
 
     def _text_child(self, content="Hello"):
-        return {"type": "text", "props": {"content": content}}
+        # "text" routes through RICHTEXT (RENDERER_MAP["text"] = RichTextRenderer),
+        # which reads html_content — "content" is the legacy key and renders nothing.
+        return {"type": "text", "props": {"html_content": content}}
 
     def test_empty_columns_returns_empty(self):
         assert self.renderer.render({"type": "columns", "props": {}, "columns": []}) == ""
@@ -331,7 +334,7 @@ class TestColumnsRenderer:
         assert "background-color:#f0f0f0" in html
 
     def test_child_block_xss_safe(self):
-        child = {"type": "text", "props": {"content": "<script>evil()</script>"}}
+        child = {"type": "text", "props": {"html_content": "<script>evil()</script>"}}
         block = self._block([{"blocks": [child]}, {"blocks": []}])
         html = self.renderer.render(block)
         assert "<script>" not in html
@@ -487,7 +490,7 @@ class TestContainerRenderer:
             "type": "container",
             "props": {},
             "children": [
-                {"type": "text", "props": {"content": "Child text"}}
+                {"type": "text", "props": {"html_content": "Child text"}}
             ],
         }
         html = ContainerRenderer().render(block)
@@ -498,8 +501,8 @@ class TestContainerRenderer:
             "type": "container",
             "props": {"layout": "row"},
             "children": [
-                {"type": "text", "props": {"content": "Left"}},
-                {"type": "text", "props": {"content": "Right"}},
+                {"type": "text", "props": {"html_content": "Left"}},
+                {"type": "text", "props": {"html_content": "Right"}},
             ],
         }
         html = ContainerRenderer().render(block)
