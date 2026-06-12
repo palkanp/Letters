@@ -20,7 +20,7 @@
         <TextEditor
           :content="block.props.html_content || ''"
           :editable="isSelected"
-          placeholder="Start typing…"
+          placeholder="Text…"
           :bubble-menu="bubbleMenuButtons"
           editor-class="rich-text-content outline-none min-h-10"
           @change="onChange"

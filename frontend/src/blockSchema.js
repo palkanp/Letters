@@ -69,7 +69,7 @@ export const BLOCK_SCHEMA = {
     label: "Text",
     icon: "type",
     defaults: {
-      html_content: "<p>Start typing your message…</p>",
+      html_content: "",
       align: "left",
       font_family: "Arial",
       font_size: "15px",

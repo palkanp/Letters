@@ -47,7 +47,7 @@ const blockLabel = (type) => BLOCK_SCHEMA[type]?.label || type;
 
 function rowClass(node) {
   return store.selectedBlockId === node.id
-    ? "bg-blue-50 ring-1 ring-blue-200"
+    ? "ring-1 ring-blue-400"
     : "hover:bg-surface-gray-2";
 }
 
@@ -194,7 +194,7 @@ const LayerNode = defineComponent({
       const rowPaddingLeft = BASE_PAD + props.depth * INDENT_W;
 
       const row = h("div", {
-        class: "group relative flex items-center gap-1.5 pr-2 py-1 mx-1 rounded-md cursor-pointer select-none transition-colors " + rowClass(b),
+        class: "group relative flex items-center gap-1.5 pr-2 py-1 mx-1 rounded cursor-pointer select-none transition-colors " + rowClass(b),
         style: { paddingLeft: rowPaddingLeft + "px" },
         draggable: true,
         onClick:    (e) => { e.stopPropagation(); store.selectBlock(b.id); },

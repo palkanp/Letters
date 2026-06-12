@@ -8,8 +8,8 @@
     :style="{
       ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle,
       ...blockBorderStyle,
-      outline: selected ? '2px solid #111827' : 'none',
-      outlineOffset: '1px',
+      outline: selected ? '2px solid #3b82f6' : 'none',
+      outlineOffset: '-2px',
     }"
     :data-block-id="block.id"
     @click.stop="store.selectBlock(block.id)"
