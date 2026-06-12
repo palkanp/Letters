@@ -7,10 +7,12 @@ frappe.listview_settings["Letters Campaign"] = {
 
   get_indicator(doc) {
     const map = {
-      Draft:    ["grey",   "status,=,Draft"],
-      Sending:  ["orange", "status,=,Sending"],
-      Sent:     ["green",  "status,=,Sent"],
-      Failed:   ["red",    "status,=,Failed"],
+      Draft:     ["grey",   "status,=,Draft"],
+      Scheduled: ["blue",   "status,=,Scheduled"],
+      Sending:   ["orange", "status,=,Sending"],
+      Partial:   ["orange", "status,=,Partial"],
+      Sent:      ["green",  "status,=,Sent"],
+      Failed:    ["red",    "status,=,Failed"],
     };
     return map[doc.status] || ["grey", "status,=,Draft"];
   },

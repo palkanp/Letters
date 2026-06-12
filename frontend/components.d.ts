@@ -40,7 +40,6 @@ declare module 'vue' {
     Social: typeof import('./src/components/blocks/social.vue')['default']
     Spacer: typeof import('./src/components/blocks/spacer.vue')['default']
     TemplateLibrary: typeof import('./src/components/TemplateLibrary.vue')['default']
-    Text: typeof import('./src/components/blocks/text.vue')['default']
     Video_thumb: typeof import('./src/components/blocks/video_thumb.vue')['default']
   }
 }

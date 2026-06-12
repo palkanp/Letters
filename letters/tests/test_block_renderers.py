@@ -19,7 +19,6 @@ from letters.letters.utils.block_renderers import (
     _spacing_wrapper,
     _sanitize_rich_html,
     HeroRenderer,
-    TextRenderer,
     ImageRenderer,
     ButtonRenderer,
     ColumnsRenderer,
@@ -193,30 +192,6 @@ class TestHeroRenderer:
     def test_custom_background_color(self):
         html = self._r({"background_color": "#ff0000"})
         assert "#ff0000" in html
-
-
-# ── TextRenderer ─────────────────────────────────────────────────────────────
-
-class TestTextRenderer:
-    def _r(self, props):
-        return TextRenderer().render({"type": "text", "props": props})
-
-    def test_renders_content(self):
-        assert "Hello world" in self._r({"content": "Hello world"})
-
-    def test_xss_content_stripped(self):
-        # Content with HTML tags is passed through the rich-html sanitizer.
-        # <img> is not in the allowed set, so the tag is stripped entirely.
-        html = self._r({"content": '<img src=x onerror="alert(1)">'})
-        assert "<img" not in html
-        assert "onerror" not in html
-        # The plain-text content of the img tag (none here) need not appear.
-
-    def test_default_font_size(self):
-        assert "15px" in self._r({})
-
-    def test_custom_align(self):
-        assert 'align="right"' in self._r({"align": "right"})
 
 
 # ── ImageRenderer ─────────────────────────────────────────────────────────────
@@ -825,14 +800,13 @@ class TestFontStack:
 
 class TestFontInRenderers:
     def test_text_uses_chosen_font(self):
-        html = TextRenderer().render(
-            {"type": "text", "props": {"content": "hi", "font_family": "Verdana"}}
+        html = RichTextRenderer().render(
+            {"type": "text", "props": {"html_content": "hi", "font_family": "Verdana"}}
         )
         assert "font-family:Verdana, Geneva, sans-serif;" in html
 
     def test_text_without_font_keeps_default(self):
-        # Existing campaigns (no font_family) must render exactly as before.
-        html = TextRenderer().render({"type": "text", "props": {"content": "hi"}})
+        html = RichTextRenderer().render({"type": "text", "props": {"html_content": "hi"}})
         assert "font-family:Arial,sans-serif;" in html
 
     def test_hero_applies_one_font_to_both_lines(self):
