@@ -8,10 +8,12 @@
     :style="{
       ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle,
       ...blockBorderStyle,
-      outline: selected ? '2px solid #3b82f6' : 'none',
+      outline: selected ? '2px solid #3b82f6' : (isHovered && !store.selectedBlockId ? '1.5px solid #bfdbfe' : 'none'),
       outlineOffset: '-2px',
     }"
     :data-block-id="block.id"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
     @click.stop="store.selectBlock(block.id)"
     @dragover.prevent="onDragOver"
     @dragleave="isDragOver = null"
@@ -119,7 +121,8 @@ import { useEditorStore } from "../stores/editor";
 
 const props  = defineProps({ block: Object, index: Number, extraStyle: { type: Object, default: () => ({}) } });
 const store  = useEditorStore();
-const selected = computed(() => store.selectedBlockId === props.block.id);
+const selected  = computed(() => store.selectedBlockId === props.block.id);
+const isHovered = ref(false);
 
 // Only top-level blocks (directly in store.blocks) support drag-to-reorder.
 // Child blocks inside containers should not interfere with the top-level order.
