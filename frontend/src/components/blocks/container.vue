@@ -30,13 +30,6 @@
           <!-- Drop indicator -->
           <div v-if="childDragOver === childIndex && childDragFrom !== null && childDragFrom !== childIndex"
             class="absolute inset-x-0 -top-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-20" />
-          <!-- Selection ring -->
-          <div
-            class="absolute inset-0 rounded pointer-events-none z-10 transition-all"
-            :class="store.selectedBlockId === child.id
-              ? 'ring-2 ring-blue-400 ring-offset-1'
-              : 'group-hover/child:ring-1 group-hover/child:ring-blue-200'"
-          />
           <!-- Drag grip -->
           <div
             class="absolute top-1/2 -translate-y-1/2 -left-5 w-4 h-6 flex items-center justify-center

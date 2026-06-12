@@ -874,8 +874,33 @@ function showBlockPreview(type, e) {
   const defaults = schema.defaults ?? {};
   const previewBlock = { id: 0, type, props: JSON.parse(JSON.stringify(defaults)) };
   if (type === "columns") {
-    const count = parseInt(defaults.column_count || "2");
-    previewBlock.columns = Array.from({ length: count }, () => ({ blocks: [] }));
+    previewBlock.props.column_count = "3";
+    previewBlock.props.padding_top = 16;
+    previewBlock.props.padding_bottom = 16;
+    previewBlock.props.padding_left = 16;
+    previewBlock.props.padding_right = 16;
+    previewBlock.props.col_gap = 16;
+    const dummyCopy = [
+      "<strong>Design</strong><br>Build beautiful emails with a drag-and-drop editor.",
+      "<strong>Personalise</strong><br>Add dynamic fields to tailor every message.",
+      "<strong>Send</strong><br>Deliver to your list with one click.",
+    ];
+    previewBlock.columns = dummyCopy.map((html, i) => ({
+      blocks: [{
+        id: i + 1,
+        type: "text",
+        props: {
+          html_content: `<p style="font-size:12px;color:#374151;line-height:1.5;margin:0;font-family:sans-serif">${html}</p>`,
+          background_color: "#ffffff",
+          padding_top: 12, padding_right: 10, padding_bottom: 12, padding_left: 10,
+        },
+      }],
+    }));
+  }
+  if (type === "social") {
+    previewBlock.props.x_url = "https://x.com";
+    previewBlock.props.linkedin_url = "https://linkedin.com";
+    previewBlock.props.github_url = "https://github.com";
   }
   if (type === "spacer") {
     previewBlock.props.background_color = "#f3f4f6";

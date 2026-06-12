@@ -1,16 +1,16 @@
 <template>
   <div
-    class="relative transition-colors group/block"
-    :class="[
-      isDragOver === 'before' ? 'border-t-2 border-t-blue-500' : '',
-      isDragOver === 'after'  ? 'border-b-2 border-b-blue-500' : '',
-    ]"
+    class="relative group/block"
     :style="{
       ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle,
       ...blockBorderStyle,
-      outline: selected ? '2px solid #111827' : 'none',
-      outlineOffset: '1px',
+      position: 'relative',
+      zIndex: selected ? 1 : 0,
+      outline: selected ? '2px solid #3b82f6' : (isHovered && !store.selectedBlockId ? '1.5px solid #d1d5db' : 'none'),
+      outlineOffset: '-2px',
     }"
+    @mouseenter="isHovered = true"
+    @mouseleave="isHovered = false"
     @click.stop="store.selectBlock(block.id)"
     @dragover.prevent="onDragOver"
     @dragleave="isDragOver = null"
@@ -115,7 +115,8 @@ import { useEditorStore } from "../stores/editor";
 
 const props  = defineProps({ block: Object, index: Number, extraStyle: { type: Object, default: () => ({}) } });
 const store  = useEditorStore();
-const selected = computed(() => store.selectedBlockId === props.block.id);
+const selected  = computed(() => store.selectedBlockId === props.block.id);
+const isHovered = ref(false);
 
 // Only top-level blocks (directly in store.blocks) support drag-to-reorder.
 // Child blocks inside containers should not interfere with the top-level order.
@@ -125,8 +126,11 @@ const isTopLevel = computed(() => store.blocks.some((b) => b.id === props.block.
 const blockBorderStyle = computed(() => {
   const c = props.block.props?.block_border_color;
   const r = props.block.props?.block_border_radius;
+  // Show user border only when this block is selected, or when nothing is selected.
+  // This prevents a parent's border from showing simultaneously with a child's selection ring.
+  const showBorder = c && (selected.value || !store.selectedBlockId);
   return {
-    border: c ? `1px solid ${c}` : "none",
+    border: showBorder ? `1px solid ${c}` : "none",
     borderRadius: r || "0",
   };
 });
