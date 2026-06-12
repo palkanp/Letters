@@ -106,7 +106,10 @@
       >{{ paddingTip }}</div>
     </Transition>
 
-    <slot />
+    <!-- Inner content wrapper: clips to border-radius without hiding the drag grip -->
+    <div :style="contentClipStyle">
+      <slot />
+    </div>
   </div>
 </template>
 
@@ -130,6 +133,14 @@ const blockBorderStyle = computed(() => {
     border: c ? `1px solid ${c}` : "none",
     borderRadius: r || "0",
   };
+});
+
+// Inner content wrapper clips block content to the border-radius.
+// The outer div stays overflow:visible so the drag grip (at -left-7) isn't clipped.
+const contentClipStyle = computed(() => {
+  const r = props.block.props?.block_border_radius;
+  if (!r || r === "0") return {};
+  return { overflow: "hidden", borderRadius: r };
 });
 
 // ── Top-level container width + alignment ────────────────────────────────────
