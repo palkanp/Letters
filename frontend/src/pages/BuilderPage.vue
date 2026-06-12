@@ -191,7 +191,7 @@
 
       <!-- Canvas -->
       <main
-        class="flex-1 overflow-y-auto p-6 relative"
+        class="flex-1 overflow-y-auto p-6 relative bg-gray-100"
         @dragover.prevent
         @drop="onCanvasDrop"
         @click="editorStore.selectBlock(null)"
