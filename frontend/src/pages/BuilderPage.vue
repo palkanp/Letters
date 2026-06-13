@@ -539,7 +539,7 @@ const menuOptions = computed(() => [
     hideLabel: true,
     items: [
       {
-        label: "Back to Campaigns",
+        label: "Back to Letters",
         icon: "arrow-left",
         onClick: () => (window.location.href = "/app/letters-campaign"),
       },
@@ -550,23 +550,23 @@ const menuOptions = computed(() => [
     hideLabel: true,
     items: [
 {
-        label: "Duplicate Campaign",
+        label: "Duplicate Letter",
         icon: "copy",
         onClick: duplicateCampaign,
         disabled: !editorStore.campaignDoc || duplicating.value,
       },
       {
-        label: "Campaign Settings",
+        label: "Settings",
         icon: "settings",
         onClick: () => (showSettings.value = true),
       },
       {
-        label: "Keyboard Shortcuts",
+        label: "Shortcuts",
         icon: "command",
         onClick: () => (showShortcuts.value = true),
       },
       {
-        label: isDark.value ? "Switch to Light Mode" : "Switch to Dark Mode",
+        label: "Toggle theme",
         icon: isDark.value ? "sun" : "moon",
         onClick: () => toggleDark(),
       },
