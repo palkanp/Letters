@@ -463,6 +463,7 @@ import { Button, TextInput, FeatherIcon, Dialog, Dropdown, Tooltip, toast, Progr
 import { useDark, useToggle } from "@vueuse/core";
 import { useEditorStore } from "../stores/editor";
 import { BLOCK_SCHEMA } from "../blockSchema";
+import { WEB_FONT_META, injectGoogleFonts } from "../fonts";
 import Inspector from "../components/Inspector.vue";
 import LayersPanel from "../components/LayersPanel.vue";
 import CampaignSettings from "../components/CampaignSettings.vue";
@@ -788,6 +789,27 @@ watch([subject, previewText, () => editorStore.campaignName], () => {
 watch(recipientConfig, () => {
   if (_suppressDirty === 0) editorStore.markDirty();
 }, { deep: true });
+
+// ── Google Fonts injection ───────────────────────────────────────────────────
+// Watch the block tree for web-font usage and inject <link> tags so the editor
+// preview renders the correct weights. Runs immediately on mount (immediate:true)
+// and again whenever any font_family prop changes.
+function collectFontFamilies(blocks) {
+  const names = [];
+  for (const block of blocks || []) {
+    if (block.props?.font_family) names.push(block.props.font_family);
+    for (const col of block.props?.columns || []) {
+      names.push(...collectFontFamilies(col.blocks));
+    }
+    names.push(...collectFontFamilies(block.children));
+  }
+  return names;
+}
+watch(
+  () => collectFontFamilies(editorStore.blocks),
+  (names) => injectGoogleFonts(names),
+  { immediate: true, deep: false }
+);
 
 // ── Auto-save (debounced 800ms) ──────────────────────────────────────────────
 // The history debounce (editor.js, 600ms) and this autosave debounce (800ms)

@@ -5,6 +5,7 @@ from typing import Any
 
 from .design_tree_processor import DesignTreeProcessor
 from .block_renderers import RENDERER_MAP
+from .fonts import google_fonts_link_tags
 
 _HTML_WRAPPER = """\
 <!DOCTYPE html>
@@ -12,7 +13,7 @@ _HTML_WRAPPER = """\
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />{font_links}
 </head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;">
 {preheader}
@@ -42,12 +43,30 @@ class EmailCompiler:
 
     def compile(self) -> str:
         self._processor.validate()
-        blocks_html = self._render_blocks(self._processor.get_tree())
+        tree = self._processor.get_tree()
+        blocks_html = self._render_blocks(tree)
+        font_links = self._render_font_links(tree)
         return _HTML_WRAPPER.format(
             blocks=blocks_html,
             preheader=self._render_preheader(),
             email_width=self._email_width,
+            font_links="\n" + font_links if font_links else "",
         )
+
+    def _collect_fonts(self, blocks: list[dict[str, Any]]) -> list[str]:
+        """Recursively collect all font_family values from the block tree."""
+        fonts: list[str] = []
+        for block in blocks:
+            props = block.get("props") or {}
+            if props.get("font_family"):
+                fonts.append(props["font_family"])
+            children = block.get("children") or []
+            fonts.extend(self._collect_fonts(children))
+        return fonts
+
+    def _render_font_links(self, tree: list[dict[str, Any]]) -> str:
+        fonts = self._collect_fonts(tree)
+        return google_fonts_link_tags(fonts)
 
     def _render_preheader(self) -> str:
         """Hidden inbox preview line, shown in the inbox list, not in the email body."""
