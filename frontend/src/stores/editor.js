@@ -429,7 +429,9 @@ export const useEditorStore = defineStore("editor", () => {
     selectedBlockId.value = null;
     // Use _createBlock defaults then merge any provided props
     blocks.value = templateBlocks.map((tpl) => {
-      const b = _createBlock(tpl.type, nextId());
+      // "rich_text" was merged into "text" — never instantiate the legacy type.
+      const type = tpl.type === "rich_text" ? "text" : tpl.type;
+      const b = _createBlock(type, nextId());
       if (tpl.props) Object.assign(b.props, tpl.props);
       if (tpl.type === "columns" && tpl.columns) {
         b.columns = tpl.columns.map(col => ({

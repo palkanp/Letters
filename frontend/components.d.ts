@@ -39,7 +39,6 @@ declare module 'vue' {
     Section_label: typeof import('./src/components/blocks/section_label.vue')['default']
     Social: typeof import('./src/components/blocks/social.vue')['default']
     Spacer: typeof import('./src/components/blocks/spacer.vue')['default']
-    TemplateLibrary: typeof import('./src/components/TemplateLibrary.vue')['default']
     TemplatePicker: typeof import('./src/components/TemplatePicker.vue')['default']
     Video_thumb: typeof import('./src/components/blocks/video_thumb.vue')['default']
   }

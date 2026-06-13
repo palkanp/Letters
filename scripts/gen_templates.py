@@ -23,7 +23,7 @@ newsletter = [
       subheading="New single-origins, a café that finally has a name, and the return of the cold brew everyone keeps emailing us about.",
       background_color="#f8f5f0", heading_color="#1c1917", subheading_color="#57534e",
       heading_size="32px", padding_top=48, padding_bottom=40),
-    b("rich_text",
+    b("text",
       html_content="<p>Hi friend,</p><p>It's been a busy month at the roastery. We brought in three new harvests, opened the doors to our first permanent café, and roasted more coffee in March than in any month since we started in a garage four years ago. Here's everything worth knowing.</p>",
       font_size="16px", line_height="1.7", padding_top=32, padding_bottom=8),
     b("section_label", label="WHAT'S NEW THIS MONTH"),
@@ -45,7 +45,7 @@ newsletter = [
       author="Maya Fernandes", role="Subscriber since 2022",
       background_color="#f8f5f0", border_color="#d6cfc4"),
     b("section_label", label="FROM THE ROASTERY"),
-    b("rich_text",
+    b("text",
       html_content="<p>A quick thank-you. Every bag you buy goes a little further than the coffee — this quarter we've paid <strong>23% above the Fair Trade floor</strong> directly to the farms we work with. That only happens because you keep choosing us over the supermarket shelf. It matters. Thank you.</p>",
       font_size="15px", line_height="1.7", padding_top=8),
     b("button", label="Shop this month's coffee →", url="#", color="#1c1917", text_color="#ffffff", button_padding="normal", padding_top=8),
@@ -62,7 +62,7 @@ announcement = [
       subheading="The fastest way to turn a messy backlog into a plan your whole team can actually follow.",
       background_color="#0f172a", heading_color="#f1f5f9", subheading_color="#94a3b8",
       heading_size="36px", padding_top=56, padding_bottom=48),
-    b("rich_text",
+    b("text",
       html_content="<p>For two years the number one request from Driftwave customers has been the same: <strong>“give us a way to plan, not just track.”</strong> Today we're shipping exactly that.</p><p>Boards is a planning surface that lives right alongside your tasks. Drag work across stages, group by owner or sprint, and watch the timeline update itself. No exports, no second tool, no Monday-morning spreadsheet.</p>",
       font_size="16px", line_height="1.7", padding_top=36, padding_bottom=8),
     b("section_label", label="WHAT YOU CAN DO NOW"),
@@ -84,7 +84,7 @@ announcement = [
       quote="We cancelled two other tools the week Boards shipped. It does the planning and the tracking, and our standups are ten minutes shorter.",
       author="Priya Nair", role="Head of Engineering, Cartograph",
       background_color="#f8fafc", border_color="#cbd5e1"),
-    b("rich_text",
+    b("text",
       html_content="<p>Boards is rolling out to every workspace this week — no upgrade needed on Team and Business plans. Open Driftwave and look for the new <strong>Boards</strong> tab in your sidebar.</p>",
       font_size="15px", line_height="1.7", align="center", padding_top=16),
     b("divider", padding_top=8, padding_bottom=4),
@@ -100,7 +100,7 @@ welcome = [
       subheading="Lumen works best when you start small. Here's how to set up your first habit in the next five minutes.",
       background_color="#f0fdf4", heading_color="#14532d", subheading_color="#166534",
       heading_size="30px", padding_top=48, padding_bottom=40),
-    b("rich_text",
+    b("text",
       html_content="<p>Hi there,</p><p>Welcome aboard — we're genuinely glad you're here. Lumen isn't about tracking forty things at once. It's about doing one or two things consistently until they stick. Let's get your first one going.</p>",
       font_size="16px", line_height="1.7", padding_top=32, padding_bottom=8),
     b("section_label", label="GET STARTED IN 3 STEPS"),
@@ -122,7 +122,7 @@ welcome = [
       quote="I've started and quit five habit apps. Lumen is the first one I've kept past a month — because it doesn't shame me when I slip.",
       author="Daniel Osei", role="Lumen member, 211-day streak",
       background_color="#f0fdf4", border_color="#bbf7d0"),
-    b("rich_text",
+    b("text",
       html_content="<p>One last thing: if you ever get stuck, just reply to this email. A real person on our team reads every message — usually within a day. Need a hand right now? Visit our <a href=\"#\">Help Centre</a>.</p>",
       font_size="14px", line_height="1.7", align="center", text_color="#4b5563", padding_top=16),
     b("footer", text="You're receiving this because you created a Lumen account. If this wasn't you, just ignore it and the account won't activate.", background_color="#f0fdf4", text_color="#4d7c5f"),
@@ -137,7 +137,7 @@ promo = [
       background_color="#fff7ed", heading_color="#9a3412", subheading_color="#c2410c",
       heading_size="34px", padding_top=52, padding_bottom=40),
     b("button", label="Shop the sale →", url="#", color="#ea580c", text_color="#ffffff", button_padding="normal", padding_top=8, padding_bottom=8),
-    b("rich_text",
+    b("text",
       html_content="<p>This is the one we tell you to wait for. Everything — new arrivals included — is 40% off for the next three days. Here's where we'd start.</p>",
       font_size="15px", line_height="1.7", align="center", text_color="#78716c", padding_top=8, padding_bottom=8),
     b("divider", padding_top=16),
@@ -163,7 +163,7 @@ promo = [
       author="Sophie Lindqvist", role="Verified buyer",
       background_color="#fff7ed", border_color="#fed7aa"),
     b("button", label="Take 40% off everything", url="#", color="#ea580c", text_color="#ffffff", button_padding="normal", padding_top=24, padding_bottom=8),
-    b("rich_text",
+    b("text",
       html_content="<p>Sale ends Sunday at 11:59pm. Code SPRING40 applies automatically at checkout. Discount can't be combined with other offers or applied to gift cards.</p>",
       font_size="12px", line_height="1.6", align="center", text_color="#a8a29e", padding_top=8, padding_bottom=8),
     b("social", instagram_url="https://instagram.com", x_url="https://x.com", website_url="https://example.com", color="#9a3412", align="center"),
@@ -178,19 +178,19 @@ digest = [
       subheading="The five things worth knowing from the past seven days — read it in under four minutes.",
       background_color="#1e1b4b", heading_color="#e0e7ff", subheading_color="#a5b4fc",
       heading_size="30px", padding_top=44, padding_bottom=36),
-    b("rich_text",
+    b("text",
       html_content="<p>Good morning. It was a heavy news week, so we cut hard. Here's the signal, none of the noise. Let's go.</p>",
       font_size="16px", line_height="1.7", padding_top=28, padding_bottom=8),
     b("section_label", label="TOP STORIES"),
-    b("rich_text",
+    b("text",
       html_content="<p><strong>1 · The funding winter is thawing — selectively.</strong></p><p>Early-stage rounds ticked up 18% this quarter, but the money is pooling around a handful of AI infrastructure names. Founders outside that lane are still finding the room cold. <a href=\"#\">Read the full breakdown →</a></p>",
       padding_top=8, padding_bottom=4),
     b("divider", padding_top=4, padding_bottom=4, border_color="#e0e7ff"),
-    b("rich_text",
+    b("text",
       html_content="<p><strong>2 · A 28-year-old's side project is now critical internet plumbing.</strong></p><p>An open-source library maintained by one person quietly ended up inside half the apps you use. This week's outage was a reminder of how fragile that arrangement is. <a href=\"#\">Why it matters →</a></p>",
       padding_top=4, padding_bottom=4),
     b("divider", padding_top=4, padding_bottom=4, border_color="#e0e7ff"),
-    b("rich_text",
+    b("text",
       html_content="<p><strong>3 · Remote work isn't dead — it just moved cities.</strong></p><p>New census data shows the people who left big metros in 2021 mostly stayed gone. Mid-size cities are the quiet winners, and their rents now show it. <a href=\"#\">See the maps →</a></p>",
       padding_top=4, padding_bottom=16),
     b("section_label", label="ALSO WORTH YOUR TIME"),
@@ -203,7 +203,7 @@ digest = [
       ],
       style="numbered", link_color="#4f46e5"),
     b("section_label", label="FROM THE EDITOR"),
-    b("rich_text",
+    b("text",
       html_content="<p>A small ask: if a friend would like The Frontier, forward this to them. We don't run ads and we don't sell your data — word of mouth is the entire growth strategy, and it's worked for 40,000 readers so far.</p>",
       font_size="15px", line_height="1.7", padding_top=8),
     b("button", label="Forward to a friend", url="#", color="#4f46e5", text_color="#ffffff", button_padding="normal", padding_top=16),
@@ -234,32 +234,44 @@ def apply_font(blocks, font):
     return blocks
 
 
-def add_images(blocks, seed_prefix, logo_text):
-    """Seed templates with placeholder images so they look complete out of the box:
-    a logo in the header, photos in image+text rows, and product shots."""
+def add_images(blocks, logo_text, keywords):
+    """Seed templates with *relevant* placeholder imagery: a branded logo in the
+    header, and topical photos (via LoremFlickr keyword search) in image+text
+    rows / product cards — consuming the keyword list in order."""
     logo = f"https://placehold.co/180x48/efefef/9ca3af?text={logo_text}"
-    n = 0
+    kw = list(keywords)
+    lock = 0
     for blk in blocks:
         t = blk["type"]
         props = blk.setdefault("props", {})
         if t == "header":
             props["logo_url"] = logo
-        elif t == "image_text":
-            n += 1
-            props.setdefault("image_url", f"https://picsum.photos/seed/{seed_prefix}{n}/480/360")
-            props.setdefault("image_width", "200px")
-        elif t == "product_card":
-            n += 1
-            props.setdefault("image_url", f"https://picsum.photos/seed/{seed_prefix}{n}/600/400")
+        elif t in ("image_text", "product_card"):
+            lock += 1
+            terms = kw.pop(0) if kw else "abstract"
+            w, h = (480, 360) if t == "image_text" else (600, 400)
+            props["image_url"] = f"https://loremflickr.com/{w}/{h}/{terms}?lock={lock}"
+            if t == "image_text":
+                props.setdefault("image_width", "200px")
     return blocks
 
 
-# Per-template single font + placeholder imagery.
-apply_font(newsletter, "Georgia");      add_images(newsletter, "northwind", "Northwind")
-apply_font(announcement, "Inter");      add_images(announcement, "driftwave", "Driftwave")
-apply_font(welcome, "Poppins");         add_images(welcome, "lumen", "Lumen")
-apply_font(promo, "Arial");             add_images(promo, "atlas", "Atlas")
-apply_font(digest, "Georgia");          add_images(digest, "frontier", "The+Frontier")
+# Per-template single font + relevant placeholder imagery (keywords match each
+# image+text / product block in order).
+apply_font(newsletter, "Georgia")
+add_images(newsletter, "Northwind", ["coffee,beans", "cafe,coffeeshop", "coldbrew,icedcoffee"])
+
+apply_font(announcement, "Inter")
+add_images(announcement, "Driftwave", ["kanban,software", "team,office", "laptop,dashboard"])
+
+apply_font(welcome, "Poppins")
+add_images(welcome, "Lumen", ["walking,outdoors", "reading,book", "morning,sunrise"])
+
+apply_font(promo, "Arial")
+add_images(promo, "Atlas", ["sweater,knitwear", "trousers,clothing", "tote,bag"])
+
+apply_font(digest, "Georgia")
+add_images(digest, "The+Frontier", [])
 
 
 # DocType is autonamed `field:title`, so each fixture's `name` must equal its title.

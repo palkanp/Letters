@@ -233,14 +233,27 @@
           </template>
         </div>
 
-        <!-- Zoom controls — sticky so they stay pinned to the viewport bottom
-             while the canvas scrolls, instead of floating over the content. -->
-        <div class="sticky bottom-0 z-20 flex justify-center pointer-events-none pt-4">
-          <div class="pointer-events-auto flex items-center gap-1 bg-surface-white border border-outline-gray-2 rounded-lg shadow-md px-1 py-1">
-            <button type="button" class="w-6 h-6 flex items-center justify-center rounded text-ink-gray-5 hover:bg-surface-gray-2 text-sm leading-none" @click.stop="stepZoom(-1)">−</button>
-            <button type="button" class="min-w-[3rem] text-xs text-ink-gray-6 hover:bg-surface-gray-2 rounded px-1 py-0.5 tabular-nums" @click.stop="canvasZoom = 1">{{ Math.round(canvasZoom * 100) }}%</button>
-            <button type="button" class="w-6 h-6 flex items-center justify-center rounded text-ink-gray-5 hover:bg-surface-gray-2 text-sm leading-none" @click.stop="stepZoom(1)">+</button>
-          </div>
+        <!-- Zoom indicator — sticky to the viewport bottom, only visible briefly
+             after a zoom change. Frappe Builder style: % on the left, a reset
+             button on the right. -->
+        <div class="sticky bottom-0 z-20 flex justify-center pointer-events-none pb-4 pt-4">
+          <Transition name="fade">
+            <div
+              v-show="zoomVisible"
+              class="pointer-events-auto flex items-center gap-2 bg-gray-900 text-white rounded-full shadow-lg pl-3.5 pr-1.5 py-1"
+              @mouseenter="zoomVisible = true"
+            >
+              <span class="text-xs font-medium tabular-nums select-none">{{ Math.round(canvasZoom * 100) }}%</span>
+              <button
+                type="button"
+                class="w-6 h-6 flex items-center justify-center rounded-full hover:bg-white/15 transition-colors"
+                title="Reset to 100%"
+                @click.stop="resetZoom"
+              >
+                <FeatherIcon name="maximize-2" class="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </Transition>
         </div>
       </main>
 
@@ -500,6 +513,22 @@ const SHORTCUTS = [
 
 const canvasZoom = ref(1);
 const ZOOM_LEVELS = [0.5, 0.67, 0.75, 0.9, 1, 1.1, 1.25, 1.5];
+
+// The zoom pill is hidden by default; it appears whenever the zoom changes
+// (shortcut, trackpad, or its own buttons) and fades out 2.5s after the last
+// change so it never permanently covers the canvas.
+const zoomVisible = ref(false);
+let _zoomHideTimer = null;
+function flashZoom() {
+  zoomVisible.value = true;
+  clearTimeout(_zoomHideTimer);
+  _zoomHideTimer = setTimeout(() => { zoomVisible.value = false; }, 2500);
+}
+watch(canvasZoom, flashZoom);
+
+function resetZoom() {
+  canvasZoom.value = 1;
+}
 
 function stepZoom(dir) {
   const idx = ZOOM_LEVELS.findIndex(z => z >= canvasZoom.value - 0.01);
