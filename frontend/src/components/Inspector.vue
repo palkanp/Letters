@@ -115,13 +115,13 @@
             </PropRow>
             <PropRow label="Left" compact>
               <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.padding_left ?? 32"
+                :modelValue="block.props.padding_left ?? 16"
                 @update:modelValue="set('padding_left', Number($event))"
               />
             </PropRow>
             <PropRow label="Right" compact>
               <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.padding_right ?? 32"
+                :modelValue="block.props.padding_right ?? 16"
                 @update:modelValue="set('padding_right', Number($event))"
               />
             </PropRow>

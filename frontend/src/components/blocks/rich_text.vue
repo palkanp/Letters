@@ -75,20 +75,21 @@ function onChange(html) {
 <style>
 /* Show placeholder even when the block is not selected (not focused).
    TipTap normally gates the placeholder behind :focus — we override that. */
-/* Bubble menu: the Tippy popup appends to <body> and picks up dark-mode tokens
-   even when the canvas is always light. Force the inner Menu div (bg-surface-base
-   from frappe-ui Tailwind) to a fixed light surface + dark icons so the toolbar
-   is always readable against the white email canvas. */
-.bubble-menu > div {
+/* Bubble menu: Tippy appends to <body> and inherits dark-mode tokens from the
+   page even though the canvas is always white. Override at the tippy-box level
+   so both the wrapper and inner menu div get a fixed light surface + dark text. */
+.tippy-box .bubble-menu,
+.tippy-box .bubble-menu .inline-flex {
   background-color: #ffffff !important;
+}
+.tippy-box .bubble-menu {
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14) !important;
   border-radius: 8px !important;
+  overflow: hidden !important;
 }
-.bubble-menu button {
-  color: #1f2937 !important;
-}
-.bubble-menu svg {
+.tippy-box .bubble-menu button,
+.tippy-box .bubble-menu svg {
   color: #1f2937 !important;
 }
 
@@ -100,55 +101,50 @@ function onChange(html) {
   pointer-events: none;
 }
 
-/* Force TipTap's ProseMirror to inherit block-level styles from the shell wrapper.
-   frappe-ui's TextEditor CSS may reset font-size/color/line-height on .ProseMirror. */
+/* Force ProseMirror root to inherit the shell's block-level styles.
+   Only the root needs !important — child elements inherit naturally from it.
+   Using !important only here avoids overriding TipTap's inline style spans. */
 .rich-text-shell .ProseMirror {
   font-size: inherit !important;
   font-weight: inherit !important;
   color: inherit !important;
   line-height: inherit !important;
   font-family: inherit !important;
+  letter-spacing: inherit !important;
 }
-/* Block/inline elements — inherit all block-level styles from the shell.
-   strong and b are excluded from font-weight so inline Bold markup still works. */
+
+/* Child elements: inherit without !important so TipTap inline styles still work.
+   text-align keeps !important because email alignment must override browser defaults.
+   strong/b are omitted from font-weight so Bold markup renders at browser default (700). */
 .rich-text-shell .ProseMirror p,
 .rich-text-shell .ProseMirror li,
 .rich-text-shell .ProseMirror span,
 .rich-text-shell .ProseMirror em,
-.rich-text-shell .ProseMirror i {
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  color: inherit !important;
-  line-height: inherit !important;
-  font-family: inherit !important;
-  text-align: inherit !important;
-  letter-spacing: inherit !important;
-}
-/* strong/b: inherit everything except font-weight so <strong> stays bold */
+.rich-text-shell .ProseMirror i,
 .rich-text-shell .ProseMirror strong,
 .rich-text-shell .ProseMirror b {
-  font-size: inherit !important;
-  color: inherit !important;
-  line-height: inherit !important;
-  font-family: inherit !important;
+  font-size: inherit;
+  color: inherit;
+  line-height: inherit;
+  font-family: inherit;
+  letter-spacing: inherit;
   text-align: inherit !important;
-  letter-spacing: inherit !important;
 }
 
-/* Headings: same overrides + reset browser default heading margin */
+/* Headings: reset browser margins + inherit block styles */
 .rich-text-shell .ProseMirror h1,
 .rich-text-shell .ProseMirror h2,
 .rich-text-shell .ProseMirror h3,
 .rich-text-shell .ProseMirror h4,
 .rich-text-shell .ProseMirror h5,
 .rich-text-shell .ProseMirror h6 {
-  font-size: inherit !important;
-  font-weight: inherit !important;
-  color: inherit !important;
-  line-height: inherit !important;
-  font-family: inherit !important;
+  font-size: inherit;
+  font-weight: inherit;
+  color: inherit;
+  line-height: inherit;
+  font-family: inherit;
+  letter-spacing: inherit;
   text-align: inherit !important;
-  letter-spacing: inherit !important;
   margin: 0 !important;
 }
 
