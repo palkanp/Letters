@@ -610,7 +610,7 @@ class TestRichTextRenderer:
 
     def test_unordered_list(self):
         out = self.renderer.render(self._block("<ul><li>A</li><li>B</li></ul>"))
-        assert "<ul>" in out
+        assert "<ul " in out  # ul always gets a style attribute
         assert "<li>A</li>" in out
 
     def test_font_size_applied(self):
@@ -648,6 +648,19 @@ class TestRichTextRenderer:
         # output must NOT contain a non-zero bottom margin on the <p>.
         out = self.renderer.render(self._block("<p>Hello</p>", padding_bottom=0))
         assert "margin:0 0 0.75em" not in out
+
+    def test_ordered_list_has_inside_positioning(self):
+        # list-style-position:inside keeps numbers next to text regardless of
+        # the block's text-align. Outside positioning (the browser default) places
+        # the marker in the padding area, which looks broken when text is centered.
+        out = self.renderer.render(self._block("<ol><li>apples</li><li>peaches</li></ol>"))
+        assert "list-style-position:inside" in out
+        assert "padding-left:0" in out
+
+    def test_unordered_list_has_inside_positioning(self):
+        out = self.renderer.render(self._block("<ul><li>A</li><li>B</li></ul>"))
+        assert "list-style-position:inside" in out
+        assert "padding-left:0" in out
 
 
 # ── ImageRenderer link-through ────────────────────────────────────────────────

@@ -1014,6 +1014,12 @@ class RichTextRenderer(BlockRenderer):
             p_style += f"text-align:{align};"
             p_last_style += f"text-align:{align};"
         html_content = html_content.replace("<p>", f"<p style=\"{p_style}\">")
+        # Lists: use inside positioning so markers stay next to text even when the
+        # block is center-aligned. Email clients default to outside + browser padding,
+        # which pushes numbers/bullets far from the text on non-left-aligned blocks.
+        list_style = "list-style-position:inside;padding-left:0;margin:0.5em 0;"
+        html_content = html_content.replace("<ul>", f'<ul style="{list_style}">')
+        html_content = html_content.replace("<ol>", f'<ol style="{list_style}">')
         # Replace only the final </p> to apply the last-paragraph zero margin.
         last_close = html_content.rfind("</p>")
         if last_close != -1:
