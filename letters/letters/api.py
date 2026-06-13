@@ -206,7 +206,8 @@ def duplicate_campaign(name: str):
         "recipient_config": getattr(original, "recipient_config", None) or "",
     })
     new_doc.insert()
-    frappe.db.commit()
+    # No explicit commit: this is a POST endpoint, so Frappe auto-commits on
+    # success. (Manual commits in request handlers are discouraged.)
     return {"name": new_doc.name, "title": new_doc.title}
 
 
