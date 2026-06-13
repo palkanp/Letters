@@ -29,7 +29,6 @@
           :editable="isSelected"
           placeholder="Text"
           :bubble-menu="bubbleMenuButtons"
-          :bubble-menu-options="{ shouldShow: () => true }"
           editor-class="rich-text-content outline-none min-h-10"
           @change="onChange"
         />
@@ -78,6 +77,14 @@ function onChange(html) {
 <style>
 /* Show placeholder even when the block is not selected (not focused).
    TipTap normally gates the placeholder behind :focus — we override that. */
+/* Bubble menu: give it an elevated surface so it doesn't blend into the canvas */
+.bubble-menu {
+  background-color: var(--surface-white, #ffffff) !important;
+  border: 1px solid var(--outline-gray-2, #e5e7eb) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+  border-radius: 6px !important;
+}
+
 .rich-text-shell .ProseMirror p.is-editor-empty:first-child::before {
   color: #d1d5db;
   content: attr(data-placeholder);
