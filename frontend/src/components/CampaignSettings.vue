@@ -139,18 +139,22 @@
                   </div>
 
                   <!-- Open rate stats (only shown for completed sends) -->
-                  <div v-if="analytics.sent_status !== 'Sending'" class="grid grid-cols-3 gap-3">
+                  <div v-if="analytics.sent_status !== 'Sending'" class="grid grid-cols-2 gap-3">
                     <div class="rounded border border-outline-gray-1 bg-surface-gray-1 px-4 py-3">
                       <p class="text-2xl font-semibold text-ink-gray-9 tabular-nums">{{ analytics.sent }}</p>
                       <p class="text-xs text-ink-gray-5 mt-0.5">Delivered</p>
+                    </div>
+                    <div class="rounded border border-outline-gray-1 bg-surface-gray-1 px-4 py-3">
+                      <p class="text-2xl font-semibold text-ink-gray-9 tabular-nums">{{ analytics.open_rate }}%</p>
+                      <p class="text-xs text-ink-gray-5 mt-0.5">Open rate</p>
                     </div>
                     <div class="rounded border border-outline-gray-1 bg-surface-gray-1 px-4 py-3">
                       <p class="text-2xl font-semibold text-ink-gray-9 tabular-nums">{{ analytics.opened }}</p>
                       <p class="text-xs text-ink-gray-5 mt-0.5">Opened</p>
                     </div>
                     <div class="rounded border border-outline-gray-1 bg-surface-gray-1 px-4 py-3">
-                      <p class="text-2xl font-semibold text-ink-gray-9 tabular-nums">{{ analytics.open_rate }}%</p>
-                      <p class="text-xs text-ink-gray-5 mt-0.5">Open rate</p>
+                      <p class="text-2xl font-semibold text-ink-gray-9 tabular-nums">{{ analytics.unsubscribed ?? 0 }}</p>
+                      <p class="text-xs text-ink-gray-5 mt-0.5">Unsubscribed</p>
                     </div>
                   </div>
 

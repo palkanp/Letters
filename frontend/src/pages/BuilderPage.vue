@@ -323,7 +323,7 @@
   <!-- Broken link checker dialog -->
   <Dialog
     :model-value="showLinkChecker"
-    title="Link Checker"
+    title="Check Links"
     size="md"
     @update:model-value="(v) => { if (!v) showLinkChecker.value = false; }"
   >
@@ -575,7 +575,7 @@ const menuOptions = computed(() => [
 const previewOptions = computed(() => [
   { label: "Preview", icon: "external-link", onClick: openPreview },
   { label: "Send test email", icon: "send", onClick: openTestModal },
-  { label: "Test broken links", icon: "link", onClick: openLinkChecker },
+  { label: "Check links", icon: "link", onClick: openLinkChecker },
 ]);
 
 const sendOptions = computed(() => [
@@ -1265,20 +1265,22 @@ function onTemplateApply(templateBlocks) {
 // ── Block picker previews (SVG sketches) ──────────────────────────────────────
 // ── Block picker ──────────────────────────────────────────────────────────────
 const availableBlocks = [
-  { type: "header",        label: "Header",      icon: "award" },
-  { type: "hero",          label: "Hero",        icon: "layout" },
+  { type: "text",          label: "Text",         icon: "type" },
+  { type: "image",         label: "Image",        icon: "image" },
+  { type: "header",        label: "Header",       icon: "award" },
+  { type: "hero",          label: "Hero",         icon: "layout" },
   { type: "image_text",    label: "Image + Text", icon: "sidebar" },
-  { type: "button",        label: "Button",      icon: "square" },
-  { type: "columns",       label: "Columns",     icon: "columns" },
-  { type: "link_list",     label: "Link List",   icon: "list" },
-  { type: "quote",         label: "Quote",       icon: "message-square" },
-  { type: "social",        label: "Social",      icon: "share-2" },
-  { type: "product_card",  label: "Product",     icon: "shopping-bag" },
-  { type: "video_thumb",   label: "Video",       icon: "play-circle" },
-  { type: "spacer",        label: "Spacer",      icon: "minus" },
-  { type: "section_label", label: "Label",       icon: "tag" },
-  { type: "divider",       label: "Divider",     icon: "more-horizontal" },
-  { type: "footer",        label: "Footer",      icon: "align-justify" },
+  { type: "button",        label: "Button",       icon: "square" },
+  { type: "columns",       label: "Columns",      icon: "columns" },
+  { type: "link_list",     label: "Link List",    icon: "list" },
+  { type: "quote",         label: "Quote",        icon: "message-square" },
+  { type: "social",        label: "Social",       icon: "share-2" },
+  { type: "product_card",  label: "Product",      icon: "shopping-bag" },
+  { type: "video_thumb",   label: "Video",        icon: "play-circle" },
+  { type: "spacer",        label: "Spacer",       icon: "minus" },
+  { type: "section_label", label: "Section Label", icon: "tag" },
+  { type: "divider",       label: "Divider",      icon: "more-horizontal" },
+  { type: "footer",        label: "Footer",       icon: "align-justify" },
 ];
 
 // Smart "Add block": if a container is selected, add inside it; else append to canvas

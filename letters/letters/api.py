@@ -289,6 +289,10 @@ def get_campaign_analytics(name):
         {"parent": latest_send.name, "opened": 1},
         "opened_on", order_by="opened_on desc",
     )
+    unsubscribed = frappe.db.count(
+        "Email Unsubscribe",
+        {"reference_doctype": "Letters Campaign", "reference_name": name},
+    )
     # Per-recipient status breakdown from the most recent send
     status_counts = {}
     for row in frappe.get_all(
@@ -300,13 +304,14 @@ def get_campaign_analytics(name):
         status_counts[s] = status_counts.get(s, 0) + 1
 
     return {
-        "sent_status": sends[0].status,
-        "total":       total,
-        "sent":        sent,
-        "opened":      opened,
-        "open_rate":   round((opened / sent) * 100, 1) if sent else 0,
-        "last_opened": str(last_opened) if last_opened else None,
-        "last_sent":   str(sends[0].creation),
+        "sent_status":  sends[0].status,
+        "total":        total,
+        "sent":         sent,
+        "opened":       opened,
+        "open_rate":    round((opened / sent) * 100, 1) if sent else 0,
+        "unsubscribed": unsubscribed,
+        "last_opened":  str(last_opened) if last_opened else None,
+        "last_sent":    str(sends[0].creation),
         "status_counts": status_counts,
     }
 
@@ -1091,7 +1096,14 @@ def process_scheduled_sends():
             frappe.db.commit()
             if not claimed:
                 continue
-            send_campaign(row.name)
+            # Run the send as the campaign's owner so recipient rows are attributed
+            # to them rather than "Administrator" (the typical scheduler user).
+            campaign_owner = frappe.db.get_value("Letters Campaign", row.name, "owner")
+            frappe.set_user(campaign_owner or frappe.session.user)
+            try:
+                send_campaign(row.name)
+            finally:
+                frappe.set_user("Administrator")
         except Exception:
             # The send didn't start (e.g. no saved recipients, compile error).
             # Mark Failed rather than leaving it silently reverted to Draft, so
