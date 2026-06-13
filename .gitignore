@@ -11,3 +11,7 @@ frontend/dist/
 .env
 .DS_Store
 *.swp
+
+# Agent skills / local dev tooling (kept on disk, not tracked)
+.agents/
+.claude/
