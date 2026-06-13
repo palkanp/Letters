@@ -22,6 +22,7 @@ _SYSTEM_FONT_STACKS: dict[str, str] = {
     "Verdana":         "Verdana, Geneva, sans-serif",
     "Tahoma":          "Tahoma, Geneva, sans-serif",
     "Trebuchet MS":    "'Trebuchet MS', Helvetica, sans-serif",
+    "Comic Sans MS":   "'Comic Sans MS', 'Comic Sans', cursive",
     # Serif
     "Georgia":         "Georgia, 'Times New Roman', serif",
     "Times New Roman": "'Times New Roman', Times, serif",

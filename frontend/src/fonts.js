@@ -21,6 +21,7 @@ const SYSTEM_FONT_STACKS = {
   "Verdana":         "Verdana, Geneva, sans-serif",
   "Tahoma":          "Tahoma, Geneva, sans-serif",
   "Trebuchet MS":    "'Trebuchet MS', Helvetica, sans-serif",
+  "Comic Sans MS":   "'Comic Sans MS', 'Comic Sans', cursive",
   // Serif
   "Georgia":         "Georgia, 'Times New Roman', serif",
   "Times New Roman": "'Times New Roman', Times, serif",
@@ -77,6 +78,7 @@ export const FONT_OPTIONS = [
   { label: "Verdana",          value: "Verdana",          group: "System fonts" },
   { label: "Tahoma",           value: "Tahoma",           group: "System fonts" },
   { label: "Trebuchet MS",     value: "Trebuchet MS",     group: "System fonts" },
+  { label: "Comic Sans MS",    value: "Comic Sans MS",    group: "System fonts" },
   { label: "Georgia",          value: "Georgia",          group: "System fonts" },
   { label: "Times New Roman",  value: "Times New Roman",  group: "System fonts" },
   { label: "Courier New",      value: "Courier New",      group: "System fonts" },
