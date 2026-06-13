@@ -1,214 +1,31 @@
 from __future__ import annotations
 
 import json
+
 import frappe
 from frappe import _
+
+from .recipients import _recipient_args_from_config, _suppressed_emails, _valid_emails
+
+
 
 # Hard ceiling on a single campaign's audience. Above this we refuse the send
 # with a clear message rather than silently dropping recipients. Tune as needed
 # for your sending infrastructure.
 MAX_RECIPIENTS = 50000
 
+
+
 # Background send-job timeout in seconds.
 SEND_JOB_TIMEOUT = 600
+
+
 
 # Flush per-recipient progress to the DB every N sends so a worker crash mid-batch
 # loses at most this many recipients' tracked status (they'd resend on retry).
 COMMIT_EVERY = 100
 
 
-@frappe.whitelist(methods=["GET", "POST"])
-def get_campaign(name: str):
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
-    return {
-        "name": doc.name,
-        "title": doc.title,
-        "subject": doc.subject,
-        "preview_text": doc.preview_text or "",
-        "status": doc.status,
-        "scheduled_at": str(doc.scheduled_at) if doc.scheduled_at else None,
-        "email_width": getattr(doc, "email_width", None) or 600,
-        "blocks": json.loads(doc.blocks_json) if doc.blocks_json else [],
-        "recipient_config": _load_recipient_config(doc),
-    }
-
-
-def _load_recipient_config(doc):
-    """Parse the campaign's saved audience selection into a dict (or None)."""
-    raw = getattr(doc, "recipient_config", None)
-    if not raw:
-        return None
-    try:
-        cfg = json.loads(raw) if isinstance(raw, str) else raw
-    except (ValueError, TypeError):
-        return None
-    return cfg if isinstance(cfg, dict) else None
-
-
-def _normalize_recipient_config(value):
-    """Coerce an incoming recipient_config (object or JSON string) to a stored
-    JSON string, or "" to clear it. Returns None to mean 'leave unchanged'."""
-    if value is None:
-        return None
-    if isinstance(value, (dict, list)):
-        return json.dumps(value)
-    text = str(value).strip()
-    if text in ("", "null", "{}"):
-        return ""
-    return text
-
-
-def _recipient_args_from_config(doc):
-    """Translate the campaign's saved recipient_config into the (recipients,
-    email_group, doctype_config) triple that send_campaign resolves. Returns
-    (None, None, None) when nothing usable is stored."""
-    cfg = _load_recipient_config(doc)
-    if not cfg:
-        return None, None, None
-    ctype = cfg.get("type")
-    if ctype == "group" and cfg.get("email_group"):
-        return None, cfg["email_group"], None
-    if ctype == "paste" and cfg.get("recipients"):
-        return cfg["recipients"], None, None
-    if ctype == "doctype" and cfg.get("doctype") and cfg.get("email_field"):
-        return None, None, {
-            "doctype":     cfg["doctype"],
-            "email_field": cfg["email_field"],
-            "filters":     cfg.get("filters") or {},
-        }
-    return None, None, None
-
-
-def _unique_campaign_title(base):
-    """Return a campaign title that doesn't collide with an existing record.
-
-    Campaigns are autonamed `field:title`, so two campaigns can't share a title.
-    If ``base`` is taken we append ` - 1`, ` - 2`, … until we find a free slot.
-    """
-    base = (base or "Untitled Campaign").strip() or "Untitled Campaign"
-    if not frappe.db.exists("Letters Campaign", base):
-        return base
-    n = 1
-    while frappe.db.exists("Letters Campaign", f"{base} - {n}"):
-        n += 1
-    return f"{base} - {n}"
-
-
-@frappe.whitelist(methods=["POST"])
-def save_campaign(name: str | None = None, title: str | None = None, subject: str | None = None, preview_text: str | None = None, blocks: str | None = None, email_width: int | None = None, recipient_config: str | None = None):
-    blocks_json = json.dumps(blocks if isinstance(blocks, list) else json.loads(blocks or "[]"))
-    normalized_config = _normalize_recipient_config(recipient_config)
-
-    if name:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "write", doc=doc, throw=True)
-        if title is not None:
-            doc.title = title
-        if subject is not None:
-            doc.subject = subject
-        if preview_text is not None:
-            doc.preview_text = preview_text
-        if email_width is not None:
-            try:
-                doc.email_width = int(email_width)
-            except (AttributeError, TypeError, ValueError):
-                pass
-        if normalized_config is not None:
-            doc.recipient_config = normalized_config
-        doc.blocks_json = blocks_json
-        doc.save()
-    else:
-        frappe.has_permission("Letters Campaign", "create", throw=True)
-        doc = frappe.get_doc({
-            "doctype": "Letters Campaign",
-            "title": _unique_campaign_title(title or "Untitled Campaign"),
-            "subject": subject or "",
-            "preview_text": preview_text or "",
-            "status": "Draft",
-            "email_width": int(email_width) if email_width else 600,
-            "blocks_json": blocks_json,
-            "recipient_config": normalized_config or "",
-        })
-        doc.insert()
-
-    return {"name": doc.name, "title": doc.title, "status": doc.status}
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def get_templates():
-    """Return all active Letters Templates with rendered preview HTML for the picker."""
-    from letters.letters.utils.email_compiler import EmailCompiler
-
-    templates = frappe.get_all(
-        "Letters Template",
-        filters={"is_active": 1},
-        fields=["name", "title", "thumbnail", "blocks_json", "sort_order"],
-        order_by="sort_order asc, title asc",
-    )
-    for tpl in templates:
-        blocks_data = json.loads(tpl.get("blocks_json") or "[]")
-        try:
-            compiler = EmailCompiler(blocks_data, preview_text="", email_width=600)
-            tpl["preview_html"] = compiler.compile()
-        except Exception:
-            frappe.log_error(frappe.get_traceback(), "Letters template preview error")
-            tpl["preview_html"] = ""
-    return templates
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def render_preview(name: str | None = None, blocks: str | None = None, preview_text: str | None = None, email_width: int | None = None):
-    """Compile blocks to email-safe HTML."""
-    from letters.letters.utils.email_compiler import EmailCompiler
-
-    if name and not blocks:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
-        blocks_data = doc.blocks_json or "[]"
-        if preview_text is None:
-            preview_text = doc.preview_text
-        if email_width is None:
-            email_width = getattr(doc, "email_width", None) or 600
-    else:
-        blocks_data = blocks if isinstance(blocks, list) else json.loads(blocks or "[]")
-
-    try:
-        compiler = EmailCompiler(blocks_data, preview_text=preview_text or "", email_width=email_width or 600)
-        html = compiler.compile()
-        return {"html": html}
-    except Exception as e:
-        frappe.log_error(frappe.get_traceback(), "Letters render_preview error")
-        frappe.throw(str(e))
-
-
-def _is_email_field(df):
-    """Frappe has no dedicated 'Email' fieldtype on most versions; email fields are
-    Data fields with options='Email'. We accept both representations to be safe."""
-    return df.fieldtype == "Email" or (df.fieldtype == "Data" and (df.options or "") == "Email")
-
-
-@frappe.whitelist(methods=["POST"])
-def duplicate_campaign(name: str):
-    """Create an exact copy of a campaign as a new Draft."""
-    original = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=original, throw=True)
-    frappe.has_permission("Letters Campaign", "create", throw=True)
-
-    new_doc = frappe.get_doc({
-        "doctype": "Letters Campaign",
-        "title": f"Copy of {original.title}",
-        "subject": original.subject or "",
-        "preview_text": original.preview_text or "",
-        "status": "Draft",
-        "email_width": getattr(original, "email_width", None) or 600,
-        "blocks_json": original.blocks_json or "[]",
-        "recipient_config": getattr(original, "recipient_config", None) or "",
-    })
-    new_doc.insert()
-    # No explicit commit: this is a POST endpoint, so Frappe auto-commits on
-    # success. (Manual commits in request handlers are discouraged.)
-    return {"name": new_doc.name, "title": new_doc.title}
 
 
 @frappe.whitelist(methods=["POST"])
@@ -254,6 +71,8 @@ def send_test(blocks: str | None = None, subject: str | None = None, preview_tex
     return {"sent_to": email}
 
 
+
+
 # ── Open tracking & analytics ─────────────────────────────────────────────────
 
 @frappe.whitelist(allow_guest=True, methods=["GET"])
@@ -277,6 +96,8 @@ def track_open(recipient_email: str | None = None, reference_name: str | None = 
     frappe.response.update(frappe.utils.get_imaginary_pixel_response())
 
 
+
+
 def _record_open(campaign_name, email):
     """Mark this campaign's recipient row(s) for `email` as opened. First open
     stamps opened_on; every hit increments open_count."""
@@ -295,6 +116,8 @@ def _record_open(campaign_name, email):
             update["opened_on"] = frappe.utils.now_datetime()
         frappe.db.set_value("Email Send Recipient", r.name, update, update_modified=False)
     frappe.db.commit()
+
+
 
 
 @frappe.whitelist(methods=["GET", "POST"])
@@ -356,6 +179,8 @@ def get_campaign_analytics(name: str):
     }
 
 
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_campaign_recipients(name: str, limit: int = 200):
     """Return the list of recipients for the most recent send of a campaign."""
@@ -378,161 +203,6 @@ def get_campaign_recipients(name: str, limit: int = 200):
     return rows
 
 
-@frappe.whitelist(methods=["GET", "POST"])
-def get_doctypes_with_email_fields():
-    """Return doctypes that have at least one email field, that the user can read."""
-    doctypes = set()
-
-    # Standard fields (DocField) — match both possible representations.
-    for filters in (
-        {"fieldtype": "Data", "options": "Email"},
-        {"fieldtype": "Email"},
-    ):
-        for row in frappe.get_all("DocField", filters=filters, fields=["parent"], distinct=True):
-            doctypes.add(row.parent)
-
-    # Custom fields live in a separate doctype.
-    for filters in (
-        {"fieldtype": "Data", "options": "Email"},
-        {"fieldtype": "Email"},
-    ):
-        for row in frappe.get_all("Custom Field", filters=filters, fields=["dt"], distinct=True):
-            doctypes.add(row.dt)
-
-    result = []
-    for dt in sorted(doctypes):
-        try:
-            if frappe.has_permission(dt, "read"):
-                result.append(dt)
-        except Exception:
-            pass
-    return result
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def get_email_fields(doctype: str):
-    """Return field names/labels of email fields for a doctype (incl. custom fields)."""
-    frappe.has_permission(doctype, "read", throw=True)
-    meta = frappe.get_meta(doctype)
-    return [
-        {"fieldname": df.fieldname, "label": df.label or df.fieldname}
-        for df in meta.fields
-        if _is_email_field(df)
-    ]
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def get_doctype_filter_fields(doctype: str):
-    """Return fields suitable as filters for the given doctype.
-
-    Returns Select, Link, and Date/Datetime fields so the user can
-    narrow recipients by criteria like Status, Territory, or creation date.
-    Also always includes "creation" and "modified" system fields.
-    """
-    frappe.has_permission(doctype, "read", throw=True)
-    meta = frappe.get_meta(doctype)
-
-    FILTER_TYPES = {"Select", "Link", "Date", "Datetime"}
-    fields = []
-    seen = set()
-
-    for df in meta.fields:
-        if df.fieldtype not in FILTER_TYPES:
-            continue
-        if df.fieldname in seen:
-            continue
-        seen.add(df.fieldname)
-        entry = {
-            "fieldname": df.fieldname,
-            "label": df.label or df.fieldname,
-            "fieldtype": df.fieldtype,
-        }
-        if df.fieldtype == "Select" and df.options:
-            entry["options"] = [o for o in df.options.split("\n") if o.strip()]
-        elif df.fieldtype == "Link":
-            entry["options_doctype"] = df.options or ""
-        fields.append(entry)
-
-    # Always offer creation date filter
-    for sys_field in ("creation", "modified"):
-        if sys_field not in seen:
-            fields.append({
-                "fieldname": sys_field,
-                "label": sys_field.capitalize(),
-                "fieldtype": "Datetime",
-            })
-
-    return fields
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def count_doctype_recipients(doctype: str, email_field: str, filters: str | None = None):
-    """Preview how many records match the given filter config."""
-    frappe.has_permission(doctype, "read", throw=True)
-    filter_dict = json.loads(filters) if isinstance(filters, str) else (filters or {})
-    filter_dict[email_field] = ["!=", ""]
-    try:
-        count = frappe.db.count(doctype, filter_dict)
-    except Exception:
-        count = 0
-    return {"count": count}
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def get_email_groups():
-    """Return all Email Groups with active member counts (single GROUP BY query)."""
-    groups = frappe.get_all(
-        "Email Group",
-        fields=["name", "title"],
-        order_by="title asc",
-    )
-    if not groups:
-        return groups
-
-    # Single GROUP BY query via the query builder. (Raw SQL functions passed as
-    # field strings — e.g. "count(*) as cnt" — are rejected by recent Frappe for
-    # SQL-injection safety, so we build the aggregate with frappe.qb instead.)
-    from frappe.query_builder.functions import Count
-
-    EGM = frappe.qb.DocType("Email Group Member")
-    count_rows = (
-        frappe.qb.from_(EGM)
-        .select(EGM.email_group, Count(EGM.name).as_("cnt"))
-        .where(EGM.unsubscribed == 0)
-        .groupby(EGM.email_group)
-    ).run(as_dict=True)
-    counts = {r["email_group"]: r["cnt"] for r in count_rows}
-
-    for g in groups:
-        g["count"] = counts.get(g["name"], 0)
-    return groups
-
-
-def _suppressed_emails():
-    """Addresses that have unsubscribed from Letters (any campaign) or globally.
-
-    Reuses Frappe's native Email Unsubscribe store, which is populated by the
-    signed unsubscribe footer Frappe injects into every campaign email (see the
-    reference_doctype/reference_name passed in _execute_send). Filtering here
-    makes an unsubscribe apply across *all* Letters campaigns, not just resends
-    of the one the recipient clicked from."""
-    rows = frappe.get_all(
-        "Email Unsubscribe",
-        or_filters=[
-            {"reference_doctype": "Letters Campaign"},
-            {"global_unsubscribe": 1},
-        ],
-        pluck="email",
-        distinct=True,
-    )
-    return {e for e in rows if e}
-
-
-def _valid_emails(emails):
-    """Drop malformed addresses using Frappe's validator (never trust the
-    client). Returns (valid_emails, dropped_count)."""
-    valid = [e for e in emails if frappe.utils.validate_email_address(e, throw=False)]
-    return valid, len(emails) - len(valid)
 
 
 @frappe.whitelist(methods=["GET", "POST"])
@@ -557,234 +227,6 @@ def get_send_progress(name: str):
     }
 
 
-# Hard caps for the link checker. A campaign can legitimately contain many
-# links, but we must bound how much server-side fetching a single client call
-# can trigger (total request count + a wall-clock budget across all of them).
-_LINK_CHECK_MAX_URLS = 50
-_LINK_CHECK_TIMEOUT = 5  # per-request, seconds
-_LINK_CHECK_TIME_BUDGET = 25  # total wall-clock across all requests, seconds
-
-
-def _ip_is_public(ip):
-    """True only for globally-routable unicast addresses. Rejects private,
-    loopback, link-local (incl. 169.254.0.0/16 cloud metadata), multicast,
-    reserved, and unspecified ranges (IPv4 and IPv6)."""
-    return not (
-        ip.is_private
-        or ip.is_loopback
-        or ip.is_link_local
-        or ip.is_multicast
-        or ip.is_reserved
-        or ip.is_unspecified
-    )
-
-
-def _resolve_safe_target(url):
-    """Validate ``url`` for server-side fetching and resolve it to a single,
-    pinned IP address.
-
-    Returns ``(host, ip, port, scheme, error)``. When ``error`` is a non-None
-    reason string the URL must NOT be fetched. On success ``ip`` is the exact
-    address the caller must connect to — every address the host resolves to has
-    been checked, and the connection is later made to this pinned IP (not a
-    fresh lookup), which closes the DNS-rebinding (TOCTOU) window.
-
-    Blocks: non-http(s) schemes, and any hostname where ANY resolved address is
-    non-public (so a DNS name pointing partly at an internal IP is rejected)."""
-    import ipaddress
-    import socket
-    from urllib.parse import urlsplit
-
-    try:
-        parts = urlsplit(url)
-    except ValueError:
-        return None, None, None, None, "invalid url"
-
-    if parts.scheme not in ("http", "https"):
-        return None, None, None, None, "unsupported scheme"
-
-    host = parts.hostname
-    if not host:
-        return None, None, None, None, "no host"
-
-    port = parts.port or (443 if parts.scheme == "https" else 80)
-
-    try:
-        infos = socket.getaddrinfo(host, port, proto=socket.IPPROTO_TCP)
-    except socket.gaierror:
-        return None, None, None, None, "dns resolution failed"
-
-    pinned_ip = None
-    for info in infos:
-        ip_str = info[4][0]
-        try:
-            ip = ipaddress.ip_address(ip_str)
-        except ValueError:
-            return None, None, None, None, "unresolvable address"
-        if not _ip_is_public(ip):
-            # Reject the whole host if ANY address is non-public — a partially
-            # internal result set is a classic rebinding trick.
-            return None, None, None, None, "private or reserved address"
-        if pinned_ip is None:
-            pinned_ip = ip_str
-
-    return host, pinned_ip, port, parts.scheme, None
-
-
-def _url_safety_error(url):
-    """Back-compat thin wrapper: just the error reason (None when safe)."""
-    return _resolve_safe_target(url)[4]
-
-
-def _head_pinned(url, timeout):
-    """Issue a HEAD request to ``url`` connecting to the pre-validated pinned IP.
-
-    Redirects are NOT followed (a 3xx Location could point back at an internal
-    host); the raw status code is returned. TLS uses the original hostname for
-    SNI and certificate verification even though the socket targets the pinned
-    IP, so security is preserved without a second DNS lookup.
-
-    Returns the HTTP status code (int). Raises on connection/HTTP errors."""
-    import http.client
-    import socket
-    import ssl
-    from urllib.parse import urlsplit
-
-    host, ip, port, scheme, error = _resolve_safe_target(url)
-    if error:
-        raise ValueError(error)
-
-    parts = urlsplit(url)
-    path = parts.path or "/"
-    if parts.query:
-        path = f"{path}?{parts.query}"
-
-    if scheme == "https":
-        ctx = ssl.create_default_context()
-        conn = http.client.HTTPSConnection(host, port=port, timeout=timeout, context=ctx)
-    else:
-        conn = http.client.HTTPConnection(host, port=port, timeout=timeout)
-
-    # Pin the socket to the validated IP. We override the address the socket
-    # connects to (the pinned IP) while leaving conn.host as the real hostname
-    # so the Host header, SNI, and cert validation all use the hostname.
-    def _connect():
-        sock = socket.create_connection((ip, port), timeout)
-        if scheme == "https":
-            conn.sock = ctx.wrap_socket(sock, server_hostname=host)
-        else:
-            conn.sock = sock
-
-    conn.connect = _connect
-    try:
-        conn.request("HEAD", path, headers={"User-Agent": "Mozilla/5.0", "Host": host})
-        resp = conn.getresponse()
-        return resp.status
-    finally:
-        conn.close()
-
-
-def _run_link_check(blocks_data, preview_text, email_width):
-    """Core probe loop. Compiles the email and HEAD-checks every href.
-
-    URLs are validated against an SSRF allowlist before any fetch: only public
-    http(s) hosts are probed (see _resolve_safe_target). The probe connects to
-    the exact IP that passed validation (no second DNS lookup), so DNS
-    rebinding cannot redirect us to an internal host. Internal/loopback/cloud-
-    metadata targets are reported as blocked, never requested."""
-    import re
-    import time
-
-    from .utils.email_compiler import EmailCompiler
-    html = EmailCompiler(blocks_data, preview_text=preview_text, email_width=email_width).compile()
-
-    urls = list(dict.fromkeys(re.findall(r'href=["\']([^"\'#][^"\']*)["\']', html)))
-    results = []
-    deadline = time.monotonic() + _LINK_CHECK_TIME_BUDGET
-    checked = 0
-    for url in urls:
-        if not url.startswith("http"):
-            results.append({"url": url, "status": "skipped", "code": None})
-            continue
-        if checked >= _LINK_CHECK_MAX_URLS or time.monotonic() >= deadline:
-            results.append({"url": url, "status": "skipped", "code": None})
-            continue
-
-        if _url_safety_error(url):
-            results.append({"url": url, "status": "blocked", "code": None})
-            continue
-
-        checked += 1
-        try:
-            code = _head_pinned(url, _LINK_CHECK_TIMEOUT)
-            if code >= 400:
-                results.append({"url": url, "status": "error", "code": code})
-            else:
-                results.append({"url": url, "status": "ok", "code": code})
-        except Exception:
-            results.append({"url": url, "status": "error", "code": None})
-
-    return results
-
-
-def _resolve_link_check_args(blocks, name):
-    """Shared input resolution for sync and async link-check paths."""
-    if name:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
-        blocks_data = json.loads(doc.blocks_json or "[]")
-        preview_text = doc.preview_text or ""
-        email_width = getattr(doc, "email_width", None) or 600
-    else:
-        if not blocks:
-            frappe.throw(_("No blocks provided."))
-        blocks_data = json.loads(blocks) if isinstance(blocks, str) else blocks
-        preview_text = ""
-        email_width = 600
-    return blocks_data, preview_text, email_width
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def check_links(blocks: str | None = None, name: str | None = None):
-    """Synchronous link check (used by tests and the CLI). Prefer
-    start_link_check / get_link_check_result in the UI to avoid tying
-    up a web worker for the full probe duration."""
-    blocks_data, preview_text, email_width = _resolve_link_check_args(blocks, name)
-    return _run_link_check(blocks_data, preview_text, email_width)
-
-
-@frappe.whitelist(methods=["POST"])
-def start_link_check(blocks: str | None = None, name: str | None = None):
-    """Enqueue a background link check and return a job key the caller
-    can poll with get_link_check_result. The result is cached for 5 min."""
-    blocks_data, preview_text, email_width = _resolve_link_check_args(blocks, name)
-    job_key = frappe.generate_hash(length=20)
-    frappe.enqueue(
-        "letters.letters.api._link_check_worker",
-        queue="short",
-        timeout=120,
-        blocks_json=json.dumps(blocks_data),
-        preview_text=preview_text,
-        email_width=email_width,
-        job_key=job_key,
-    )
-    return {"job_key": job_key}
-
-
-@frappe.whitelist(methods=["GET", "POST"])
-def get_link_check_result(job_key: str):
-    """Return {"status": "pending"} or {"status": "done", "results": [...]}."""
-    result = frappe.cache().get_value(f"link_check:{job_key}")
-    if result is None:
-        return {"status": "pending"}
-    return {"status": "done", "results": result}
-
-
-def _link_check_worker(blocks_json, preview_text, email_width, job_key):
-    """Background worker: runs the probe loop and writes results to cache."""
-    blocks_data = json.loads(blocks_json)
-    results = _run_link_check(blocks_data, preview_text, int(email_width))
-    frappe.cache().set_value(f"link_check:{job_key}", results, expires_in_sec=300)
 
 
 @frappe.whitelist(methods=["POST"])
@@ -817,6 +259,8 @@ def schedule_campaign(name: str, scheduled_at: str):
     doc.db_set("status", "Scheduled")
     frappe.db.commit()
     return {"scheduled_at": str(dt)}
+
+
 
 
 @frappe.whitelist(methods=["POST"])
@@ -957,6 +401,8 @@ def send_campaign(name: str, recipients: str | None = None, email_group: str | N
     }
 
 
+
+
 def _resume_send(send_doc_name, campaign_name, campaign_doc):
     """Re-enqueue a partial/failed Email Send. Only its unsent recipients will
     be (re)attempted, so retrying never re-delivers to addresses already Sent."""
@@ -971,6 +417,8 @@ def _resume_send(send_doc_name, campaign_name, campaign_doc):
 
     _enqueue_send(send_doc_name, campaign_name)
     return {"queued": True, "count": unsent, "resumed": True}
+
+
 
 
 def _bulk_insert_recipients(send_doc_name, recipient_list):
@@ -999,6 +447,8 @@ def _bulk_insert_recipients(send_doc_name, recipient_list):
     frappe.db.bulk_insert("Email Send Recipient", fields=fields, values=values)
 
 
+
+
 def _enqueue_send(send_doc_name, campaign_name):
     """Enqueue the per-recipient delivery loop as a background job."""
     frappe.enqueue(
@@ -1009,6 +459,8 @@ def _enqueue_send(send_doc_name, campaign_name):
         send_doc_name=send_doc_name,
         campaign_name=campaign_name,
     )
+
+
 
 
 def _execute_send(send_doc_name, campaign_name):
@@ -1113,6 +565,8 @@ def _execute_send(send_doc_name, campaign_name):
             frappe.db.commit()
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Letters _execute_send cleanup error")
+
+
 
 
 def process_scheduled_sends():
