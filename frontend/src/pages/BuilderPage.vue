@@ -284,197 +284,37 @@
     :submit="onTemplateSubmit"
   />
 
-  <!-- Keyboard shortcuts viewer -->
-  <Dialog
-    :model-value="showShortcuts"
-    title="Keyboard Shortcuts"
-    size="sm"
-    @update:model-value="(v) => { if (!v) showShortcuts = false }"
-  >
-    <template #default>
-      <div class="space-y-1 text-sm">
-        <div v-for="s in SHORTCUTS" :key="s.label" class="flex items-center justify-between py-1.5 border-b border-outline-gray-1 last:border-0">
-          <span class="text-ink-gray-7">{{ s.label }}</span>
-          <div class="flex items-center gap-1">
-            <kbd v-for="k in s.keys" :key="k" class="inline-flex items-center px-1.5 py-0.5 rounded bg-surface-gray-2 border border-outline-gray-2 text-xs font-mono text-ink-gray-6">{{ k }}</kbd>
-          </div>
-        </div>
-      </div>
-    </template>
-    <template #actions>
-      <div class="flex justify-end w-full">
-        <Button @click="showShortcuts = false">Close</Button>
-      </div>
-    </template>
-  </Dialog>
+  <ShortcutsDialog v-model="showShortcuts" />
 
-  <!-- Test email recipient prompt -->
-  <Dialog
-    :model-value="showTestModal"
-    title="Send Test Email"
-    message="Send a copy of this campaign so you can preview it in a real inbox."
-    size="sm"
-    @update:model-value="(v) => { if (!v) showTestModal = false }"
-  >
-    <template #default>
-      <p class="text-xs text-ink-gray-5">
-        A copy with a <strong>[TEST]</strong> subject prefix will be sent to your account:
-      </p>
-      <p class="text-sm font-medium text-ink-gray-8 mt-1">{{ testRecipient }}</p>
-    </template>
-    <template #actions>
-      <div class="flex items-center justify-end gap-2 w-full">
-        <Button @click="showTestModal = false">Cancel</Button>
-        <Button
-          variant="solid"
-          :loading="testSending"
-          :disabled="!testRecipient || testSending"
-          @click="sendTest"
-        >Send test</Button>
-      </div>
-    </template>
-  </Dialog>
+  <TestEmailDialog
+    v-model="showTestModal"
+    :recipient="testRecipient"
+    :sending="testSending"
+    @send="sendTest"
+  />
 
-  <!-- Broken link checker dialog -->
-  <Dialog
-    :model-value="showLinkChecker"
-    title="Check Links"
-    size="md"
-    @update:model-value="(v) => { if (!v) showLinkChecker = false }"
-  >
-    <template #default>
-      <!-- Loading state -->
-      <div v-if="checkingLinks" class="py-8 flex flex-col items-center gap-3">
-        <FeatherIcon name="loader" class="w-6 h-6 text-ink-gray-4 animate-spin" />
-        <span class="text-sm text-ink-gray-5">Checking all links…</span>
-      </div>
+  <LinkCheckerDialog
+    v-model="showLinkChecker"
+    :checking="checkingLinks"
+    :results="linkResults"
+    @recheck="openLinkChecker"
+    @fix="applyLinkFix"
+  />
 
-      <!-- Empty state -->
-      <div v-else-if="!linkResults.length" class="py-8 flex flex-col items-center gap-2">
-        <FeatherIcon name="link" class="w-6 h-6 text-ink-gray-3" />
-        <p class="text-sm text-ink-gray-5">No links found in this email.</p>
-      </div>
-
-      <!-- Results -->
-      <div v-else class="flex flex-col gap-1">
-        <!-- Summary row -->
-        <div class="flex items-center gap-2 pb-2 mb-1 border-b border-outline-gray-1">
-          <Badge v-if="linkResults.filter(r => r.status === 'ok').length" theme="green" variant="subtle" size="sm">
-            <template #prefix><FeatherIcon name="check" class="w-3 h-3" /></template>
-            {{ linkResults.filter(r => r.status === 'ok').length }} working
-          </Badge>
-          <Badge v-if="linkResults.filter(r => r.status === 'error').length" theme="red" variant="subtle" size="sm">
-            <template #prefix><FeatherIcon name="alert-circle" class="w-3 h-3" /></template>
-            {{ linkResults.filter(r => r.status === 'error').length }} broken
-          </Badge>
-          <Badge v-if="linkResults.filter(r => r.status === 'skipped').length" theme="gray" variant="subtle" size="sm">
-            {{ linkResults.filter(r => r.status === 'skipped').length }} skipped
-          </Badge>
-          <Tooltip v-if="linkResults.filter(r => r.status === 'blocked').length" text="Could not verify from this server (DNS or network unreachable). Links likely work fine for recipients.">
-            <Badge theme="orange" variant="subtle" size="sm">
-              <template #prefix><FeatherIcon name="shield-off" class="w-3 h-3" /></template>
-              {{ linkResults.filter(r => r.status === 'blocked').length }} blocked
-            </Badge>
-          </Tooltip>
-          <Button class="ml-auto" size="xs" variant="ghost" icon-left="refresh-cw" :loading="checkingLinks" @click="openLinkChecker">Re-check</Button>
-        </div>
-
-        <!-- Link rows -->
-        <div class="max-h-80 overflow-y-auto flex flex-col gap-1">
-          <div
-            v-for="r in linkResults"
-            :key="r.url"
-            class="rounded border px-3 py-2.5"
-            :class="{
-              'border-outline-gray-1 bg-surface-gray-1': r.status === 'ok' || r.status === 'skipped',
-              'border-outline-red-2 bg-surface-red-1': r.status === 'error',
-              'border-outline-amber-2 bg-surface-amber-1': r.status === 'blocked',
-            }"
-          >
-            <!-- Top row: url + badge -->
-            <div class="flex items-center gap-2 min-w-0">
-              <FeatherIcon
-                :name="r.status === 'ok' ? 'check-circle' : r.status === 'skipped' ? 'minus' : r.status === 'blocked' ? 'shield-off' : 'alert-circle'"
-                class="w-3.5 h-3.5 flex-shrink-0"
-                :class="r.status === 'ok' ? 'text-green-500' : r.status === 'skipped' ? 'text-ink-gray-3' : r.status === 'blocked' ? 'text-orange-500' : 'text-red-500'"
-              />
-              <span class="text-xs font-mono text-ink-gray-7 truncate flex-1 min-w-0">{{ r.url }}</span>
-              <Tooltip v-if="r.status === 'blocked'" text="Server blocked automated requests. Link likely works for real recipients.">
-                <Badge theme="orange" variant="subtle" size="sm" class="flex-shrink-0">Blocked</Badge>
-              </Tooltip>
-              <Badge
-                v-else-if="r.status !== 'ok'"
-                :theme="r.status === 'skipped' ? 'gray' : 'red'"
-                variant="subtle"
-                size="sm"
-                class="flex-shrink-0"
-              >{{ r.status === 'skipped' ? 'Non-HTTP' : r.code ? `${r.code}` : 'Unreachable' }}</Badge>
-            </div>
-
-            <!-- Inline fix for broken links -->
-            <div v-if="r.status === 'error'" class="mt-2 flex items-center gap-1.5">
-              <TextInput
-                size="sm"
-                class="flex-1 min-w-0"
-                placeholder="Replace with correct URL…"
-                :modelValue="r._fix || ''"
-                @update:modelValue="(v) => r._fix = v"
-                @keyup.enter="applyLinkFix(r)"
-              />
-              <Button size="sm" variant="solid" :disabled="!r._fix" @click="applyLinkFix(r)">Fix</Button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </template>
-  </Dialog>
-
-  <!-- Schedule sending dialog -->
-  <Dialog
-    :model-value="showScheduleModal"
-    title="Schedule Sending"
-    message="The campaign will be sent automatically at the chosen time."
-    size="sm"
-    @update:model-value="(v) => { if (!v) showScheduleModal = false }"
-  >
-    <template #default>
-      <label class="block text-xs font-medium text-ink-gray-7 mb-1.5">Send at</label>
-      <div class="flex gap-2">
-        <DatePicker
-          v-model="scheduleDate"
-          format="D MMM YYYY"
-          placeholder="Pick a date"
-          :min="minScheduleDate"
-          class="flex-1"
-        />
-        <TimePicker
-          v-model="scheduleTime"
-          placeholder="Pick a time"
-          class="flex-1"
-        />
-      </div>
-      <p v-if="scheduleDate && scheduleTime" class="mt-2 text-xs text-ink-gray-5">
-        Sending on {{ formatScheduledAt(scheduleDate + ' ' + scheduleTime) }}
-      </p>
-    </template>
-    <template #actions>
-      <div class="flex items-center justify-end gap-2 w-full">
-        <Button @click="showScheduleModal = false">Cancel</Button>
-        <Button
-          variant="solid"
-          :loading="scheduling"
-          :disabled="!scheduleDate || !scheduleTime || scheduling"
-          @click="scheduleCampaign"
-        >Schedule</Button>
-      </div>
-    </template>
-  </Dialog>
+  <ScheduleDialog
+    v-model="showScheduleModal"
+    v-model:date="scheduleDate"
+    v-model:time="scheduleTime"
+    :min-date="minScheduleDate"
+    :scheduling="scheduling"
+    @schedule="scheduleCampaign"
+  />
 
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { Button, TextInput, FeatherIcon, Dialog, Dropdown, Tooltip, Progress, Badge, DatePicker, TimePicker } from "frappe-ui";
+import { Button, FeatherIcon, Dropdown, Tooltip, Progress, Badge } from "frappe-ui";
 import { useDark, useToggle } from "@vueuse/core";
 import { useEditorStore } from "../stores/editor";
 import { injectGoogleFonts } from "../fonts";
@@ -484,6 +324,10 @@ import CampaignSettings from "../components/CampaignSettings.vue";
 import TemplatePicker from "../components/TemplatePicker.vue";
 import BlockAdderRow from "../components/BlockAdderRow.vue";
 import BlockRenderer from "../components/BlockRenderer.vue";
+import ShortcutsDialog from "../components/dialogs/ShortcutsDialog.vue";
+import TestEmailDialog from "../components/dialogs/TestEmailDialog.vue";
+import LinkCheckerDialog from "../components/dialogs/LinkCheckerDialog.vue";
+import ScheduleDialog from "../components/dialogs/ScheduleDialog.vue";
 import { useZoom } from "../composables/useZoom";
 import { usePanelResize } from "../composables/usePanelResize";
 import { useBlockPicker } from "../composables/useBlockPicker";
@@ -513,23 +357,6 @@ const {
 const { openPreview } = usePreview(editorStore, previewText);
 const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore);
 const { showTestModal, testSending, testRecipient, openTestModal, sendTest } = useTestEmail(editorStore, { subject, previewText });
-
-const isMac = navigator.platform.startsWith("Mac") || navigator.userAgent.includes("Mac");
-const MOD = isMac ? "⌘" : "Ctrl";
-const SHORTCUTS = [
-  { label: "Undo",             keys: [MOD, "Z"] },
-  { label: "Redo",             keys: [MOD, "⇧", "Z"] },
-  { label: "Save",             keys: [MOD, "S"] },
-  { label: "Copy block",       keys: [MOD, "C"] },
-  { label: "Paste block",      keys: [MOD, "V"] },
-  { label: "Duplicate block",  keys: [MOD, "D"] },
-  { label: "Delete block",     keys: ["⌫"] },
-  { label: "Deselect",         keys: ["Esc"] },
-  { label: "Preview",          keys: [MOD, "⇧", "P"] },
-  { label: "Zoom in",          keys: [MOD, "+"] },
-  { label: "Zoom out",         keys: [MOD, "−"] },
-  { label: "Reset zoom",       keys: [MOD, "0"] },
-];
 
 const { canvasZoom, zoomVisible, resetZoom, stepZoom } = useZoom();
 
