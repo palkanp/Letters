@@ -388,12 +388,12 @@
                 <Badge theme="orange" variant="subtle" size="sm" class="flex-shrink-0">Blocked</Badge>
               </Tooltip>
               <Badge
-                v-else
-                :theme="r.status === 'ok' ? 'green' : r.status === 'skipped' ? 'gray' : 'red'"
+                v-else-if="r.status !== 'ok'"
+                :theme="r.status === 'skipped' ? 'gray' : 'red'"
                 variant="subtle"
                 size="sm"
                 class="flex-shrink-0"
-              >{{ r.status === 'ok' ? (r.code || 'OK') : r.status === 'skipped' ? 'Non-HTTP' : r.code ? `${r.code}` : 'Unreachable' }}</Badge>
+              >{{ r.status === 'skipped' ? 'Non-HTTP' : r.code ? `${r.code}` : 'Unreachable' }}</Badge>
             </div>
 
             <!-- Inline fix for broken links -->
