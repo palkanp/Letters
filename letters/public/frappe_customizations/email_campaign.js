@@ -1,10 +1,14 @@
 frappe.ui.form.on("Letters Campaign", {
     refresh(frm) {
+        // Only offer the builder for a saved campaign. On a brand-new, unsaved
+        // form we don't surface any builder/template entry point — campaigns are
+        // meant to be started via "New Campaign" (which opens the picker).
+        if (frm.is_new()) return;
         frm.add_custom_button(__("Open in Letters Builder"), () => {
-            const path = frm.is_new()
-                ? "/app/letters-builder"
-                : `/app/letters-builder?name=${encodeURIComponent(frm.doc.name)}`;
-            window.open(path, "_blank");
+            window.open(
+                `/app/letters-builder?name=${encodeURIComponent(frm.doc.name)}`,
+                "_blank"
+            );
         });
     },
 });
