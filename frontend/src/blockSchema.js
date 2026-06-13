@@ -721,9 +721,6 @@ export const BLOCK_SCHEMA = {
       thumbnail_url: "",
       video_url: "#",
       caption: "Watch the video",
-      play_button_color: "#ffffff",
-      play_icon_color: "#111827",
-      overlay_color: "rgba(0,0,0,0.3)",
       border_radius: "0",
       padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16,
       ...borderDefaults,
@@ -742,8 +739,6 @@ export const BLOCK_SCHEMA = {
         id: "style",
         title: "Style",
         fields: [
-          { key: "play_button_color", label: "Play button",   type: "color" },
-          { key: "play_icon_color",   label: "Play icon",     type: "color" },
           { key: "border_radius", label: "Thumbnail corners", type: "text", placeholder: "8px" },
           ...borderFields,
         ],

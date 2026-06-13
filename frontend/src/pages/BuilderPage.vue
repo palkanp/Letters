@@ -1033,6 +1033,8 @@ function _startProgressPolling() {
   }, 2000);
 }
 
+let _linkCheckPollTimer = null;
+
 async function openLinkChecker() {
   if (!editorStore.blocks.length) {
     toast.warning("Canvas is empty. Add some blocks first.");
@@ -1041,12 +1043,40 @@ async function openLinkChecker() {
   showLinkChecker.value = true;
   checkingLinks.value = true;
   linkResults.value = [];
+  // Cancel any in-flight poll from a previous check.
+  if (_linkCheckPollTimer) { clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null; }
   try {
     const args = editorStore.campaignDoc?.name
       ? { name: editorStore.campaignDoc.name }
       : { blocks: JSON.stringify(editorStore.blocks.map(stripIds)) };
-    const res = await frappe.call({ method: "letters.letters.api.check_links", args });
-    linkResults.value = res.message || [];
+    const startRes = await frappe.call({ method: "letters.letters.api.start_link_check", args });
+    const jobKey = startRes.message?.job_key;
+    if (!jobKey) throw new Error("No job key returned.");
+
+    await new Promise((resolve, reject) => {
+      const deadline = Date.now() + 90_000;
+      _linkCheckPollTimer = setInterval(async () => {
+        if (Date.now() > deadline) {
+          clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null;
+          reject(new Error("Link check timed out."));
+          return;
+        }
+        try {
+          const r = await frappe.call({
+            method: "letters.letters.api.get_link_check_result",
+            args: { job_key: jobKey },
+          });
+          if (r.message?.status === "done") {
+            clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null;
+            linkResults.value = r.message.results || [];
+            resolve();
+          }
+        } catch (e) {
+          clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null;
+          reject(e);
+        }
+      }, 1500);
+    });
   } catch (e) {
     toast.error("Link check failed: " + describeError(e));
     showLinkChecker.value = false;

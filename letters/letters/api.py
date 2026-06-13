@@ -639,9 +639,8 @@ def _head_pinned(url, timeout):
         conn.close()
 
 
-@frappe.whitelist()
-def check_links(blocks=None, name=None):
-    """Extract all hrefs from compiled email HTML and check if they resolve.
+def _run_link_check(blocks_data, preview_text, email_width):
+    """Core probe loop. Compiles the email and HEAD-checks every href.
 
     URLs are validated against an SSRF allowlist before any fetch: only public
     http(s) hosts are probed (see _resolve_safe_target). The probe connects to
@@ -650,19 +649,6 @@ def check_links(blocks=None, name=None):
     metadata targets are reported as blocked, never requested."""
     import re
     import time
-
-    if name:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
-        blocks_data = json.loads(doc.blocks_json or "[]")
-        preview_text = doc.preview_text or ""
-        email_width = getattr(doc, "email_width", None) or 600
-    else:
-        if not blocks:
-            frappe.throw(_("No blocks provided."))
-        blocks_data = json.loads(blocks) if isinstance(blocks, str) else blocks
-        preview_text = ""
-        email_width = 600
 
     from .utils.email_compiler import EmailCompiler
     html = EmailCompiler(blocks_data, preview_text=preview_text, email_width=email_width).compile()
@@ -679,8 +665,6 @@ def check_links(blocks=None, name=None):
             results.append({"url": url, "status": "skipped", "code": None})
             continue
 
-        # SSRF guard: never let a user-supplied URL make us probe an internal
-        # host. Validate (scheme + resolved IP ranges) before any network call.
         if _url_safety_error(url):
             results.append({"url": url, "status": "blocked", "code": None})
             continue
@@ -688,7 +672,6 @@ def check_links(blocks=None, name=None):
         checked += 1
         try:
             code = _head_pinned(url, _LINK_CHECK_TIMEOUT)
-            # Treat 4xx/5xx as broken; 2xx/3xx as reachable.
             if code >= 400:
                 results.append({"url": url, "status": "error", "code": code})
             else:
@@ -697,6 +680,66 @@ def check_links(blocks=None, name=None):
             results.append({"url": url, "status": "error", "code": None})
 
     return results
+
+
+def _resolve_link_check_args(blocks, name):
+    """Shared input resolution for sync and async link-check paths."""
+    if name:
+        doc = frappe.get_doc("Letters Campaign", name)
+        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+        blocks_data = json.loads(doc.blocks_json or "[]")
+        preview_text = doc.preview_text or ""
+        email_width = getattr(doc, "email_width", None) or 600
+    else:
+        if not blocks:
+            frappe.throw(_("No blocks provided."))
+        blocks_data = json.loads(blocks) if isinstance(blocks, str) else blocks
+        preview_text = ""
+        email_width = 600
+    return blocks_data, preview_text, email_width
+
+
+@frappe.whitelist()
+def check_links(blocks=None, name=None):
+    """Synchronous link check (used by tests and the CLI). Prefer
+    start_link_check / get_link_check_result in the UI to avoid tying
+    up a web worker for the full probe duration."""
+    blocks_data, preview_text, email_width = _resolve_link_check_args(blocks, name)
+    return _run_link_check(blocks_data, preview_text, email_width)
+
+
+@frappe.whitelist()
+def start_link_check(blocks=None, name=None):
+    """Enqueue a background link check and return a job key the caller
+    can poll with get_link_check_result. The result is cached for 5 min."""
+    blocks_data, preview_text, email_width = _resolve_link_check_args(blocks, name)
+    job_key = frappe.generate_hash(length=20)
+    frappe.enqueue(
+        "letters.letters.api._link_check_worker",
+        queue="short",
+        timeout=120,
+        blocks_json=json.dumps(blocks_data),
+        preview_text=preview_text,
+        email_width=email_width,
+        job_key=job_key,
+    )
+    return {"job_key": job_key}
+
+
+@frappe.whitelist()
+def get_link_check_result(job_key):
+    """Return {"status": "pending"} or {"status": "done", "results": [...]}."""
+    result = frappe.cache().get_value(f"link_check:{job_key}")
+    if result is None:
+        return {"status": "pending"}
+    return {"status": "done", "results": result}
+
+
+def _link_check_worker(blocks_json, preview_text, email_width, job_key):
+    """Background worker: runs the probe loop and writes results to cache."""
+    blocks_data = json.loads(blocks_json)
+    results = _run_link_check(blocks_data, preview_text, int(email_width))
+    frappe.cache().set_value(f"link_check:{job_key}", results, expires_in_sec=300)
 
 
 @frappe.whitelist()
