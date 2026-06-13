@@ -475,6 +475,8 @@ const SHORTCUTS = [
   { label: "Undo",             keys: ["⌘", "Z"] },
   { label: "Redo",             keys: ["⌘", "⇧", "Z"] },
   { label: "Save",             keys: ["⌘", "S"] },
+  { label: "Copy block",       keys: ["⌘", "C"] },
+  { label: "Paste block",      keys: ["⌘", "V"] },
   { label: "Duplicate block",  keys: ["⌘", "D"] },
   { label: "Delete block",     keys: ["⌫"] },
   { label: "Deselect",         keys: ["Esc"] },
@@ -686,6 +688,20 @@ function keydownHandler(e) {
     e.preventDefault();
     clearTimeout(_autoSaveTimer);
     saveCampaign();
+    return;
+  }
+  // Copy selected block: Cmd/Ctrl + C (only when not in a text field)
+  if (e.key === "c") {
+    if (document.activeElement?.isContentEditable) return;
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+    if (editorStore.selectedBlockId) editorStore.copyBlock(editorStore.selectedBlockId);
+    return;
+  }
+  // Paste block: Cmd/Ctrl + V (only when not in a text field)
+  if (e.key === "v") {
+    if (document.activeElement?.isContentEditable) return;
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
+    editorStore.pasteBlock();
     return;
   }
   // Duplicate selected block: Cmd/Ctrl + D

@@ -357,6 +357,7 @@ export const BLOCK_SCHEMA = {
       show_dividers: false,
       divider_color: "#e5e7eb",
       col_gap: 24,
+      vertical_align: "top",
       padding_top: 20, padding_right: 24, padding_bottom: 20, padding_left: 24,
       ...borderDefaults,
     },
@@ -594,6 +595,7 @@ export const BLOCK_SCHEMA = {
       color: "#374151",
       background_color: "#ffffff",
       align: "center",
+      icon_size: 32,
       padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
     },
@@ -615,6 +617,7 @@ export const BLOCK_SCHEMA = {
         id: "style",
         title: "Style",
         fields: [
+          { key: "icon_size",        label: "Icon size",   type: "number", min: 16, max: 64, unit: "px" },
           { key: "color",            label: "Icon color",  type: "color" },
           { key: "background_color", label: "Background",  type: "color" },
           { key: "align",            label: "Alignment",   type: "align" },

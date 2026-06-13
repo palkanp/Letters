@@ -430,6 +430,12 @@ class ColumnsRenderer(BlockRenderer):
         half_gap  = round(col_gap / 2)
         outer_pad = _padding(p, 20, 20, 20, 20)
 
+        _valign_map = {
+            "top": "top", "middle": "middle", "bottom": "bottom",
+            "flex-start": "top", "center": "middle", "flex-end": "bottom",
+        }
+        valign = _valign_map.get(p.get("vertical_align", "top"), "top")
+
         cells = ""
         for idx, col in enumerate(columns):
             col_blocks = col.get("blocks", [])
@@ -447,8 +453,8 @@ class ColumnsRenderer(BlockRenderer):
                 if show_dividers and not is_last else ""
             )
             cells += (
-                f'<td width="{col_width}%" valign="top"'
-                f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:top;{border_style}">'
+                f'<td width="{col_width}%" valign="{valign}"'
+                f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign};{border_style}">'
                 f'{col_html or "&nbsp;"}'
                 f'</td>'
             )
