@@ -119,9 +119,11 @@ function onChange(html) {
   letter-spacing: inherit !important;
 }
 
-/* Child elements: inherit without !important so TipTap inline styles still work.
-   text-align keeps !important because email alignment must override browser defaults.
-   strong/b are omitted from font-weight so Bold markup renders at browser default (700). */
+/* Child elements: use !important so block-level props always win over any inline
+   styles that may have been pasted in from external sources (Word, Google Docs, etc.).
+   This matches what the email preview does — _sanitize_rich_html strips all inline
+   styles, so only the block props control the appearance in both views.
+   strong/b are excluded from font-weight so Bold markup renders at 700. */
 .rich-text-shell .ProseMirror p,
 .rich-text-shell .ProseMirror li,
 .rich-text-shell .ProseMirror span,
@@ -129,11 +131,11 @@ function onChange(html) {
 .rich-text-shell .ProseMirror i,
 .rich-text-shell .ProseMirror strong,
 .rich-text-shell .ProseMirror b {
-  font-size: inherit;
-  color: inherit;
-  line-height: inherit;
-  font-family: inherit;
-  letter-spacing: inherit;
+  font-size: inherit !important;
+  color: inherit !important;
+  line-height: inherit !important;
+  font-family: inherit !important;
+  letter-spacing: inherit !important;
   text-align: inherit !important;
 }
 
