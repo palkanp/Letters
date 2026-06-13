@@ -137,7 +137,20 @@ describe("list style position", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 4. Shell :style binding — all block-level props wired up
+// 4. Prose max-width — must be overridden so content fills the full block
+// ---------------------------------------------------------------------------
+
+describe("prose max-width override", () => {
+  const css = styleBlock();
+
+  it(".rich-text-shell .prose has max-width: none", () => {
+    expect(css).toContain(".rich-text-shell .prose");
+    expect(css).toContain("max-width: none");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 5. Shell :style binding — all block-level props wired up
 // ---------------------------------------------------------------------------
 
 describe("rich-text-shell :style binding", () => {
