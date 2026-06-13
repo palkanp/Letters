@@ -473,8 +473,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { Button, TextInput, FeatherIcon, Dialog, Dropdown, Tooltip, toast, Progress, Badge, DatePicker, TimePicker } from "frappe-ui";
+import { ref, computed, watch } from "vue";
+import { Button, TextInput, FeatherIcon, Dialog, Dropdown, Tooltip, Progress, Badge, DatePicker, TimePicker } from "frappe-ui";
 import { useDark, useToggle } from "@vueuse/core";
 import { useEditorStore } from "../stores/editor";
 import { injectGoogleFonts } from "../fonts";
@@ -488,7 +488,11 @@ import { useZoom } from "../composables/useZoom";
 import { usePanelResize } from "../composables/usePanelResize";
 import { useBlockPicker } from "../composables/useBlockPicker";
 import { useCampaign } from "../composables/useCampaign";
-import { describeError, formatScheduledAt, stripIds, collectFontFamilies } from "../utils/builderHelpers";
+import { usePreview } from "../composables/usePreview";
+import { useLinkChecker } from "../composables/useLinkChecker";
+import { useTestEmail } from "../composables/useTestEmail";
+import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
+import { formatScheduledAt, collectFontFamilies } from "../utils/builderHelpers";
 
 const editorStore = useEditorStore();
 const isDark = useDark({ attribute: "data-theme", valueDark: "dark", valueLight: "light" });
@@ -505,6 +509,10 @@ const {
   onTemplateSubmit, saveNow,
   sendCampaign, scheduleCampaign, duplicateCampaign,
 } = useCampaign(editorStore);
+
+const { openPreview } = usePreview(editorStore, previewText);
+const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore);
+const { showTestModal, testSending, testRecipient, openTestModal, sendTest } = useTestEmail(editorStore, { subject, previewText });
 
 const isMac = navigator.platform.startsWith("Mac") || navigator.userAgent.includes("Mac");
 const MOD = isMac ? "⌘" : "Ctrl";
@@ -524,10 +532,8 @@ const SHORTCUTS = [
 ];
 
 const { canvasZoom, zoomVisible, resetZoom, stepZoom } = useZoom();
-const previewing    = ref(false);
-const showLinkChecker = ref(false);
-const linkResults = ref([]);
-const checkingLinks = ref(false);
+
+useKeyboardShortcuts({ editorStore, saveNow, openPreview, stepZoom, canvasZoom });
 
 // Left brand dropdown (Frappe Builder-style): navigation + page-level actions
 // that don't belong in the always-visible toolbar.
@@ -592,13 +598,6 @@ const sendOptions = computed(() => [
   },
 ]);
 
-const testSending = ref(false);
-const showTestModal = ref(false);
-// Prefill with the logged-in user's email when it looks like one (it's the
-// most common test target); blank if the session id isn't an email.
-const _sessionUser = (typeof window !== "undefined" && window.frappe?.session?.user) || "";
-const testRecipient = ref(_sessionUser.includes("@") ? _sessionUser : "");
-
 // ── Panel resize ──────────────────────────────────────────────────────────────
 const { leftPanelWidth, rightPanelWidth, startLeftResize, startRightResize } = usePanelResize();
 
@@ -609,122 +608,6 @@ const {
   blockPreview, showBlockPreview, hideBlockPreview, onCanvasDrop,
 } = useBlockPicker(editorStore);
 
-// ── Unsaved changes protection ────────────────────────────────────────────────
-function beforeUnloadHandler(e) {
-  if (editorStore.isDirty) {
-    e.preventDefault();
-    e.returnValue = ""; // required for Chrome
-  }
-}
-
-// ── Keyboard shortcuts ────────────────────────────────────────────────────────
-function keydownHandler(e) {
-  // Non-modifier shortcuts (only when not in a text field)
-  if (!e.metaKey && !e.ctrlKey) {
-    const inInput = document.activeElement?.isContentEditable ||
-      ["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName);
-    if (!inInput) {
-      if (e.key === "Escape") {
-        editorStore.selectBlock(null);
-        return;
-      }
-      if ((e.key === "Delete" || e.key === "Backspace") && editorStore.selectedBlockId) {
-        e.preventDefault();
-        editorStore.removeBlock(editorStore.selectedBlockId);
-        return;
-      }
-    }
-    return;
-  }
-  const mod = true;
-  // Undo: Cmd/Ctrl + Z (without Shift)
-  if (e.key === "z" && !e.shiftKey) {
-    // Only intercept when not inside an input / contenteditable
-    if (document.activeElement?.isContentEditable) return;
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
-    e.preventDefault();
-    editorStore.undo();
-    return;
-  }
-  // Redo: Cmd/Ctrl + Shift + Z  or  Ctrl + Y
-  if ((e.key === "z" && e.shiftKey) || (e.key === "y" && !e.shiftKey)) {
-    if (document.activeElement?.isContentEditable) return;
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
-    e.preventDefault();
-    editorStore.redo();
-    return;
-  }
-  // Save: Cmd/Ctrl + S
-  if (e.key === "s") {
-    e.preventDefault();
-    saveNow();
-    return;
-  }
-  // Copy selected block: Cmd/Ctrl + C (only when not in a text field)
-  if (e.key === "c") {
-    if (document.activeElement?.isContentEditable) return;
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
-    if (editorStore.selectedBlockId) editorStore.copyBlock(editorStore.selectedBlockId);
-    return;
-  }
-  // Paste block: Cmd/Ctrl + V (only when not in a text field)
-  if (e.key === "v") {
-    if (document.activeElement?.isContentEditable) return;
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
-    editorStore.pasteBlock();
-    return;
-  }
-  // Duplicate selected block: Cmd/Ctrl + D
-  if (e.key === "d") {
-    if (document.activeElement?.isContentEditable) return;
-    if (["INPUT", "TEXTAREA", "SELECT"].includes(document.activeElement?.tagName)) return;
-    e.preventDefault();
-    if (editorStore.selectedBlockId) editorStore.duplicateBlock(editorStore.selectedBlockId);
-    return;
-  }
-  // Preview: Cmd/Ctrl + Shift + P
-  if (e.key === "p" && e.shiftKey) {
-    e.preventDefault();
-    openPreview();
-    return;
-  }
-  // Zoom in: Cmd/Ctrl + =  or  +
-  if (e.key === "=" || e.key === "+") {
-    e.preventDefault();
-    stepZoom(1);
-    return;
-  }
-  // Zoom out: Cmd/Ctrl + -
-  if (e.key === "-") {
-    e.preventDefault();
-    stepZoom(-1);
-    return;
-  }
-  // Reset zoom: Cmd/Ctrl + 0
-  if (e.key === "0") {
-    e.preventDefault();
-    canvasZoom.value = 1;
-    return;
-  }
-}
-
-function wheelHandler(e) {
-  if (!e.ctrlKey) return;
-  e.preventDefault();
-  stepZoom(e.deltaY < 0 ? 1 : -1);
-}
-
-onMounted(() => {
-  window.addEventListener("beforeunload", beforeUnloadHandler);
-  window.addEventListener("keydown", keydownHandler);
-  window.addEventListener("wheel", wheelHandler, { passive: false });
-});
-onUnmounted(() => {
-  window.removeEventListener("beforeunload", beforeUnloadHandler);
-  window.removeEventListener("keydown", keydownHandler);
-  window.removeEventListener("wheel", wheelHandler);
-});
-
 // ── Google Fonts injection ───────────────────────────────────────────────────
 // Watch the block tree for web-font usage and inject <link> tags so the editor
 // preview renders the correct weights. Runs immediately on mount (immediate:true)
@@ -734,219 +617,6 @@ watch(
   (names) => injectGoogleFonts(names),
   { immediate: true, deep: false }
 );
-
-// ── Preview ───────────────────────────────────────────────────────────────────
-async function openPreview() {
-  // Open the window BEFORE the async call — browsers only allow window.open
-  // inside a synchronous user-gesture handler. Opening it after an await
-  // makes the popup blocker kill it silently.
-  const win = window.open("", "_blank");
-  if (!win) {
-    toast.warning("Pop-up blocked. Allow pop-ups for this site to use Preview.");
-    return;
-  }
-
-  // Show a loading indicator in the new tab while we fetch the HTML.
-  win.document.write(
-    "<!doctype html><html><head><title>Loading preview…</title>" +
-    "<style>body{font-family:system-ui,sans-serif;display:flex;align-items:center;" +
-    "justify-content:center;height:100vh;margin:0;color:#6b7280;font-size:14px;}" +
-    "</style></head><body>Generating preview…</body></html>"
-  );
-  win.document.close();
-
-  previewing.value = true;
-  try {
-    const res = await frappe.call({
-      method: "letters.letters.api.render_preview",
-      args: {
-        blocks:       JSON.stringify(editorStore.blocks.map(stripIds)),
-        preview_text: previewText.value,
-        email_width:  editorStore.emailWidth,
-      },
-    });
-    const html          = res.message.html;
-    const rawTitle      = editorStore.campaignName || "Email Preview";
-    const campaignTitle = rawTitle
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-
-    const toolbar = `
-<style>
-  #__preview-toolbar {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    display: flex; align-items: center; gap: 4px;
-    background: #111827; border-radius: 9999px;
-    padding: 6px 10px; box-shadow: 0 8px 32px rgba(0,0,0,.5);
-    z-index: 9999; font-family: -apple-system, sans-serif;
-  }
-  #__preview-toolbar span {
-    color: #9ca3af; font-size: 11px; padding: 0 8px 0 4px;
-    border-right: 1px solid #374151; margin-right: 4px;
-  }
-  #__preview-toolbar button {
-    color: #e5e7eb; background: none; border: none; cursor: pointer;
-    font-size: 12px; padding: 5px 12px; border-radius: 6px; transition: background .15s;
-  }
-  #__preview-toolbar button:hover { background: #1f2937; }
-  #__preview-toolbar button.active { background: #374151; color: #fff; }
-</style>
-<div id="__preview-toolbar">
-  <span>${campaignTitle}</span>
-  <button class="active" onclick="setMode('desktop', this)">🖥 Desktop</button>
-  <button onclick="setMode('mobile', this)">📱 Mobile</button>
-</div>
-<script>
-  function setMode(mode, btn) {
-    document.querySelectorAll('#__preview-toolbar button').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    document.body.style.maxWidth = mode === 'mobile' ? '390px' : '';
-    document.body.style.margin   = mode === 'mobile' ? '0 auto' : '';
-  }
-<\/script>`;
-
-    // Inject before </body> when present; otherwise append so the toolbar
-    // never silently vanishes if the compiled HTML lacks a body close tag.
-    const fullHtml = html.includes("</body>")
-      ? html.replace("</body>", toolbar + "\n</body>")
-      : html + toolbar;
-    win.document.open();
-    win.document.write(fullHtml);
-    win.document.close();
-    win.document.title = rawTitle + " · Preview";
-  } catch (e) {
-    win.close();
-    toast.error("Preview failed: " + describeError(e));
-  } finally {
-    previewing.value = false;
-  }
-}
-
-let _linkCheckPollTimer = null;
-
-async function openLinkChecker() {
-  if (!editorStore.blocks.length) {
-    toast.warning("Canvas is empty. Add some blocks first.");
-    return;
-  }
-  showLinkChecker.value = true;
-  checkingLinks.value = true;
-  linkResults.value = [];
-  // Cancel any in-flight poll from a previous check.
-  if (_linkCheckPollTimer) { clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null; }
-  try {
-    const args = editorStore.campaignDoc?.name
-      ? { name: editorStore.campaignDoc.name }
-      : { blocks: JSON.stringify(editorStore.blocks.map(stripIds)) };
-    const startRes = await frappe.call({ method: "letters.letters.api.start_link_check", args });
-    const jobKey = startRes.message?.job_key;
-    if (!jobKey) throw new Error("No job key returned.");
-
-    await new Promise((resolve, reject) => {
-      const deadline = Date.now() + 90_000;
-      _linkCheckPollTimer = setInterval(async () => {
-        if (Date.now() > deadline) {
-          clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null;
-          reject(new Error("Link check timed out."));
-          return;
-        }
-        try {
-          const r = await frappe.call({
-            method: "letters.letters.api.get_link_check_result",
-            args: { job_key: jobKey },
-          });
-          if (r.message?.status === "done") {
-            clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null;
-            linkResults.value = r.message.results || [];
-            resolve();
-          }
-        } catch (e) {
-          clearInterval(_linkCheckPollTimer); _linkCheckPollTimer = null;
-          reject(e);
-        }
-      }, 1500);
-    });
-  } catch (e) {
-    toast.error("Link check failed: " + describeError(e));
-    showLinkChecker.value = false;
-  } finally {
-    checkingLinks.value = false;
-  }
-}
-
-function applyLinkFix(result) {
-  const oldUrl = result.url;
-  const newUrl = (result._fix || "").trim();
-  if (!newUrl || newUrl === oldUrl) return;
-  try { new URL(newUrl); } catch { toast.error("Enter a valid URL (include https://)."); return; }
-
-  function fixInBlock(block) {
-    if (!block) return;
-    if (block.props) {
-      for (const key of Object.keys(block.props)) {
-        if (typeof block.props[key] === "string" && block.props[key].includes(oldUrl)) {
-          block.props[key] = block.props[key].replaceAll(oldUrl, newUrl);
-        }
-      }
-    }
-    // container children
-    if (Array.isArray(block.children)) block.children.forEach(fixInBlock);
-    // columns block: each column has a .blocks array
-    if (Array.isArray(block.columns)) {
-      block.columns.forEach(col => {
-        if (Array.isArray(col.blocks)) col.blocks.forEach(fixInBlock);
-      });
-    }
-  }
-
-  editorStore.blocks.forEach(fixInBlock);
-  editorStore.markDirty();
-
-  // Flip the row to green in the dialog
-  result.url = newUrl;
-  result.status = "ok";
-  result.code = null;
-  result._fix = "";
-  toast.success("Link updated: press ⌘S to save.");
-}
-
-// ── Test send ─────────────────────────────────────────────────────────────────
-function openTestModal() {
-  if (!editorStore.blocks.length) {
-    toast.warning("Canvas is empty. Add some blocks first.");
-    return;
-  }
-  showTestModal.value = true;
-}
-
-async function sendTest() {
-  const email = testRecipient.value.trim();
-  if (!email) {
-    toast.warning("Enter an email address to send the test to.");
-    return;
-  }
-  testSending.value = true;
-  try {
-    const res = await frappe.call({
-      method: "letters.letters.api.send_test",
-      args: {
-        name:         editorStore.campaignDoc?.name || null,
-        blocks:       editorStore.campaignDoc?.name ? null : JSON.stringify(editorStore.blocks.map(stripIds)),
-        subject:      subject.value || "Test Email",
-        preview_text: previewText.value,
-        recipient:    email,
-      },
-    });
-    toast.success(`Test queued to ${res.message.sent_to}. It'll arrive shortly.`);
-    showTestModal.value = false;
-  } catch (e) {
-    toast.error("Test send failed: " + describeError(e));
-  } finally {
-    testSending.value = false;
-  }
-}
 
 
 </script>
