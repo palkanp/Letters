@@ -265,7 +265,7 @@
 
   <TemplatePicker
     v-if="showTemplatePicker"
-    @created="onTemplatePickerCreated"
+    :submit="onTemplateSubmit"
   />
 
   <!-- Keyboard shortcuts viewer -->
@@ -867,6 +867,9 @@ const initialName = urlParams.get("name");
 onMounted(async () => {
   if (initialName) {
     await loadCampaign(initialName);
+    // A freshly created campaign (e.g. from the Desk form) has no blocks yet —
+    // greet the user with the template picker instead of an empty canvas.
+    if (!editorStore.blocks.length) showTemplatePicker.value = true;
   } else {
     // No campaign name in URL — show template picker so the user chooses a
     // starting point before seeing the canvas.
@@ -874,11 +877,33 @@ onMounted(async () => {
   }
 });
 
-async function onTemplatePickerCreated(campaignName) {
+// Handles a template/blank choice from the picker. Two modes:
+//   - Existing campaign already loaded → apply blocks to it and save.
+//   - No campaign yet → create a new one, then load it.
+async function onTemplateSubmit(blocks) {
+  if (editorStore.campaignDoc?.name) {
+    editorStore.loadTemplate(blocks);
+    await saveCampaign();
+    showTemplatePicker.value = false;
+    return;
+  }
+
+  const res = await frappe.call({
+    method: "letters.letters.api.save_campaign",
+    args: {
+      name: null,
+      title: "Untitled Campaign",
+      subject: "",
+      preview_text: "",
+      email_width: 600,
+      blocks: JSON.stringify(blocks),
+      recipient_config: null,
+    },
+  });
   showTemplatePicker.value = false;
-  await loadCampaign(campaignName);
+  await loadCampaign(res.message.name);
   const url = new URL(window.location.href);
-  url.searchParams.set("name", campaignName);
+  url.searchParams.set("name", res.message.name);
   window.history.replaceState({}, "", url.toString());
 }
 

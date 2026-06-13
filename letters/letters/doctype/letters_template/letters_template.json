@@ -6,6 +6,8 @@
   "istable": 0,
   "is_submittable": 0,
   "track_changes": 0,
+  "autoname": "field:title",
+  "naming_rule": "By fieldname",
   "fields": [
     {
       "fieldname": "title",

@@ -1,21 +1,21 @@
 <template>
-  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-    <div class="bg-white rounded-2xl shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden">
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+    <div class="bg-surface-white rounded-2xl shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden">
 
       <!-- Header -->
-      <div class="flex-shrink-0 px-8 pt-7 pb-5 border-b border-gray-100">
-        <h2 class="text-xl font-semibold text-gray-900">New Campaign</h2>
-        <p class="text-sm text-gray-500 mt-1">Start from a template or begin with a blank canvas.</p>
+      <div class="flex-shrink-0 px-8 pt-7 pb-5 border-b border-outline-gray-1">
+        <h2 class="text-xl font-semibold text-ink-gray-9">New Campaign</h2>
+        <p class="text-sm text-ink-gray-6 mt-1">Start from a template or begin with a blank canvas.</p>
       </div>
 
       <!-- Grid -->
       <div class="flex-1 overflow-y-auto px-8 py-6">
         <div v-if="loading" class="grid grid-cols-3 gap-5">
-          <div v-for="i in 6" :key="i" class="rounded-xl border border-gray-100 overflow-hidden animate-pulse">
-            <div class="bg-gray-100 h-48" />
+          <div v-for="i in 6" :key="i" class="rounded-xl border border-outline-gray-1 overflow-hidden animate-pulse">
+            <div class="bg-surface-gray-2 h-48" />
             <div class="p-4 space-y-2">
-              <div class="h-3.5 bg-gray-200 rounded w-1/2" />
-              <div class="h-2.5 bg-gray-100 rounded w-3/4" />
+              <div class="h-3.5 bg-surface-gray-3 rounded w-1/2" />
+              <div class="h-2.5 bg-surface-gray-2 rounded w-3/4" />
             </div>
           </div>
         </div>
@@ -24,21 +24,21 @@
           <!-- Blank tile -->
           <button
             type="button"
-            class="group text-left rounded-xl border-2 border-dashed border-gray-200 hover:border-gray-900 transition-all overflow-hidden focus:outline-none focus:border-gray-900"
+            class="group text-left rounded-xl border-2 border-dashed border-outline-gray-2 hover:border-ink-gray-9 transition-all overflow-hidden focus:outline-none focus:border-ink-gray-9 disabled:opacity-50"
             :disabled="creating"
-            @click="selectBlank"
+            @click="pick(blankBlocks)"
           >
-            <div class="h-48 bg-gray-50 flex flex-col items-center justify-center gap-2 group-hover:bg-gray-100 transition-colors">
-              <div class="w-10 h-10 rounded-full bg-white border-2 border-gray-200 flex items-center justify-center group-hover:border-gray-400 transition-colors">
-                <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <div class="h-48 bg-surface-gray-1 flex flex-col items-center justify-center gap-2 group-hover:bg-surface-gray-2 transition-colors">
+              <div class="w-10 h-10 rounded-full bg-surface-white border-2 border-outline-gray-2 flex items-center justify-center group-hover:border-outline-gray-3 transition-colors">
+                <svg class="w-5 h-5 text-ink-gray-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </div>
-              <span class="text-xs text-gray-400 group-hover:text-gray-600 transition-colors">Blank canvas</span>
+              <span class="text-xs text-ink-gray-5 group-hover:text-ink-gray-7 transition-colors">Blank canvas</span>
             </div>
-            <div class="px-4 py-3 border-t border-gray-100">
-              <p class="text-sm font-semibold text-gray-800">Blank</p>
-              <p class="text-xs text-gray-400 mt-0.5">Header and footer only</p>
+            <div class="px-4 py-3 border-t border-outline-gray-1">
+              <p class="text-sm font-semibold text-ink-gray-8">Blank</p>
+              <p class="text-xs text-ink-gray-5 mt-0.5">Header and footer only</p>
             </div>
           </button>
 
@@ -47,37 +47,35 @@
             v-for="tpl in templates"
             :key="tpl.name"
             type="button"
-            class="group text-left rounded-xl border-2 border-gray-100 hover:border-gray-900 transition-all overflow-hidden focus:outline-none focus:border-gray-900"
+            class="group text-left rounded-xl border-2 border-outline-gray-1 hover:border-ink-gray-9 transition-all overflow-hidden focus:outline-none focus:border-ink-gray-9 disabled:opacity-50"
             :disabled="creating"
-            @click="selectTemplate(tpl)"
+            @click="pick(JSON.parse(tpl.blocks_json || '[]'))"
           >
-            <!-- Preview: iframe of actual rendered email HTML -->
-            <div class="h-48 bg-gray-50 overflow-hidden relative">
+            <!-- Preview: scaled iframe of the actual rendered email HTML -->
+            <div class="h-48 bg-white overflow-hidden relative">
               <iframe
                 v-if="tpl.preview_html"
                 :srcdoc="tpl.preview_html"
-                class="absolute top-0 left-0 w-full border-none pointer-events-none"
+                class="absolute top-0 left-0 border-none pointer-events-none"
                 sandbox="allow-same-origin"
-                :style="{ height: '600px', transform: 'scale(0.32)', transformOrigin: 'top left', width: '312.5%' }"
+                :style="{ height: '1500px', transform: 'scale(0.46)', transformOrigin: 'top left', width: '217%' }"
               />
-              <!-- Fallback while preview loads -->
-              <div v-else class="w-full h-full bg-gradient-to-b from-gray-100 to-gray-50 flex items-center justify-center">
-                <span class="text-xs text-gray-300">Preview unavailable</span>
+              <div v-else class="w-full h-full bg-surface-gray-2 flex items-center justify-center">
+                <span class="text-xs text-ink-gray-4">Preview unavailable</span>
               </div>
-              <!-- Hover overlay -->
-              <div class="absolute inset-0 bg-gray-900/0 group-hover:bg-gray-900/5 transition-colors" />
+              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
             </div>
-            <div class="px-4 py-3 border-t border-gray-100">
-              <p class="text-sm font-semibold text-gray-800 group-hover:text-gray-900">{{ tpl.title }}</p>
+            <div class="px-4 py-3 border-t border-outline-gray-1">
+              <p class="text-sm font-semibold text-ink-gray-8 group-hover:text-ink-gray-9">{{ tpl.title }}</p>
             </div>
           </button>
         </div>
       </div>
 
       <!-- Footer -->
-      <div v-if="creating" class="flex-shrink-0 px-8 py-4 border-t border-gray-100 flex items-center gap-3">
-        <div class="w-4 h-4 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin" />
-        <span class="text-sm text-gray-500">Creating campaign…</span>
+      <div v-if="creating" class="flex-shrink-0 px-8 py-4 border-t border-outline-gray-1 flex items-center gap-3">
+        <div class="w-4 h-4 border-2 border-outline-gray-2 border-t-ink-gray-7 rounded-full animate-spin" />
+        <span class="text-sm text-ink-gray-6">Setting up your campaign…</span>
       </div>
     </div>
   </div>
@@ -86,11 +84,18 @@
 <script setup>
 import { ref, onMounted } from "vue";
 
-const emit = defineEmits(["created"]);
+const props = defineProps({
+  // Async handler that receives the chosen blocks array and does the work
+  // (create a new campaign, or apply to the current one). Picker stays open
+  // and shows a spinner until it resolves.
+  submit: { type: Function, required: true },
+});
 
 const loading = ref(true);
 const creating = ref(false);
 const templates = ref([]);
+
+const blankBlocks = [{ type: "header" }, { type: "footer" }];
 
 onMounted(async () => {
   try {
@@ -103,34 +108,14 @@ onMounted(async () => {
   }
 });
 
-async function createCampaign(blocks) {
+async function pick(blocks) {
+  if (creating.value) return;
   creating.value = true;
   try {
-    const res = await frappe.call({
-      method: "letters.letters.api.save_campaign",
-      args: {
-        name: null,
-        title: "Untitled Campaign",
-        subject: "",
-        preview_text: "",
-        email_width: 600,
-        blocks: JSON.stringify(blocks),
-        recipient_config: null,
-      },
-    });
-    emit("created", res.message.name);
+    await props.submit(blocks);
   } catch (e) {
-    frappe.msgprint("Could not create campaign. Please try again.");
     creating.value = false;
+    throw e;
   }
-}
-
-function selectBlank() {
-  createCampaign([{ type: "header" }, { type: "footer" }]);
-}
-
-function selectTemplate(tpl) {
-  const blocks = JSON.parse(tpl.blocks_json || "[]");
-  createCampaign(blocks);
 }
 </script>

@@ -78,6 +78,21 @@ def _recipient_args_from_config(doc):
     return None, None, None
 
 
+def _unique_campaign_title(base):
+    """Return a campaign title that doesn't collide with an existing record.
+
+    Campaigns are autonamed `field:title`, so two campaigns can't share a title.
+    If ``base`` is taken we append ` - 1`, ` - 2`, … until we find a free slot.
+    """
+    base = (base or "Untitled Campaign").strip() or "Untitled Campaign"
+    if not frappe.db.exists("Letters Campaign", base):
+        return base
+    n = 1
+    while frappe.db.exists("Letters Campaign", f"{base} - {n}"):
+        n += 1
+    return f"{base} - {n}"
+
+
 @frappe.whitelist()
 def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks=None, email_width=None, recipient_config=None):
     blocks_json = json.dumps(blocks if isinstance(blocks, list) else json.loads(blocks or "[]"))
@@ -105,7 +120,7 @@ def save_campaign(name=None, title=None, subject=None, preview_text=None, blocks
         frappe.has_permission("Letters Campaign", "create", throw=True)
         doc = frappe.get_doc({
             "doctype": "Letters Campaign",
-            "title": title or "Untitled Campaign",
+            "title": _unique_campaign_title(title or "Untitled Campaign"),
             "subject": subject or "",
             "preview_text": preview_text or "",
             "status": "Draft",
