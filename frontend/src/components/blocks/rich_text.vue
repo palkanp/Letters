@@ -94,13 +94,20 @@ function onChange(html) {
 }
 .rich-text-shell .ProseMirror p,
 .rich-text-shell .ProseMirror li,
-.rich-text-shell .ProseMirror span {
-  font-size: inherit;
-  font-weight: inherit;
-  color: inherit;
-  line-height: inherit;
-  font-family: inherit;
+.rich-text-shell .ProseMirror span,
+.rich-text-shell .ProseMirror h1,
+.rich-text-shell .ProseMirror h2,
+.rich-text-shell .ProseMirror h3,
+.rich-text-shell .ProseMirror h4,
+.rich-text-shell .ProseMirror h5,
+.rich-text-shell .ProseMirror h6 {
+  font-size: inherit !important;
+  font-weight: inherit !important;
+  color: inherit !important;
+  line-height: inherit !important;
+  font-family: inherit !important;
   text-align: inherit !important;
+  margin: 0 !important;
 }
 
 .rich-text-content ul {
