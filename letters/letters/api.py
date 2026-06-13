@@ -1038,7 +1038,7 @@ def _execute_send(send_doc_name, campaign_name):
         elif sent == 0:
             send_status = campaign_status = "Failed"
         else:
-            send_status, campaign_status = "Partial", "Failed"
+            send_status, campaign_status = "Partial", "Partial"
 
         # Persist the parent fields directly instead of send_doc.save(): the
         # per-recipient statuses were already written via set_value, so a full

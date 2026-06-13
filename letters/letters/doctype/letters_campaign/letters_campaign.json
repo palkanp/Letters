@@ -29,7 +29,7 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Draft\nScheduled\nSending\nSent\nFailed",
+      "options": "Draft\nScheduled\nSending\nSent\nPartial\nFailed",
       "default": "Draft",
       "in_list_view": 1,
       "in_standard_filter": 1

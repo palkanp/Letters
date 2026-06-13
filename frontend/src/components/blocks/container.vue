@@ -3,7 +3,7 @@
   <BlockWrapper :block="block" :index="index" :extra-style="wrapperStyle">
     <div
       :style="{
-        backgroundColor: block.props.background_color || '#f8fafc',
+        backgroundColor: block.props.background_color || undefined,
         display: 'flex',
         flexDirection: block.props.layout === 'row' ? 'row' : 'column',
         alignItems:     block.props.layout === 'row' ? (block.props.vertical_align || 'stretch') : undefined,

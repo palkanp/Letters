@@ -483,19 +483,21 @@ const isDark = useDark({ attribute: "data-theme", valueDark: "dark", valueLight:
 const toggleDark = useToggle(isDark);
 const showShortcuts = ref(false);
 
+const isMac = navigator.platform.startsWith("Mac") || navigator.userAgent.includes("Mac");
+const MOD = isMac ? "⌘" : "Ctrl";
 const SHORTCUTS = [
-  { label: "Undo",             keys: ["⌘", "Z"] },
-  { label: "Redo",             keys: ["⌘", "⇧", "Z"] },
-  { label: "Save",             keys: ["⌘", "S"] },
-  { label: "Copy block",       keys: ["⌘", "C"] },
-  { label: "Paste block",      keys: ["⌘", "V"] },
-  { label: "Duplicate block",  keys: ["⌘", "D"] },
+  { label: "Undo",             keys: [MOD, "Z"] },
+  { label: "Redo",             keys: [MOD, "⇧", "Z"] },
+  { label: "Save",             keys: [MOD, "S"] },
+  { label: "Copy block",       keys: [MOD, "C"] },
+  { label: "Paste block",      keys: [MOD, "V"] },
+  { label: "Duplicate block",  keys: [MOD, "D"] },
   { label: "Delete block",     keys: ["⌫"] },
   { label: "Deselect",         keys: ["Esc"] },
-  { label: "Preview",          keys: ["⌘", "⇧", "P"] },
-  { label: "Zoom in",          keys: ["⌘", "+"] },
-  { label: "Zoom out",         keys: ["⌘", "−"] },
-  { label: "Reset zoom",       keys: ["⌘", "0"] },
+  { label: "Preview",          keys: [MOD, "⇧", "P"] },
+  { label: "Zoom in",          keys: [MOD, "+"] },
+  { label: "Zoom out",         keys: [MOD, "−"] },
+  { label: "Reset zoom",       keys: [MOD, "0"] },
 ];
 
 const canvasZoom = ref(1);
@@ -588,7 +590,15 @@ const sendOptions = computed(() => [
   {
     label: "Schedule sending",
     icon: "clock",
-    onClick: () => { showScheduleModal.value = true; },
+    onClick: () => {
+      const existing = editorStore.campaignDoc?.scheduled_at;
+      if (existing) {
+        const [d, t] = existing.split(" ");
+        scheduleDate.value = d || "";
+        scheduleTime.value = t ? t.slice(0, 5) : "";
+      }
+      showScheduleModal.value = true;
+    },
     disabled: !editorStore.campaignDoc,
   },
 ]);
@@ -750,13 +760,21 @@ function keydownHandler(e) {
   }
 }
 
+function wheelHandler(e) {
+  if (!e.ctrlKey) return;
+  e.preventDefault();
+  stepZoom(e.deltaY < 0 ? 1 : -1);
+}
+
 onMounted(() => {
   window.addEventListener("beforeunload", beforeUnloadHandler);
   window.addEventListener("keydown", keydownHandler);
+  window.addEventListener("wheel", wheelHandler, { passive: false });
 });
 onUnmounted(() => {
   window.removeEventListener("beforeunload", beforeUnloadHandler);
   window.removeEventListener("keydown", keydownHandler);
+  window.removeEventListener("wheel", wheelHandler);
   clearInterval(_progressTimer);
 });
 
