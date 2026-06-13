@@ -412,11 +412,6 @@
         </div>
       </div>
     </template>
-    <template #actions>
-      <div class="flex justify-end w-full">
-        <Button @click="showLinkChecker = false">Close</Button>
-      </div>
-    </template>
   </Dialog>
 
   <!-- Schedule sending dialog -->
