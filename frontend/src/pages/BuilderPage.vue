@@ -325,7 +325,7 @@
     :model-value="showLinkChecker"
     title="Check Links"
     size="md"
-    @update:model-value="(v) => { if (!v) showLinkChecker.value = false; }"
+    @update:model-value="(v) => { if (!v) showLinkChecker = false }"
   >
     <template #default>
       <!-- Loading state -->
@@ -355,7 +355,7 @@
           <Badge v-if="linkResults.filter(r => r.status === 'skipped').length" theme="gray" variant="subtle" size="sm">
             {{ linkResults.filter(r => r.status === 'skipped').length }} skipped
           </Badge>
-          <Tooltip v-if="linkResults.filter(r => r.status === 'blocked').length" text="The server blocked automated requests. The link likely works fine for real recipients.">
+          <Tooltip v-if="linkResults.filter(r => r.status === 'blocked').length" text="Could not verify from this server (DNS or network unreachable). Links likely work fine for recipients.">
             <Badge theme="orange" variant="subtle" size="sm">
               <template #prefix><FeatherIcon name="shield-off" class="w-3 h-3" /></template>
               {{ linkResults.filter(r => r.status === 'blocked').length }} blocked
@@ -414,7 +414,7 @@
     </template>
     <template #actions>
       <div class="flex justify-end w-full">
-        <Button @click="showLinkChecker.value = false">Close</Button>
+        <Button @click="showLinkChecker = false">Close</Button>
       </div>
     </template>
   </Dialog>
