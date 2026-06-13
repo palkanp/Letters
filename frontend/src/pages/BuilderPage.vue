@@ -2,127 +2,22 @@
   <div class="letters-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
-    <header class="flex-shrink-0 h-12 bg-white border-b border-outline-gray-1 flex items-center px-4 gap-3">
-
-      <!-- Brand + page menu (Frappe Builder-style left dropdown) -->
-      <Dropdown :options="menuOptions" placement="bottom-start">
-        <template #default="{ open }">
-          <button
-            type="button"
-            class="flex-shrink-0 flex items-center gap-1 h-8 pl-1.5 pr-1 rounded-md hover:bg-surface-gray-2 transition-colors"
-            aria-label="Campaign menu"
-          >
-            <span class="w-6 h-6 rounded-md bg-gray-900 text-white flex items-center justify-center text-xs font-bold">L</span>
-            <FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="w-3.5 h-3.5 text-ink-gray-4" />
-          </button>
-        </template>
-      </Dropdown>
-
-      <div class="w-px h-4 bg-outline-gray-2 mx-0.5" />
-
-      <!-- Add block / Add container — icon tools (Frappe Builder-style) -->
-      <Tooltip text="Add block">
-        <Button variant="ghost" size="sm" icon="plus" aria-label="Add block" @click.stop="onAddBlock" />
-      </Tooltip>
-      <Tooltip text="Add container">
-        <Button variant="ghost" size="sm" icon="square" aria-label="Add container" @click.stop="addContainer" />
-      </Tooltip>
-      <Tooltip text="Add text">
-        <Button variant="ghost" size="sm" icon="type" aria-label="Add text" @click.stop="insertBlock('text')" />
-      </Tooltip>
-      <Tooltip text="Add image">
-        <Button variant="ghost" size="sm" icon="image" aria-label="Add image" @click.stop="insertBlock('image')" />
-      </Tooltip>
-
-      <!-- Centered campaign title — click opens settings too -->
-      <div class="flex-1 flex items-center justify-center gap-2 min-w-0">
-        <button
-          type="button"
-          class="flex items-center gap-1.5 min-w-0 max-w-sm px-2 py-1 rounded-md hover:bg-surface-gray-2 transition-colors group"
-          title="Campaign settings"
-          @click="showSettings = true"
-        >
-          <span class="truncate text-sm font-medium text-ink-gray-8">
-            {{ editorStore.campaignName || "Untitled Campaign" }}
-          </span>
-        </button>
-        <Transition name="fade">
-          <span v-if="saving" class="text-xs text-ink-gray-4 flex-shrink-0">Saving…</span>
-          <span v-else-if="savedFlash" class="text-xs text-ink-gray-4 flex-shrink-0">Saved</span>
-        </Transition>
-      </div>
-
-      <!-- Actions -->
-      <div class="flex items-center gap-1.5 flex-shrink-0">
-
-        <!-- Settings (gear) — opens the Campaign Settings dialog -->
-        <Tooltip text="Campaign settings">
-          <Button
-            variant="ghost"
-            size="sm"
-            icon="settings"
-            aria-label="Campaign settings"
-            @click="showSettings = true"
-          />
-        </Tooltip>
-
-        <div class="w-px h-4 bg-outline-gray-2 mx-0.5" />
-
-        <!-- Sending: inline progress bar -->
-        <template v-if="campaignStatus === 'Sending'">
-          <div class="flex items-center gap-2 min-w-[180px]">
-            <Progress
-              :value="sendProgress.total ? Math.round(sendProgress.sent / sendProgress.total * 100) : 5"
-              size="md"
-              class="flex-1"
-            />
-            <span class="text-xs tabular-nums text-ink-gray-5 flex-shrink-0">{{ sendProgress.sent }}/{{ sendProgress.total }}</span>
-          </div>
-        </template>
-
-        <!-- Sent / Failed / Partial: status badge only -->
-        <template v-else-if="campaignStatus === 'Sent' || campaignStatus === 'Partial' || campaignStatus === 'Failed'">
-          <Badge
-            :theme="campaignStatus === 'Sent' ? 'green' : campaignStatus === 'Partial' ? 'orange' : 'red'"
-            variant="subtle"
-            size="md"
-          >
-            <template #prefix>
-              <FeatherIcon :name="campaignStatus === 'Sent' ? 'check-circle' : 'alert-circle'" class="w-3 h-3" />
-            </template>
-            {{ campaignStatus === 'Sent' ? 'Sent' : campaignStatus === 'Partial' ? 'Partially sent' : 'Failed' }}
-          </Badge>
-        </template>
-
-        <!-- Scheduled: status badge with time -->
-        <template v-else-if="campaignStatus === 'Scheduled'">
-          <Badge theme="blue" variant="subtle" size="md">
-            <template #prefix><FeatherIcon name="clock" class="w-3 h-3" /></template>
-            Scheduled{{ editorStore.campaignDoc?.scheduled_at ? ` · ${formatScheduledAt(editorStore.campaignDoc.scheduled_at)}` : '' }}
-          </Badge>
-        </template>
-
-        <!-- Draft: normal preview + send -->
-        <template v-else>
-          <Dropdown :options="previewOptions" placement="bottom-end">
-            <template #default="{ open }">
-              <Button variant="ghost" size="sm">
-                Preview
-                <template #suffix><FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="w-3 h-3" /></template>
-              </Button>
-            </template>
-          </Dropdown>
-          <Dropdown :options="sendOptions" placement="bottom-end">
-            <template #default="{ open }">
-              <Button variant="solid" size="sm" :disabled="!editorStore.campaignDoc">
-                Send
-                <template #suffix><FeatherIcon :name="open ? 'chevron-up' : 'chevron-down'" class="w-3 h-3" /></template>
-              </Button>
-            </template>
-          </Dropdown>
-        </template>
-      </div>
-    </header>
+    <BuilderToolbar
+      :menu-options="menuOptions"
+      :preview-options="previewOptions"
+      :send-options="sendOptions"
+      :campaign-status="campaignStatus"
+      :send-progress="sendProgress"
+      :saving="saving"
+      :saved-flash="savedFlash"
+      :campaign-name="editorStore.campaignName"
+      :scheduled-at="editorStore.campaignDoc?.scheduled_at || ''"
+      :can-send="!!editorStore.campaignDoc"
+      @add-block="onAddBlock"
+      @add-container="addContainer"
+      @insert="insertBlock"
+      @open-settings="showSettings = true"
+    />
 
     <!-- ── Body ──────────────────────────────────────────────────────────────── -->
     <div class="flex flex-1 overflow-hidden">
@@ -314,7 +209,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { Button, FeatherIcon, Dropdown, Tooltip, Progress, Badge } from "frappe-ui";
+import { FeatherIcon } from "frappe-ui";
 import { useDark, useToggle } from "@vueuse/core";
 import { useEditorStore } from "../stores/editor";
 import { injectGoogleFonts } from "../fonts";
@@ -324,6 +219,7 @@ import CampaignSettings from "../components/CampaignSettings.vue";
 import TemplatePicker from "../components/TemplatePicker.vue";
 import BlockAdderRow from "../components/BlockAdderRow.vue";
 import BlockRenderer from "../components/BlockRenderer.vue";
+import BuilderToolbar from "../components/BuilderToolbar.vue";
 import ShortcutsDialog from "../components/dialogs/ShortcutsDialog.vue";
 import TestEmailDialog from "../components/dialogs/TestEmailDialog.vue";
 import LinkCheckerDialog from "../components/dialogs/LinkCheckerDialog.vue";
