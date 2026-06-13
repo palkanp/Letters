@@ -286,7 +286,7 @@ def get_campaign_analytics(name):
     )
     last_opened = frappe.db.get_value(
         "Email Send Recipient",
-        {"parent": ["in", send_names], "opened": 1},
+        {"parent": latest_send.name, "opened": 1},
         "opened_on", order_by="opened_on desc",
     )
     # Per-recipient status breakdown from the most recent send
@@ -1058,6 +1058,13 @@ def _execute_send(send_doc_name, campaign_name):
         try:
             frappe.db.set_value("Email Send", send_doc_name, "status", "Failed")
             frappe.db.set_value("Letters Campaign", campaign_name, "status", "Failed")
+            # Mark all Pending rows as Failed so they don't show misleadingly in
+            # the recipient list after a batch-level error (e.g. compile failure).
+            frappe.db.sql(
+                "UPDATE `tabEmail Send Recipient` SET status = 'Failed'"
+                " WHERE parent = %s AND status = 'Pending'",
+                send_doc_name,
+            )
             frappe.db.commit()
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Letters _execute_send cleanup error")

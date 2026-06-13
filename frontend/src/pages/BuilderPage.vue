@@ -1121,6 +1121,7 @@ function applyLinkFix(result) {
   const oldUrl = result.url;
   const newUrl = (result._fix || "").trim();
   if (!newUrl || newUrl === oldUrl) return;
+  try { new URL(newUrl); } catch { toast.error("Enter a valid URL (include https://)."); return; }
 
   function fixInBlock(block) {
     if (!block) return;

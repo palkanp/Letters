@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from base64 import b64encode
+from functools import lru_cache
 from html import escape
 from html.parser import HTMLParser
 from typing import Any, List, Optional, Tuple
@@ -642,6 +643,7 @@ class QuoteRenderer(BlockRenderer):
         return _spacing_wrapper(html, p)
 
 
+@lru_cache(maxsize=256)
 def _social_icon_img(svg_path: str, color: str, label: str, size: int = 24) -> str:
     """Build a base64 data-URI <img> for a monochrome social icon SVG path."""
     svg = (

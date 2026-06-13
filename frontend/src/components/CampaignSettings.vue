@@ -53,30 +53,35 @@
 
               <!-- ── Details ── -->
               <div v-if="activeTab === 'details'" class="space-y-4">
-                <div>
-                  <label class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Campaign Name</label>
+                <label class="block">
+                  <span class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Campaign Name</span>
                   <TextInput
                     :model-value="campaignName"
                     placeholder="e.g. June Newsletter"
                     @update:model-value="(v) => emit('update:campaignName', v)"
                   />
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Subject Line <span class="text-red-400 ml-0.5">*</span></label>
+                </label>
+                <label class="block">
+                  <span class="flex items-center justify-between mb-1.5">
+                    <span class="text-xs font-semibold text-ink-gray-6 uppercase tracking-wide">Subject Line <span class="text-red-400 ml-0.5">*</span></span>
+                    <span class="text-xs tabular-nums" :class="subject.length > 78 ? 'text-red-500' : subject.length > 60 ? 'text-orange-500' : 'text-ink-gray-4'">{{ subject.length }}</span>
+                  </span>
                   <TextInput
                     :model-value="subject"
                     placeholder="e.g. Your June update is here"
                     @update:model-value="(v) => emit('update:subject', v)"
                   />
-                </div>
-                <div>
-                  <label class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Preview Text</label>
+                  <p v-if="subject.length > 78" class="mt-1 text-xs text-red-500">Most email clients truncate subjects over 78 characters.</p>
+                  <p v-else-if="subject.length > 60" class="mt-1 text-xs text-orange-500">Over 60 characters may be clipped on mobile.</p>
+                </label>
+                <label class="block">
+                  <span class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Preview Text</span>
                   <TextInput
                     :model-value="previewText"
                     placeholder="Brief teaser shown after subject line"
                     @update:model-value="(v) => emit('update:previewText', v)"
                   />
-                </div>
+                </label>
               </div>
 
               <!-- ── Recipients ── -->
@@ -127,8 +132,14 @@
                 </div>
 
                 <div v-else class="space-y-4">
-                  <!-- Open rate stats -->
-                  <div class="grid grid-cols-3 gap-3">
+                  <!-- Sending-in-progress notice -->
+                  <div v-if="analytics.sent_status === 'Sending'" class="flex items-start gap-2 rounded border border-outline-blue-2 bg-surface-blue-1 px-3 py-2.5 text-xs text-ink-gray-7">
+                    <FeatherIcon name="loader" class="w-3.5 h-3.5 mt-0.5 flex-shrink-0 animate-spin text-blue-500" />
+                    <span>Send in progress. Stats update once the batch completes.</span>
+                  </div>
+
+                  <!-- Open rate stats (only shown for completed sends) -->
+                  <div v-if="analytics.sent_status !== 'Sending'" class="grid grid-cols-3 gap-3">
                     <div class="rounded border border-outline-gray-1 bg-surface-gray-1 px-4 py-3">
                       <p class="text-2xl font-semibold text-ink-gray-9 tabular-nums">{{ analytics.sent }}</p>
                       <p class="text-xs text-ink-gray-5 mt-0.5">Delivered</p>
@@ -144,7 +155,7 @@
                   </div>
 
                   <!-- Delivery breakdown -->
-                  <div v-if="analytics.status_counts && Object.keys(analytics.status_counts).length" class="space-y-1.5">
+                  <div v-if="analytics.sent_status !== 'Sending' && analytics.status_counts && Object.keys(analytics.status_counts).length" class="space-y-1.5">
                     <p class="text-xs font-medium text-ink-gray-7">Delivery breakdown</p>
                     <div
                       v-for="(count, status) in analytics.status_counts"
