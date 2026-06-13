@@ -75,21 +75,21 @@ function onChange(html) {
 <style>
 /* Show placeholder even when the block is not selected (not focused).
    TipTap normally gates the placeholder behind :focus — we override that. */
-/* Bubble menu: Tippy appends to <body> and inherits dark-mode tokens from the
-   page even though the canvas is always white. Override at the tippy-box level
-   so both the wrapper and inner menu div get a fixed light surface + dark text. */
-.tippy-box .bubble-menu,
-.tippy-box .bubble-menu .inline-flex {
+/* Bubble menu: TipTap uses @floating-ui/dom (no Tippy wrapper), so the
+   .bubble-menu div renders directly. Force a white surface so it's always
+   readable over the light canvas regardless of the page dark/light mode. */
+.bubble-menu,
+.bubble-menu .inline-flex {
   background-color: #ffffff !important;
 }
-.tippy-box .bubble-menu {
+.bubble-menu {
   border: 1px solid #e5e7eb !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14) !important;
   border-radius: 8px !important;
   overflow: hidden !important;
 }
-.tippy-box .bubble-menu button,
-.tippy-box .bubble-menu svg {
+.bubble-menu button,
+.bubble-menu svg {
   color: #1f2937 !important;
 }
 
