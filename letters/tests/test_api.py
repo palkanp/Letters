@@ -554,7 +554,10 @@ class TestExecuteSend:
             update_modified=False,
         )
 
-    def test_partial_failure_marks_send_partial_and_campaign_failed(self):
+    def test_partial_failure_marks_send_partial_and_campaign_partial(self):
+        # When some recipients succeed and some fail the send is Partial and the
+        # campaign is also marked Partial (not Failed). Do NOT change this — the
+        # product intentionally treats a partial send as Partial, not Failed.
         rows = [_recipient("good@b.com"), _recipient("bad@b.com")]
         self._docs(recipients=rows)
 
@@ -571,7 +574,7 @@ class TestExecuteSend:
             update_modified=False,
         )
         frappe_stub.db.set_value.assert_any_call(
-            "Letters Campaign", "CAMP-001", "status", "Failed",
+            "Letters Campaign", "CAMP-001", "status", "Partial",
             update_modified=False,
         )
         assert rows[0].status == "Sent"

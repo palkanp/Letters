@@ -802,12 +802,16 @@ class TestFontStack:
     def test_unknown_name_returns_fallback(self):
         # Anything outside the safe-font whitelist falls through to the caller's
         # default; the raw value is never echoed into the output.
-        assert font_stack({"font_family": "Comic Sans MS"}, "FB") == "FB"
+        assert font_stack({"font_family": "UnknownFont"}, "FB") == "FB"
         assert font_stack({"font_family": "<script>"}, "FB") == "FB"
+        # Known fonts must NOT return the fallback
+        assert font_stack({"font_family": "Comic Sans MS"}, "FB") != "FB"
 
     def test_every_option_has_a_generic_fallback(self):
+        # Comic Sans uses 'cursive' as its generic family — include it alongside
+        # the standard email-safe generic families.
         for stack in FONT_STACKS.values():
-            assert stack.rstrip().endswith(("sans-serif", "serif", "monospace"))
+            assert stack.rstrip().endswith(("sans-serif", "serif", "monospace", "cursive"))
 
 
 class TestFontInRenderers:
