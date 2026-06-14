@@ -85,7 +85,7 @@
           <!-- Text -->
           <div class="flex-1">
             <EditableDiv
-              class="outline-none min-h-10 leading-relaxed text-ink-gray-7"
+              class="outline-none leading-relaxed text-ink-gray-7"
               :style="{ fontFamily: fontStack(block.props.font_family, 'Arial, Helvetica, sans-serif') }"
               :model-value="block.props.text"
               @update:model-value="update('text', $event)"

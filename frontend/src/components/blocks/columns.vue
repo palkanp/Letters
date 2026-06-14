@@ -88,8 +88,24 @@ const paddingStyle = usePadding(blockProps, { top: 20, right: 24, bottom: 20, le
 // ── Sync column_count → columns array ────────────────────────────────────────
 watch(
   () => props.block.props.column_count,
-  (val) => {
-    const count = parseInt(val) || 2;
+  (val, oldVal) => {
+    const count    = parseInt(val)    || 2;
+    const oldCount = parseInt(oldVal) || 2;
+    if (count >= oldCount) { store.setColumnCount(props.block.id, count); return; }
+
+    // Reducing: check if any columns being removed have content.
+    const cols = props.block.columns || [];
+    const hasContent = cols.slice(count).some((col) => col.blocks?.length > 0);
+    if (hasContent) {
+      const ok = window.confirm(
+        `Reducing to ${count} column${count === 1 ? "" : "s"} will delete the content in the removed column${count === oldCount - 1 ? "" : "s"}. Continue?`
+      );
+      if (!ok) {
+        // Revert the prop change in the store without triggering the watcher again.
+        store.updateBlockPropsLive(props.block.id, { column_count: oldCount });
+        return;
+      }
+    }
     store.setColumnCount(props.block.id, count);
   },
 );

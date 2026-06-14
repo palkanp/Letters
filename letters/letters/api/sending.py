@@ -230,15 +230,25 @@ def _execute_send(send_doc_name, campaign_name):
     a previous run stopped. Must NOT be decorated with @frappe.whitelist().
     """
     try:
-        doc      = frappe.get_doc("Letters Campaign", campaign_name)
         send_doc = frappe.get_doc("Email Send", send_doc_name)
 
+        # Use the content snapshot taken at queue time so edits made after
+        # clicking Send don't affect what recipients receive.
+        blocks_json   = send_doc.snapshot_blocks or ""
+        subject       = send_doc.snapshot_subject or ""
+        preview_text  = send_doc.snapshot_preview_text or ""
+        email_width   = send_doc.snapshot_email_width or 600
+
+        # Fall back to live campaign for sends queued before snapshot was introduced
+        if not blocks_json:
+            doc         = frappe.get_doc("Letters Campaign", campaign_name)
+            blocks_json = doc.blocks_json
+            subject     = subject or doc.subject
+            preview_text = preview_text or doc.preview_text or ""
+            email_width  = email_width or getattr(doc, "email_width", None) or 600
+
         from letters.letters.utils.email_compiler import EmailCompiler
-        compiler = EmailCompiler(
-            doc.blocks_json,
-            preview_text=doc.preview_text,
-            email_width=getattr(doc, "email_width", None) or 600,
-        )
+        compiler = EmailCompiler(blocks_json, preview_text=preview_text, email_width=email_width)
         html = compiler.compile()
 
         sent = failed = 0
@@ -250,7 +260,7 @@ def _execute_send(send_doc_name, campaign_name):
             try:
                 frappe.sendmail(
                     recipients=[row.email],
-                    subject=doc.subject,
+                    subject=subject,
                     message=html,
                     now=False,
                     reference_doctype="Letters Campaign",

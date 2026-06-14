@@ -5,7 +5,7 @@
       class="flex-1 flex flex-col items-center justify-center px-4 text-center gap-2"
     >
       <p class="text-xs text-ink-gray-4 leading-relaxed">
-        No blocks yet. Use <strong>+ Add block</strong> below.
+        No blocks yet. Use the <strong>+</strong> button in the toolbar to add your first block.
       </p>
     </div>
 
@@ -60,20 +60,23 @@ function getChildren(block) {
 // ── Block metadata ────────────────────────────────────────────────────────────
 const blockMeta = computed(() => {
   const map = new Map();
-  function walk(list, parentId) {
+  function walk(list, parentId, colIndex = null) {
     list.forEach((block, index) => {
-      const colChildren = block.columns?.flatMap((col) => col.blocks || []) ?? [];
+      const colChildCount = block.columns?.reduce((n, col) => n + (col.blocks?.length ?? 0), 0) ?? 0;
       map.set(block.id, {
         parentId,
         index,
-        childrenCount: (block.children?.length ?? 0) + colChildren.length,
+        colIndex,   // which column this block lives in (null = not a column child)
+        childrenCount: (block.children?.length ?? 0) + colChildCount,
         isContainer: block.type === "container",
       });
-      if (block.children?.length) walk(block.children, block.id);
-      if (colChildren.length) walk(colChildren, block.id);
+      if (block.children?.length) walk(block.children, block.id, null);
+      if (block.columns?.length) {
+        block.columns.forEach((col, ci) => walk(col.blocks || [], block.id, ci));
+      }
     });
   }
-  walk(store.blocks, null);
+  walk(store.blocks, null, null);
   return map;
 });
 
@@ -132,12 +135,20 @@ function onDrop(id) {
   if (from == null || from === id || !state || isDescendant(from, id)) return;
   const meta = blockMeta.value.get(id);
   if (!meta) return;
+
   if (state.zone === "inside" && meta.isContainer) {
     store.moveBlockTo(from, id, meta.childrenCount);
-  } else if (state.zone === "before") {
-    store.moveBlockTo(from, meta.parentId, meta.index);
+    return;
+  }
+
+  const insertOffset = state.zone === "before" ? 0 : 1;
+
+  // If the target block lives inside a column, use the column-aware move so the
+  // dragged block lands in the correct column rather than vanishing into .children.
+  if (meta.colIndex !== null) {
+    store.moveBlockToColumn(from, meta.parentId, meta.colIndex, meta.index + insertOffset);
   } else {
-    store.moveBlockTo(from, meta.parentId, meta.index + 1);
+    store.moveBlockTo(from, meta.parentId, meta.index + insertOffset);
   }
 }
 

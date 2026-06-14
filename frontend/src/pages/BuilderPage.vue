@@ -117,13 +117,22 @@
 
           <!-- Block list with inline adders -->
           <template v-else-if="!loadingCampaign">
-            <!-- Adder before first block -->
-            <BlockAdderRow :after-index="-1" @open="(i) => openPicker({ mode: 'top', afterIndex: i })" />
+            <!-- Read-only notice for sent/sending campaigns -->
+            <div
+              v-if="editorStore.isReadOnly"
+              class="flex items-center gap-2 px-4 py-2.5 bg-surface-gray-2 border-b border-outline-gray-1 text-xs text-ink-gray-5 select-none"
+            >
+              <FeatherIcon name="lock" class="w-3.5 h-3.5 flex-shrink-0" />
+              This campaign has been sent and is read-only.
+            </div>
+
+            <!-- Adder before first block (hidden when read-only) -->
+            <BlockAdderRow v-if="!editorStore.isReadOnly" :after-index="-1" @open="(i) => openPicker({ mode: 'top', afterIndex: i })" />
 
             <template v-for="(block, index) in editorStore.blocks" :key="block.id">
               <BlockRenderer :block="block" :index="index" />
-              <!-- Adder after each block -->
-              <BlockAdderRow :after-index="index" @open="(i) => openPicker({ mode: 'top', afterIndex: i })" />
+              <!-- Adder after each block (hidden when read-only) -->
+              <BlockAdderRow v-if="!editorStore.isReadOnly" :after-index="index" @open="(i) => openPicker({ mode: 'top', afterIndex: i })" />
             </template>
           </template>
         </div>
@@ -152,14 +161,14 @@
         </div>
       </main>
 
-      <!-- Drag handle (left edge of Inspector) -->
-      <div
-        class="flex-shrink-0 w-1 bg-transparent hover:bg-blue-400 cursor-col-resize z-[1] transition-colors"
-        @mousedown="startRightResize"
-      />
-
-      <!-- Right: Inspector -->
-      <Inspector :width="rightPanelWidth" />
+      <!-- Drag handle + Inspector (hidden for read-only campaigns) -->
+      <template v-if="!editorStore.isReadOnly">
+        <div
+          class="flex-shrink-0 w-1 bg-transparent hover:bg-blue-400 cursor-col-resize z-[1] transition-colors"
+          @mousedown="startRightResize"
+        />
+        <Inspector :width="rightPanelWidth" />
+      </template>
 
     </div>
   </div>
@@ -246,13 +255,13 @@ const {
   saving, savedFlash, loadingCampaign, duplicating, scheduling,
   scheduleDate, scheduleTime, minScheduleDate, openScheduleModal,
   sendProgress, campaignStatus,
-  onTemplateSubmit, saveNow,
+  onTemplateSubmit, saveNow, saveCampaign,
   sendCampaign, scheduleCampaign, duplicateCampaign,
 } = useCampaign(editorStore);
 
 const { openPreview } = usePreview(editorStore, previewText);
-const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore);
-const { showTestModal, testSending, testRecipient, openTestModal, sendTest } = useTestEmail(editorStore, { subject, previewText });
+const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore, { flushSave: saveCampaign });
+const { showTestModal, testSending, testRecipient, openTestModal, sendTest } = useTestEmail(editorStore, { subject, previewText, flushSave: saveCampaign });
 
 const { canvasZoom, zoomVisible, resetZoom, stepZoom } = useZoom();
 

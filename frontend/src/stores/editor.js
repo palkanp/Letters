@@ -12,6 +12,9 @@ export const useEditorStore = defineStore("editor", () => {
   const isDirty        = ref(false);
   const clipboard       = ref(null); // holds a deep-cloned block for copy/paste
 
+  const SENT_STATUSES = ["Sent", "Sending", "Partial", "Failed"];
+  const isReadOnly = computed(() => SENT_STATUSES.includes(campaignDoc.value?.status));
+
   const _idCounter = ref(0);
   function nextId() { return ++_idCounter.value; }
 
@@ -134,6 +137,7 @@ export const useEditorStore = defineStore("editor", () => {
   }
 
   function selectBlock(id) {
+    if (isReadOnly.value) return;
     selectedBlockId.value = id;
   }
 
@@ -256,6 +260,36 @@ export const useEditorStore = defineStore("editor", () => {
         parent.children.splice(idx, 0, moved);
       }
     }
+    markDirty();
+  }
+
+  // Column-aware variant: detach blockId from wherever it is, then insert it
+  // into columns[colIndex].blocks of the columnsParentId block at targetIndex.
+  function moveBlockToColumn(blockId, columnsParentId, colIndex, targetIndex) {
+    _pushHistory(true);
+
+    let moved = null;
+    function detach(list) {
+      const idx = list.findIndex((b) => b.id === blockId);
+      if (idx !== -1) { moved = list.splice(idx, 1)[0]; return true; }
+      for (const b of list) {
+        if (b.children && detach(b.children)) return true;
+        if (b.columns) {
+          for (const col of b.columns) {
+            if (col.blocks && detach(col.blocks)) return true;
+          }
+        }
+      }
+      return false;
+    }
+    detach(blocks.value);
+    if (!moved) return;
+
+    const parent = findBlock(columnsParentId);
+    if (!parent?.columns?.[colIndex]) { markDirty(); return; }
+    const col = parent.columns[colIndex];
+    const idx = Math.min(targetIndex, col.blocks.length);
+    col.blocks.splice(idx, 0, moved);
     markDirty();
   }
 
@@ -483,6 +517,8 @@ export const useEditorStore = defineStore("editor", () => {
     findBlock,
     markDirty,
     clearDirty,
+    isReadOnly,
+    moveBlockToColumn,
   };
 });
 

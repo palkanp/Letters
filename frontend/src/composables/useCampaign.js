@@ -144,6 +144,7 @@ export function useCampaign(editorStore) {
 
   // ── Save ──────────────────────────────────────────────────────────────────────
   async function saveCampaign() {
+    if (editorStore.isReadOnly) return;
     saving.value = true;
     try {
       const res = await frappe.call({
@@ -203,6 +204,12 @@ export function useCampaign(editorStore) {
       showSettings.value = true;
       toast.warning("Choose recipients before sending.");
       return;
+    }
+
+    // Flush any pending autosave so the backend sends the current editor state.
+    if (editorStore.isDirty) {
+      clearTimeout(_autoSaveTimer);
+      await saveCampaign();
     }
 
     sending.value = true;

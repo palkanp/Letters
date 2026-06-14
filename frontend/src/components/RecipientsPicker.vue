@@ -48,6 +48,14 @@
       <div v-if="parsedPasted.length > 0" class="text-xs text-ink-gray-5 font-medium">
         {{ parsedPasted.length }} valid email{{ parsedPasted.length === 1 ? "" : "s" }} detected
       </div>
+      <div v-if="invalidPasted.length > 0" class="rounded-md bg-red-50 border border-red-200 px-3 py-2 space-y-1">
+        <p class="text-xs font-medium text-red-700">
+          {{ invalidPasted.length }} invalid address{{ invalidPasted.length === 1 ? "" : "es" }} will be ignored:
+        </p>
+        <ul class="text-xs text-red-600 space-y-0.5">
+          <li v-for="e in invalidPasted" :key="e" class="font-mono">{{ e }}</li>
+        </ul>
+      </div>
     </div>
 
     <!-- ── Tab: From DocType ── -->
@@ -101,12 +109,16 @@ async function loadEmailGroups() {
 
 // ── Paste ─────────────────────────────────────────────────────────────────────
 const pastedEmails = ref("");
-const parsedPasted = computed(() =>
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+const _allPasted = computed(() =>
   pastedEmails.value
     .split(/[\n,;]/)
     .map((e) => e.trim().toLowerCase())
-    .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))
+    .filter(Boolean)
 );
+const parsedPasted  = computed(() => _allPasted.value.filter((e) => EMAIL_RE.test(e)));
+const invalidPasted = computed(() => _allPasted.value.filter((e) => !EMAIL_RE.test(e)));
 
 // ── DocType (delegated to DoctypeTab) ─────────────────────────────────────────
 const doctypeConfig = ref(null);

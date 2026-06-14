@@ -29,7 +29,7 @@
           :editable="isSelected"
           placeholder="Text"
           :bubble-menu="bubbleMenuButtons"
-          editor-class="rich-text-content outline-none min-h-10"
+          editor-class="rich-text-content outline-none"
           @change="onChange"
         />
       </div>
@@ -185,7 +185,16 @@ function onChange(html) {
 .rich-text-content p {
   margin: 0 0 0.5em;
 }
-.rich-text-content p:last-child {
+.rich-text-content p:first-child {
+  margin-top: 0;
+}
+.rich-text-content p:last-child,
+.rich-text-content ul:last-child,
+.rich-text-content ol:last-child {
   margin-bottom: 0;
+}
+.rich-text-content ul:first-child,
+.rich-text-content ol:first-child {
+  margin-top: 0;
 }
 </style>

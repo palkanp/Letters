@@ -20,6 +20,12 @@
           </div>
         </div>
 
+        <!-- Error state -->
+        <div v-else-if="loadError" class="flex flex-col items-center justify-center py-16 gap-4">
+          <p class="text-sm text-ink-gray-6">Couldn't load templates.</p>
+          <Button variant="subtle" size="sm" label="Try again" icon="refresh-cw" @click="loadTemplates" />
+        </div>
+
         <div v-else class="grid grid-cols-3 gap-5">
           <!-- Blank tile -->
           <div class="group flex flex-col gap-0 rounded-xl border-2 border-dashed border-outline-gray-2 overflow-hidden transition-all hover:border-blue-500">
@@ -89,20 +95,25 @@ const props = defineProps({
 
 const loading = ref(true);
 const creating = ref(false);
+const loadError = ref(false);
 const templates = ref([]);
 
 const blankBlocks = [{ type: "header" }, { type: "footer" }];
 
-onMounted(async () => {
+async function loadTemplates() {
+  loading.value = true;
+  loadError.value = false;
   try {
     const res = await frappe.call({ method: "letters.letters.api.get_templates" });
     templates.value = res.message || [];
-  } catch (e) {
-    console.error("Failed to load templates", e);
+  } catch {
+    loadError.value = true;
   } finally {
     loading.value = false;
   }
-});
+}
+
+onMounted(loadTemplates);
 
 async function pick(blocks) {
   if (creating.value) return;

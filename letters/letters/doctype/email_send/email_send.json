@@ -55,6 +55,36 @@
       "in_list_view": 1
     },
     {
+      "fieldname": "snapshot_section",
+      "fieldtype": "Section Break",
+      "label": "Content Snapshot",
+      "collapsible": 1
+    },
+    {
+      "fieldname": "snapshot_subject",
+      "fieldtype": "Data",
+      "label": "Subject (snapshot)",
+      "read_only": 1
+    },
+    {
+      "fieldname": "snapshot_preview_text",
+      "fieldtype": "Data",
+      "label": "Preview Text (snapshot)",
+      "read_only": 1
+    },
+    {
+      "fieldname": "snapshot_email_width",
+      "fieldtype": "Int",
+      "label": "Email Width (snapshot)",
+      "read_only": 1
+    },
+    {
+      "fieldname": "snapshot_blocks",
+      "fieldtype": "Long Text",
+      "label": "Blocks JSON (snapshot)",
+      "read_only": 1
+    },
+    {
       "fieldname": "recipients_section",
       "fieldtype": "Section Break",
       "label": "Recipients"

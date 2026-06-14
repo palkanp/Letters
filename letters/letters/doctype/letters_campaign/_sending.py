@@ -78,8 +78,6 @@ class SendingMixin:
             MAX_RECIPIENTS, _bulk_insert_recipients, _enqueue_send, _resume_send,
         )
 
-        if self.status in ("Sent", "Sending"):
-            frappe.throw(_("This campaign has already been sent or is currently sending."))
         if not self.blocks_json:
             frappe.throw(_("Campaign has no content to send."))
         if not self.subject:
@@ -96,6 +94,24 @@ class SendingMixin:
         if existing and existing[0].status in ("Failed", "Partial"):
             return _resume_send(existing[0].name, self.name, self)
 
+        # Atomically claim the send: transition Draft/Scheduled → Sending only if
+        # the campaign is still in a sendable state. rowcount==0 means another
+        # request beat us to it (race condition) or the campaign is already sent.
+        campaign_qb = frappe.qb.DocType("Letters Campaign")
+        (
+            frappe.qb.update(campaign_qb)
+            .set(campaign_qb.status, "Sending")
+            .where(
+                (campaign_qb.name == self.name)
+                & (campaign_qb.status.isin(["Draft", "Scheduled"]))
+            )
+        ).run()
+        claimed = frappe.db._cursor.rowcount
+        frappe.db.commit()
+        if not claimed:
+            frappe.throw(_("This campaign has already been sent or is currently sending."))
+        self.status = "Sending"
+
         # Fall back to the campaign's saved audience when no explicit source is passed
         if not (email_group or doctype_config or recipients):
             recipients, email_group, doctype_config = _recipient_args_from_config(self)
@@ -107,7 +123,8 @@ class SendingMixin:
             _suppressed_emails, _valid_emails,
         )
 
-        # Claim the send synchronously to prevent a race between two requests
+        # Snapshot the content at send time so edits after clicking Send can't
+        # change what recipients receive. _execute_send reads from the snapshot.
         send_doc = frappe.get_doc({
             "doctype": "Email Send",
             "campaign": self.name,
@@ -116,22 +133,17 @@ class SendingMixin:
             "email_group": email_group or "",
             "total_recipients": len(recipient_list),
             "sent_count": 0,
+            "snapshot_subject":      self.subject,
+            "snapshot_preview_text": self.preview_text or "",
+            "snapshot_email_width":  getattr(self, "email_width", None) or 600,
+            "snapshot_blocks":       self.blocks_json,
         })
         send_doc.insert(ignore_permissions=True)
         _bulk_insert_recipients(send_doc.name, recipient_list)
         frappe.db.commit()
 
-        self.status = "Sending"
-        self.save(ignore_permissions=True)
-        frappe.db.commit()
-
         _enqueue_send(send_doc.name, self.name)
-        return {
-            "queued": True,
-            "count": len(recipient_list),
-            "mode": mode,
-            "skipped_invalid": invalid_count,
-        }
+        return {"queued": True, "count": len(recipient_list), "mode": mode, "skipped_invalid": invalid_count}
 
 
 def _resolve_recipients(email_group, recipients, doctype_config, max_recipients, suppressed_fn, valid_fn):

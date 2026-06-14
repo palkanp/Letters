@@ -5,7 +5,7 @@ import { describeError, stripIds } from "../utils/builderHelpers";
 // Runs the server-side broken-link check (enqueue + poll) and applies inline
 // URL fixes back into the block tree. Polling is capped at 90s and any prior
 // poll is cancelled before a new run.
-export function useLinkChecker(editorStore) {
+export function useLinkChecker(editorStore, { flushSave } = {}) {
   const showLinkChecker = ref(false);
   const linkResults = ref([]);
   const checkingLinks = ref(false);
@@ -16,6 +16,7 @@ export function useLinkChecker(editorStore) {
       toast.warning("Canvas is empty. Add some blocks first.");
       return;
     }
+    if (editorStore.isDirty && flushSave) await flushSave();
     showLinkChecker.value = true;
     checkingLinks.value = true;
     linkResults.value = [];

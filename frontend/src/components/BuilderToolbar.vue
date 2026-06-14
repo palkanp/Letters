@@ -1,5 +1,5 @@
 <template>
-  <header class="flex-shrink-0 h-12 bg-white border-b border-outline-gray-1 flex items-center px-4 gap-3">
+  <header class="flex-shrink-0 h-12 bg-white border-b border-outline-gray-1 flex items-center px-4 gap-3 relative">
 
     <!-- Brand + page menu (Frappe Builder-style left dropdown) -->
     <Dropdown :options="menuOptions" placement="bottom-start">
@@ -31,11 +31,11 @@
       <Button variant="ghost" size="sm" icon="image" aria-label="Add image" @click.stop="emit('insert', 'image')" />
     </Tooltip>
 
-    <!-- Centered campaign title — click opens settings too -->
-    <div class="flex-1 flex items-center justify-center gap-2 min-w-0">
+    <!-- Centered campaign title — absolute so it's centered to the page, not the remaining flex space -->
+    <div class="absolute inset-x-0 flex items-center justify-center gap-2 pointer-events-none" style="height:48px;">
       <button
         type="button"
-        class="flex items-center gap-1.5 min-w-0 max-w-sm px-2 py-1 rounded-md hover:bg-surface-gray-2 transition-colors group"
+        class="pointer-events-auto flex items-center gap-1.5 min-w-0 max-w-sm px-2 py-1 rounded-md hover:bg-surface-gray-2 transition-colors group"
         title="Campaign settings"
         @click="emit('open-settings')"
       >
@@ -50,7 +50,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center gap-1.5 flex-shrink-0">
+    <div class="flex items-center gap-1.5 flex-shrink-0 ml-auto">
 
       <!-- Settings (gear) — opens the Campaign Settings dialog -->
       <Tooltip text="Campaign settings">

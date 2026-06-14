@@ -307,6 +307,59 @@ class TestSendEnqueue(IntegrationTestCase):
         self.assertEqual(send_count, 1)
 
 
+class TestSendSnapshot(IntegrationTestCase):
+    """Content is snapshotted onto Email Send at queue time."""
+
+    def test_snapshot_fields_written_on_send(self):
+        doc = _new_campaign(subject="Snap Subject", blocks_json=SAMPLE_BLOCKS)
+        with patch("frappe.enqueue"):
+            doc.send(recipients=["a@example.com"])
+        send_name = frappe.db.get_value("Email Send", {"campaign": doc.name}, "name")
+        snap = frappe.db.get_value(
+            "Email Send", send_name,
+            ["snapshot_subject", "snapshot_blocks"],
+            as_dict=True,
+        )
+        self.assertEqual(snap.snapshot_subject, "Snap Subject")
+        self.assertEqual(snap.snapshot_blocks, SAMPLE_BLOCKS)
+
+    def test_snapshot_is_independent_of_later_campaign_edits(self):
+        doc = _new_campaign(subject="Original Subject", blocks_json=SAMPLE_BLOCKS)
+        with patch("frappe.enqueue"):
+            doc.send(recipients=["a@example.com"])
+        # Simulate a post-send edit to the live campaign
+        frappe.db.set_value("Letters Campaign", doc.name, "subject", "Edited After Send")
+
+        send_name = frappe.db.get_value("Email Send", {"campaign": doc.name}, "name")
+        snap_subject = frappe.db.get_value("Email Send", send_name, "snapshot_subject")
+        self.assertEqual(snap_subject, "Original Subject")
+
+
+class TestAtomicSendClaim(IntegrationTestCase):
+    """send() must atomically transition Draft → Sending to prevent double-sends."""
+
+    def test_throws_when_already_sending(self):
+        doc = _new_campaign()
+        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sending")
+        doc.reload()
+        with self.assertRaises(frappe.ValidationError):
+            doc.send(recipients=["a@example.com"])
+
+    def test_throws_when_already_sent(self):
+        doc = _new_campaign()
+        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sent")
+        doc.reload()
+        with self.assertRaises(frappe.ValidationError):
+            doc.send(recipients=["a@example.com"])
+
+    def test_campaign_status_is_sending_after_successful_claim(self):
+        doc = _new_campaign()
+        with patch("frappe.enqueue"):
+            doc.send(recipients=["a@example.com"])
+        status = frappe.db.get_value("Letters Campaign", doc.name, "status")
+        self.assertEqual(status, "Sending")
+
+
 class TestSendTestEmail(IntegrationTestCase):
     def test_sends_to_session_user(self):
         doc = _new_campaign()

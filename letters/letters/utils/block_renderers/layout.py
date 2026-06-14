@@ -74,8 +74,8 @@ class ContainerRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
         bg            = escape(p.get("background_color", "#f8fafc"))
-        border_color  = escape(p.get("border_color", "#e2e8f0"))
-        border_radius = escape(p.get("border_radius", "12px"))
+        border_color  = escape(p.get("block_border_color") or p.get("border_color", ""))
+        border_radius = escape(p.get("block_border_radius") or p.get("border_radius", "0"))
         layout        = p.get("layout", "column")
         gap           = int(p.get("gap", 12))
         padding       = _padding(p, 16, 16, 16, 16)
@@ -144,11 +144,12 @@ class ContainerRenderer(BlockRenderer):
                 f'{rows}</table>'
             )
 
+        border_style = f"border:1px solid {border_color};" if border_color else ""
+        radius_style = f"border-radius:{border_radius};" if border_radius and border_radius != "0" else ""
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
-            f' style="background-color:{bg};border-radius:{border_radius};">'
-            f'<tr><td style="padding:{padding};border:1px solid {border_color};'
-            f'border-radius:{border_radius};">'
+            f' style="background-color:{bg};{radius_style}">'
+            f'<tr><td style="padding:{padding};{border_style}{radius_style}">'
             f'{inner}'
             f'</td></tr></table>'
         )

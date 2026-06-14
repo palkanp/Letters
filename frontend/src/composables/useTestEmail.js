@@ -4,7 +4,7 @@ import { describeError, stripIds } from "../utils/builderHelpers";
 
 // Sends a single [TEST] copy of the campaign to a chosen address. Prefills the
 // recipient with the logged-in user's email when it looks like one.
-export function useTestEmail(editorStore, { subject, previewText }) {
+export function useTestEmail(editorStore, { subject, previewText, flushSave }) {
   const showTestModal = ref(false);
   const testSending = ref(false);
   // Prefill with the logged-in user's email when it looks like one (it's the
@@ -26,6 +26,7 @@ export function useTestEmail(editorStore, { subject, previewText }) {
       toast.warning("Enter an email address to send the test to.");
       return;
     }
+    if (editorStore.isDirty && flushSave) await flushSave();
     testSending.value = true;
     try {
       const res = await frappe.call({
