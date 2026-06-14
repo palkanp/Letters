@@ -31,7 +31,7 @@ class ButtonRenderer(BlockRenderer):
             f'<tr><td align="{align}" style="padding:{padding};">'
             f'<a href="{url}" style="display:inline-block;padding:{btn_padding};'
             f'background-color:{bg};color:{color};font-family:{font};'
-            f'font-size:{font_size};font-weight:bold;text-decoration:none;border-radius:{radius};">'
+            f'font-size:{font_size};font-weight:500;text-decoration:none;border-radius:{radius};">'
             f'{label}</a>'
             f'</td></tr></table>'
         )
@@ -82,12 +82,12 @@ class LinkListRenderer(BlockRenderer):
             ) if marker else ""
 
             desc_html = (
-                f'<p style="margin:2px 0 0;font-family:{font};font-size:13px;'
-                f'color:{text_color};line-height:1.5;">{description}</p>'
+                f'<p style="margin:5px 0 0;font-family:{font};font-size:13px;'
+                f'color:{text_color};line-height:1.6;">{description}</p>'
             ) if description else ""
 
             rows += (
-                f'<tr><td style="padding:0 0 10px;">'
+                f'<tr><td style="padding:0 0 12px;">'
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
                 f'<tr>'
                 f'{marker_cell}'

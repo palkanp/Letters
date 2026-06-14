@@ -16,3 +16,6 @@ frontend/dist/
 .agents/
 .claude/
 skills-lock.json
+
+# template preview build artifacts (throwaway)
+letters/public/_tpl_preview/

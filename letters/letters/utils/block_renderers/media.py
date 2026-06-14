@@ -58,12 +58,14 @@ class ImageRenderer(BlockRenderer):
 class ImageTextRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p = block.get("props", {})
-        image_url   = _abs_image_src(p.get("image_url", ""))
-        text        = escape(p.get("text", ""))
-        position    = p.get("image_position", "left")
-        img_width   = p.get("image_width", "160px")
-        layout_mode = p.get("layout_mode", "side")
-        font        = font_stack(p, "Arial,sans-serif")
+        image_url     = _abs_image_src(p.get("image_url", ""))
+        text          = escape(p.get("text", ""))
+        heading_text  = escape(p.get("heading", ""))
+        heading_color = escape(p.get("heading_color", "#111827"))
+        position      = p.get("image_position", "left")
+        img_width     = p.get("image_width", "160px")
+        layout_mode   = p.get("layout_mode", "side")
+        font          = font_stack(p, "Arial,sans-serif")
 
         img_px = img_width.replace("px", "") if img_width.endswith("px") else "160"
 
@@ -83,28 +85,32 @@ class ImageTextRenderer(BlockRenderer):
                 f' style="display:inline;border:0;margin-left:{margin_left};'
                 f'margin-right:{margin_right};margin-bottom:8px;" alt="" />'
             ) if image_url else ""
+            heading_html = (
+                f'<p style="margin:0 0 6px;font-family:{font};font-size:16px;'
+                f'font-weight:700;color:{heading_color};line-height:1.3;">{heading_text}</p>'
+            ) if heading_text else ""
             html = (
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
                 f'<tr><td style="padding:{pt}px {pr}px {pb}px {pl}px;">'
                 f'{img_html}'
+                f'{heading_html}'
                 f'<p style="margin:0;font-family:{font};font-size:15px;'
                 f'color:#333333;line-height:1.6;">{text}</p>'
                 f'</td></tr></table>'
             )
         else:
             # Side-by-side (default)
-            gap = 8
-            # Outer padding goes on the edge facing away from the other cell;
-            # the inner gap goes on the edge facing toward the other cell.
+            gap = 16
             if position == "left":
-                img_pad  = f"{pt}px {gap}px {pb}px {pl}px"   # img left: outer-left, gap-right
-                text_pad = f"{pt}px {pr}px {pb}px {gap}px"   # text right: gap-left, outer-right
+                img_pad  = f"{pt}px {gap}px {pb}px {pl}px"
+                text_pad = f"{pt}px {pr}px {pb}px {gap}px"
             else:
-                text_pad = f"{pt}px {gap}px {pb}px {pl}px"   # text left: outer-left, gap-right
-                img_pad  = f"{pt}px {pr}px {pb}px {gap}px"   # img right: gap-left, outer-right
+                text_pad = f"{pt}px {gap}px {pb}px {pl}px"
+                img_pad  = f"{pt}px {pr}px {pb}px {gap}px"
             img_cell = (
                 f'<td width="{img_px}" valign="top" style="padding:{img_pad};">'
-                f'<img src="{image_url}" width="{img_px}" style="display:block;border:0;" alt="" />'
+                f'<img src="{image_url}" width="{img_px}" style="display:block;border:0;'
+                f'border-radius:8px;" alt="" />'
                 f'</td>'
             ) if image_url else (
                 f'<td width="{img_px}" valign="top" style="padding:{img_pad};">'
@@ -113,8 +119,13 @@ class ImageTextRenderer(BlockRenderer):
                 f'padding-top:40px;">Image</div>'
                 f'</td>'
             )
+            heading_html = (
+                f'<p style="margin:0 0 8px;font-family:{font};font-size:16px;'
+                f'font-weight:700;color:{heading_color};line-height:1.3;">{heading_text}</p>'
+            ) if heading_text else ""
             text_cell = (
                 f'<td valign="top" style="padding:{text_pad};">'
+                f'{heading_html}'
                 f'<p style="margin:0;font-family:{font};font-size:15px;'
                 f'color:#333333;line-height:1.6;">{text}</p>'
                 f'</td>'
@@ -180,8 +191,8 @@ class ProductCardRenderer(BlockRenderer):
             f'color:{text_color};line-height:1.5;">{description}</p>'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'<tr>'
-            f'<td style="font-family:{font};font-size:18px;font-weight:700;'
-            f'color:{title_color};">{price}</td>'
+            f'<td style="font-family:{font};font-size:18px;font-weight:400;'
+            f'color:{text_color};">{price}</td>'
             f'<td align="right">{btn_html}</td>'
             f'</tr></table>'
             f'</td></tr></table>'
