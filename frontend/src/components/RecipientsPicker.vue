@@ -108,21 +108,24 @@
             @update:model-value="setFilter(ff.fieldname, $event)"
           />
 
-          <button
+          <Button
             v-if="activeFilters[ff.fieldname] !== undefined && activeFilters[ff.fieldname] !== ''"
-            type="button"
-            class="text-ink-gray-3 hover:text-ink-red-3"
+            variant="ghost"
+            icon="x"
+            size="sm"
+            class="!text-ink-gray-3 hover:!text-ink-red-3"
             @click="clearFilter(ff.fieldname)"
-          ><FeatherIcon name="x" class="w-3.5 h-3.5" /></button>
+          />
         </div>
 
         <div class="flex items-center gap-2 pt-1">
-          <button
-            type="button"
-            class="text-xs text-blue-600 hover:underline"
+          <Button
+            variant="ghost"
+            size="sm"
+            :label="countLoading ? 'Counting…' : 'Preview recipient count'"
             :disabled="countLoading"
             @click="previewCount"
-          >{{ countLoading ? "Counting…" : "Preview recipient count" }}</button>
+          />
           <span v-if="recipientCount !== null" class="text-xs text-ink-gray-6 font-medium">
             → {{ recipientCount }} recipient{{ recipientCount === 1 ? "" : "s" }}
           </span>
@@ -144,7 +147,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
-import { TabButtons, Textarea, Select, DatePicker, TextInput, FeatherIcon } from "frappe-ui";
+import { TabButtons, Textarea, Select, DatePicker, TextInput, FeatherIcon, Button } from "frappe-ui";
 
 const props = defineProps({
   modelValue: { type: Object, default: null }, // current recipient config (or null)

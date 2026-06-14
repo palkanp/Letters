@@ -22,37 +22,32 @@
 
         <div v-else class="grid grid-cols-3 gap-5">
           <!-- Blank tile -->
-          <button
-            type="button"
-            class="bg-surface-base border-outline-gray-2 group text-left rounded-xl border-2 border-dashed hover:border-blue-500 transition-all overflow-hidden focus:outline-none focus:border-blue-500 disabled:opacity-50"
-            :disabled="creating"
-            @click="pick(blankBlocks)"
-          >
-            <div class="bg-surface-gray-2 h-48 flex flex-col items-center justify-center gap-2">
+          <div class="group flex flex-col gap-0 rounded-xl border-2 border-dashed border-outline-gray-2 overflow-hidden transition-all hover:border-blue-500">
+            <div class="relative bg-surface-gray-2 h-48 flex flex-col items-center justify-center gap-2 overflow-hidden">
               <div class="bg-surface-base border-outline-gray-2 w-10 h-10 rounded-full border-2 flex items-center justify-center">
                 <svg class="text-ink-gray-5 w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                 </svg>
               </div>
               <span class="text-ink-gray-5 text-xs">Blank canvas</span>
+              <!-- Hover overlay -->
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Button label="Start blank" :disabled="creating" @click="pick(blankBlocks)" />
+              </div>
             </div>
             <div class="border-outline-gray-2 px-4 py-3 border-t">
               <p class="text-ink-gray-9 text-sm font-semibold">Blank</p>
               <p class="text-ink-gray-5 text-xs mt-0.5">Header and footer only</p>
             </div>
-          </button>
+          </div>
 
           <!-- Template tiles -->
-          <button
+          <div
             v-for="tpl in templates"
             :key="tpl.name"
-            type="button"
-            class="bg-surface-base border-outline-gray-2 group text-left rounded-xl border-2 hover:border-blue-500 transition-all overflow-hidden focus:outline-none focus:border-blue-500 disabled:opacity-50"
-            :disabled="creating"
-            @click="pick(JSON.parse(tpl.blocks_json || '[]'))"
+            class="group flex flex-col gap-0 rounded-xl border-2 border-outline-gray-2 overflow-hidden transition-all hover:border-blue-500"
           >
-            <!-- Preview: scaled iframe of the actual rendered email HTML -->
-            <div class="h-48 bg-white overflow-hidden relative">
+            <div class="relative h-48 bg-white overflow-hidden">
               <iframe
                 v-if="tpl.preview_html"
                 :srcdoc="tpl.preview_html"
@@ -63,12 +58,15 @@
               <div v-else class="w-full h-full bg-surface-gray-2 flex items-center justify-center">
                 <span class="text-xs text-ink-gray-4">Preview unavailable</span>
               </div>
-              <div class="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors" />
+              <!-- Hover overlay -->
+              <div class="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                <Button label="Use template" :disabled="creating" @click="pick(JSON.parse(tpl.blocks_json || '[]'))" />
+              </div>
             </div>
             <div class="border-outline-gray-2 px-4 py-3 border-t">
               <p class="text-ink-gray-9 text-sm font-semibold">{{ tpl.title }}</p>
             </div>
-          </button>
+          </div>
         </div>
       </div>
 
@@ -83,11 +81,9 @@
 
 <script setup>
 import { ref, onMounted } from "vue";
+import { Button } from "frappe-ui";
 
 const props = defineProps({
-  // Async handler that receives the chosen blocks array and does the work
-  // (create a new campaign, or apply to the current one). Picker stays open
-  // and shows a spinner until it resolves.
   submit: { type: Function, required: true },
 });
 

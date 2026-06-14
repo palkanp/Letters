@@ -21,19 +21,18 @@
             <p class="text-ink-gray-9 px-2.5 py-2 text-base font-semibold">Settings</p>
             <p class="text-ink-gray-5 px-2.5 pt-2 pb-1 text-xs font-medium uppercase tracking-wide">Campaign</p>
             <nav class="space-y-0.5">
-              <button
+              <Button
                 v-for="s in sections"
                 :key="s.id"
-                type="button"
-                class="w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm text-left transition-colors"
+                variant="ghost"
+                :icon="s.icon"
+                :label="s.label"
+                class="w-full !justify-start !text-sm"
                 :class="activeTab === s.id
-                  ? 'bg-surface-base text-ink-gray-9 shadow-sm font-medium'
-                  : 'text-ink-gray-5 hover:bg-black/5'"
+                  ? '!bg-surface-base !text-ink-gray-9 shadow-sm !font-medium'
+                  : '!text-ink-gray-5'"
                 @click="activeTab = s.id"
-              >
-                <FeatherIcon :name="s.icon" class="w-4 h-4 flex-shrink-0" />
-                {{ s.label }}
-              </button>
+              />
             </nav>
           </aside>
 
@@ -41,12 +40,7 @@
           <div class="bg-surface-base flex-1 flex flex-col min-w-0">
             <div class="border-outline-gray-2 flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
               <h2 class="text-ink-gray-9 text-base font-semibold">{{ activeSection.label }}</h2>
-              <button
-                type="button"
-                class="w-7 h-7 flex items-center justify-center rounded-md text-ink-gray-5 hover:text-ink-gray-9 hover:bg-surface-gray-2 transition-colors"
-                aria-label="Close settings"
-                @click="close"
-              ><FeatherIcon name="x" class="w-4 h-4" /></button>
+              <Button variant="ghost" icon="x" size="sm" aria-label="Close settings" @click="close" />
             </div>
 
             <div class="flex-1 overflow-y-auto px-6 py-5">
@@ -198,7 +192,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { TextInput, FeatherIcon } from "frappe-ui";
+import { TextInput, FeatherIcon, Button } from "frappe-ui";
 import RecipientsPicker from "./RecipientsPicker.vue";
 
 const props = defineProps({
