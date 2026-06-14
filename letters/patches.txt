@@ -1,2 +1,3 @@
 # patches are applied in order during bench migrate
 # format: letters.patches.patch_module.execute
+letters.patches.v1_remove_autoname_property_setters
