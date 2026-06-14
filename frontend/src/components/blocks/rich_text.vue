@@ -1,6 +1,6 @@
 <template>
   <BlockWrapper :block="block" :index="index">
-    <div :style="paddingStyle">
+    <div :style="{ backgroundColor: block.props.background_color || 'transparent', ...paddingStyle }">
       <!-- frappe-ui TextEditor (TipTap). A bubble menu provides bold/italic/
            underline/link/lists on selection, replacing the old execCommand
            toolbar and contenteditable. Block-level font + alignment styling is
@@ -180,6 +180,10 @@ function onChange(html) {
 .rich-text-content ol li::before {
   content: counter(list-counter) ".";
   margin-right: 0.4em;
+}
+/* Tiptap wraps li content in <p>; make it inline so marker + text stay on one line */
+.rich-text-content li > p {
+  display: inline;
 }
 .rich-text-content a {
   color: #2563eb;

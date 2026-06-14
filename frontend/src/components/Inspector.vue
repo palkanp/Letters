@@ -46,6 +46,15 @@
               <span class="text-xs text-ink-gray-5 w-10 text-right flex-shrink-0 tabular-nums">{{ store.emailWidth }}px</span>
             </div>
           </div>
+          <div class="flex items-center gap-2 py-1">
+            <span class="w-24 shrink-0 text-xs text-ink-gray-5">Background</span>
+            <div class="flex-1 min-w-0">
+              <ColorPicker
+                :model-value="store.canvasBg"
+                @update:model-value="(v) => { store.canvasBg = v; store.markDirty(); }"
+              />
+            </div>
+          </div>
         </div>
       </div>
     </div>
