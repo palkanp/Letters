@@ -1,5 +1,5 @@
 <template>
-  <header class="flex-shrink-0 h-12 bg-white border-b border-outline-gray-1 flex items-center px-4 gap-3 relative">
+  <header class="flex-shrink-0 h-12 bg-surface-base border-b border-outline-gray-1 flex items-center px-4 gap-3 relative">
 
     <!-- Brand + page menu (Frappe Builder-style left dropdown) -->
     <Dropdown :options="menuOptions" placement="bottom-start">

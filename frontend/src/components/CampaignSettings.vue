@@ -26,13 +26,12 @@
                 :key="s.id"
                 variant="ghost"
                 :icon="s.icon"
-                :label="s.label"
                 class="w-full !justify-start !text-sm"
                 :class="activeTab === s.id
                   ? '!bg-surface-base !text-ink-gray-9 shadow-sm !font-medium'
                   : '!text-ink-gray-5'"
                 @click="activeTab = s.id"
-              />
+              >{{ s.label }}</Button>
             </nav>
           </aside>
 
