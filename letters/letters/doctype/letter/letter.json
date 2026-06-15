@@ -40,6 +40,14 @@
       "in_standard_filter": 1
     },
     {
+      "fieldname": "folder",
+      "fieldtype": "Link",
+      "label": "Folder",
+      "options": "Letter Folder",
+      "in_list_view": 0,
+      "in_standard_filter": 1
+    },
+    {
       "fieldname": "scheduled_at",
       "fieldtype": "Datetime",
       "label": "Scheduled At",
