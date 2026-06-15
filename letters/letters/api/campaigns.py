@@ -117,7 +117,7 @@ def get_letters(folder: str | None = None):
     return frappe.get_all(
         "Letter",
         filters=filters,
-        fields=["name", "title", "status", "subject", "modified", "owner", "folder"],
+        fields=["name", "title", "status", "subject", "modified", "creation", "owner", "folder"],
         order_by="modified desc",
         limit=200,
     )

@@ -219,7 +219,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { FeatherIcon } from "frappe-ui";
-import { useDark, useToggle } from "@vueuse/core";
 import { useEditorStore } from "../stores/editor";
 import { injectGoogleFonts } from "../fonts";
 import Inspector from "../components/Inspector.vue";
@@ -243,12 +242,14 @@ import { useTestEmail } from "../composables/useTestEmail";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
 import { formatScheduledAt, collectFontFamilies } from "../utils/builderHelpers";
 
-const props = defineProps({ initialName: { type: String, default: null } });
+const props = defineProps({
+  initialName: { type: String, default: null },
+  isDark: { type: Boolean, default: false },
+  toggleDark: { type: Function, default: () => {} },
+});
 const emit = defineEmits(["close"]);
 
 const editorStore = useEditorStore();
-const isDark = useDark({ attribute: "data-theme", valueDark: "dark", valueLight: "light" });
-const toggleDark = useToggle(isDark);
 const showShortcuts = ref(false);
 
 // ── Campaign document lifecycle (fields, save/send/schedule/duplicate) ─────────

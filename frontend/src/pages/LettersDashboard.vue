@@ -77,9 +77,9 @@
                 class="flex items-center gap-1.5 px-3 py-1.5 text-sm border rounded-md transition-colors"
                 :class="activeStatus ? 'border-outline-gray-4 bg-surface-gray-3 text-ink-gray-9 font-medium' : 'border-outline-gray-1 bg-surface-base text-ink-gray-6 hover:bg-surface-gray-2'"
               >
-                Status
-                <FeatherIcon v-if="activeStatus" name="check" class="w-3 h-3 text-green-600" />
-                <FeatherIcon name="chevron-down" class="w-3 h-3" />
+                {{ activeStatus || "Status" }}
+                <FeatherIcon v-if="activeStatus" name="x" class="w-3 h-3 opacity-60" @click.stop="activeStatus = null" />
+                <FeatherIcon v-else name="chevron-down" class="w-3 h-3" />
               </button>
             </template>
           </Dropdown>
@@ -254,7 +254,7 @@ const creating = ref(false);
 const search = ref("");
 const activeFolder = ref(null);
 const activeStatus = ref(null);
-const sortBy = ref("modified");
+const sortBy = ref("modified_desc");
 const viewMode = ref("grid");
 
 const creatingFolder = ref(false);
@@ -274,9 +274,10 @@ const statusOptions = [
 ];
 
 const sortOptions = [
-  { label: "Last Modified", value: "modified" },
-  { label: "Title A–Z", value: "title" },
-  { label: "Status", value: "status" },
+  { label: "Last Modified", value: "modified_desc" },
+  { label: "Last Created", value: "creation_desc" },
+  { label: "Alphabetically (A–Z)", value: "title_asc" },
+  { label: "Alphabetically (Z–A)", value: "title_desc" },
 ];
 
 const visibleLetters = computed(() => {
@@ -291,9 +292,12 @@ const visibleLetters = computed(() => {
     );
   }
   return [...list].sort((a, b) => {
-    if (sortBy.value === "title") return (a.title || "").localeCompare(b.title || "");
-    if (sortBy.value === "status") return (a.status || "").localeCompare(b.status || "");
-    return (b.modified || "").localeCompare(a.modified || "");
+    switch (sortBy.value) {
+      case "creation_desc": return (b.creation || "").localeCompare(a.creation || "");
+      case "title_asc":     return (a.title || "").localeCompare(b.title || "");
+      case "title_desc":    return (b.title || "").localeCompare(a.title || "");
+      default:              return (b.modified || "").localeCompare(a.modified || "");
+    }
   });
 });
 

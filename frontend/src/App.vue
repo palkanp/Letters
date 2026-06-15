@@ -1,28 +1,36 @@
 <template>
   <FrappeUIProvider>
     <LettersDashboard v-if="!activeLetter" @open-letter="openLetter" />
-    <BuilderPage v-else :initial-name="activeLetter" @close="closeLetter" />
+    <BuilderPage v-else :initial-name="activeLetter" :is-dark="isDark" :toggle-dark="toggleDark" @close="closeLetter" />
   </FrappeUIProvider>
 </template>
 
 <script setup>
 import { ref, onMounted } from "vue";
 import { FrappeUIProvider } from "frappe-ui";
+import { useDark, useToggle } from "@vueuse/core";
 import LettersDashboard from "./pages/LettersDashboard.vue";
 import BuilderPage from "./pages/BuilderPage.vue";
+
+// Single source of truth for theme — initialises on dashboard load too.
+// initialValue "dark" means: if no stored preference and system is not dark,
+// still default to dark.
+const isDark = useDark({
+  attribute: "data-theme",
+  valueDark: "dark",
+  valueLight: "light",
+  initialValue: "dark",
+});
+const toggleDark = useToggle(isDark);
 
 const activeLetter = ref(null);
 
 function getRouteParam() {
   if (typeof frappe !== "undefined" && frappe.get_route) {
     const route = frappe.get_route();
-    // route is ["letter-builder", "<name>"] or ["letter-builder"]
-    if (Array.isArray(route) && route.length >= 2 && route[1]) {
-      return route[1];
-    }
+    if (Array.isArray(route) && route.length >= 2 && route[1]) return route[1];
   }
-  const params = new URLSearchParams(window.location.search);
-  return params.get("name") || null;
+  return new URLSearchParams(window.location.search).get("name") || null;
 }
 
 function openLetter(name) {
