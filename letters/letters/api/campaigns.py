@@ -105,6 +105,21 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
             frappe.throw(str(e))
 
 
+@frappe.whitelist(methods=["GET", "POST"])
+def get_letters(folder: str | None = None):
+    """Return all Letter records for the dashboard, optionally filtered by folder."""
+    filters: dict = {}
+    if folder:
+        filters["folder"] = folder
+    return frappe.get_all(
+        "Letter",
+        filters=filters,
+        fields=["name", "title", "status", "subject", "modified", "owner", "folder"],
+        order_by="modified desc",
+        limit=200,
+    )
+
+
 @frappe.whitelist(methods=["POST"])
 def duplicate_campaign(name: str):
     """Create an exact copy of a campaign as a new Draft."""

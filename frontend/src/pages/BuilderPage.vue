@@ -243,6 +243,9 @@ import { useTestEmail } from "../composables/useTestEmail";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
 import { formatScheduledAt, collectFontFamilies } from "../utils/builderHelpers";
 
+const props = defineProps({ initialName: { type: String, default: null } });
+const emit = defineEmits(["close"]);
+
 const editorStore = useEditorStore();
 const isDark = useDark({ attribute: "data-theme", valueDark: "dark", valueLight: "light" });
 const toggleDark = useToggle(isDark);
@@ -257,7 +260,7 @@ const {
   sendProgress, campaignStatus,
   onTemplateSubmit, saveNow, saveCampaign,
   sendCampaign, scheduleCampaign, duplicateCampaign,
-} = useLetter(editorStore);
+} = useLetter(editorStore, { initialName: props.initialName, onClose: () => emit("close") });
 
 const { openPreview } = usePreview(editorStore, previewText);
 const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore, { flushSave: saveCampaign });
@@ -281,7 +284,7 @@ const menuOptions = computed(() => [
       {
         label: "Back to Letters",
         icon: "arrow-left",
-        onClick: () => (frappe.set_route("List", "Letter")),
+        onClick: () => emit("close"),
       },
     ],
   },

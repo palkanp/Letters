@@ -7,7 +7,7 @@ import { describeError, stripIds } from "../utils/builderHelpers";
 // debounced autosave), and the send / schedule / duplicate actions plus their
 // progress polling. BuilderPage wires the returned state straight into its
 // template; the editor store still owns the block tree itself.
-export function useLetter(editorStore) {
+export function useLetter(editorStore, { initialName = null, onClose = null } = {}) {
   const subject       = ref("");
   const previewText   = ref("");
   // { type, email_group | recipients | (doctype + email_field + filters) }
@@ -94,17 +94,14 @@ export function useLetter(editorStore) {
   }
 
   onMounted(async () => {
-    const initialName = getRouteParam();
-    if (initialName) {
-      await loadCampaign(initialName);
-      // Normalize legacy ?name= URLs to the path-based format on load.
-      setRouteParam(initialName);
-      // A freshly created campaign (e.g. from the Desk form) has no blocks yet —
-      // greet the user with the template picker instead of an empty canvas.
+    // When launched from the dashboard, initialName is passed as a prop.
+    // Otherwise fall back to the Frappe route / legacy query param.
+    const name = initialName || getRouteParam();
+    if (name) {
+      await loadCampaign(name);
+      setRouteParam(name);
       if (!editorStore.blocks.length) showTemplatePicker.value = true;
     } else {
-      // No campaign name in URL — show template picker so the user chooses a
-      // starting point before seeing the canvas.
       showTemplatePicker.value = true;
     }
   });
