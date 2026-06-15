@@ -281,7 +281,7 @@ const menuOptions = computed(() => [
       {
         label: "Back to Letters",
         icon: "arrow-left",
-        onClick: () => (window.location.href = "/app/letters-campaign"),
+        onClick: () => (frappe.set_route("List", "Letter")),
       },
     ],
   },
