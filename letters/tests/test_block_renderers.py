@@ -1001,28 +1001,28 @@ class TestImageTextRendererPadding:
         html = ImageTextRenderer().render(_image_text_block(position="left", pl=40, pr=24))
         tds = html.split("<td")
         img_td = next(t for t in tds if "display:block" in t or "Image</div>" in t or "img.jpg" in t)
-        assert "padding:20px 8px 20px 40px" in img_td, img_td
+        assert "padding:20px 16px 20px 40px" in img_td, img_td
 
     def test_position_left_text_has_outer_right_padding(self):
         # Text on right: text cell's right padding == pr (outer), left == gap (inner)
         html = ImageTextRenderer().render(_image_text_block(position="left", pl=40, pr=24))
         tds = html.split("<td")
         text_td = next(t for t in tds if "Hello" in t)
-        assert "padding:20px 24px 20px 8px" in text_td, text_td
+        assert "padding:20px 24px 20px 16px" in text_td, text_td
 
     def test_position_right_text_has_outer_left_padding(self):
         # Image on right, text on left: text cell's left padding == pl (outer), right == gap
         html = ImageTextRenderer().render(_image_text_block(position="right", pl=40, pr=24))
         tds = html.split("<td")
         text_td = next(t for t in tds if "Hello" in t)
-        assert "padding:20px 8px 20px 40px" in text_td, text_td
+        assert "padding:20px 16px 20px 40px" in text_td, text_td
 
     def test_position_right_img_has_outer_right_padding(self):
         # Image on right: img cell's right padding == pr (outer), left == gap
         html = ImageTextRenderer().render(_image_text_block(position="right", pl=40, pr=24))
         tds = html.split("<td")
         img_td = next(t for t in tds if "img.jpg" in t)
-        assert "padding:20px 24px 20px 8px" in img_td, img_td
+        assert "padding:20px 24px 20px 16px" in img_td, img_td
 
     def test_position_left_column_order(self):
         html = ImageTextRenderer().render(_image_text_block(position="left"))

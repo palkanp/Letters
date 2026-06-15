@@ -5,7 +5,7 @@ import frappe
 
 class AnalyticsMixin:
     def get_analytics(self):
-        frappe.has_permission("Letters Campaign", "read", doc=self, throw=True)
+        frappe.has_permission("Letter", "read", doc=self, throw=True)
         name = self.name
         sends = frappe.get_all(
             "Email Send",
@@ -30,7 +30,7 @@ class AnalyticsMixin:
         )
         unsubscribed = frappe.db.count(
             "Email Unsubscribe",
-            {"reference_doctype": "Letters Campaign", "reference_name": name},
+            {"reference_doctype": "Letter", "reference_name": name},
         )
         status_counts = {}
         for row in frappe.get_all("Email Send Recipient", filters={"parent": latest.name}, fields=["status"]):
@@ -50,7 +50,7 @@ class AnalyticsMixin:
         }
 
     def get_recipients(self, limit=200):
-        frappe.has_permission("Letters Campaign", "read", doc=self, throw=True)
+        frappe.has_permission("Letter", "read", doc=self, throw=True)
         send = frappe.db.get_value(
             "Email Send", {"campaign": self.name}, "name", order_by="creation desc"
         )
@@ -65,7 +65,7 @@ class AnalyticsMixin:
         )
 
     def get_send_progress(self):
-        frappe.has_permission("Letters Campaign", "read", doc=self, throw=True)
+        frappe.has_permission("Letter", "read", doc=self, throw=True)
         name = self.name
         statuses = ["Sending", "Sent", "Failed", "Partial"]
         if not frappe.db.exists("Email Send", {"campaign": name, "status": ["in", statuses]}):

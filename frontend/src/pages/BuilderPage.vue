@@ -1,5 +1,5 @@
 <template>
-  <div class="letters-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
+  <div class="letter-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
     <BuilderToolbar
@@ -24,7 +24,7 @@
 
       <!-- Permanent left sidebar: Layers + Add block -->
       <aside
-        class="flex-shrink-0 bg-white border-r border-outline-gray-1 flex flex-col relative"
+        class="flex-shrink-0 bg-surface-base border-r border-outline-gray-1 flex flex-col relative"
         :style="{ width: leftPanelWidth + 'px' }"
       >
         <!-- Drag handle (right edge) -->
@@ -219,7 +219,6 @@
 <script setup>
 import { ref, computed, watch } from "vue";
 import { FeatherIcon } from "frappe-ui";
-import { useDark, useToggle } from "@vueuse/core";
 import { useEditorStore } from "../stores/editor";
 import { injectGoogleFonts } from "../fonts";
 import Inspector from "../components/Inspector.vue";
@@ -236,16 +235,21 @@ import ScheduleDialog from "../components/dialogs/ScheduleDialog.vue";
 import { useZoom } from "../composables/useZoom";
 import { usePanelResize } from "../composables/usePanelResize";
 import { useBlockPicker } from "../composables/useBlockPicker";
-import { useCampaign } from "../composables/useCampaign";
+import { useLetter } from "../composables/useLetter";
 import { usePreview } from "../composables/usePreview";
 import { useLinkChecker } from "../composables/useLinkChecker";
 import { useTestEmail } from "../composables/useTestEmail";
 import { useKeyboardShortcuts } from "../composables/useKeyboardShortcuts";
 import { formatScheduledAt, collectFontFamilies } from "../utils/builderHelpers";
 
+const props = defineProps({
+  initialName: { type: String, default: null },
+  isDark: { type: Boolean, default: false },
+  toggleDark: { type: Function, default: () => {} },
+});
+const emit = defineEmits(["close"]);
+
 const editorStore = useEditorStore();
-const isDark = useDark({ attribute: "data-theme", valueDark: "dark", valueLight: "light" });
-const toggleDark = useToggle(isDark);
 const showShortcuts = ref(false);
 
 // ── Campaign document lifecycle (fields, save/send/schedule/duplicate) ─────────
@@ -257,7 +261,7 @@ const {
   sendProgress, campaignStatus,
   onTemplateSubmit, saveNow, saveCampaign,
   sendCampaign, scheduleCampaign, duplicateCampaign,
-} = useCampaign(editorStore);
+} = useLetter(editorStore, { initialName: props.initialName, onClose: () => emit("close") });
 
 const { openPreview } = usePreview(editorStore, previewText);
 const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore, { flushSave: saveCampaign });
@@ -281,7 +285,7 @@ const menuOptions = computed(() => [
       {
         label: "Back to Letters",
         icon: "arrow-left",
-        onClick: () => (window.location.href = "/app/letters-campaign"),
+        onClick: () => emit("close"),
       },
     ],
   },
@@ -307,8 +311,8 @@ const menuOptions = computed(() => [
       },
       {
         label: "Toggle theme",
-        icon: isDark.value ? "sun" : "moon",
-        onClick: () => toggleDark(),
+        icon: props.isDark ? "sun" : "moon",
+        onClick: () => props.toggleDark(),
       },
     ],
   },

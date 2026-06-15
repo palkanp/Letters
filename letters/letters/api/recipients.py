@@ -220,7 +220,7 @@ def _suppressed_emails():
     rows = frappe.get_all(
         "Email Unsubscribe",
         or_filters=[
-            {"reference_doctype": "Letters Campaign"},
+            {"reference_doctype": "Letter"},
             {"global_unsubscribe": 1},
         ],
         pluck="email",

@@ -22,8 +22,8 @@ COMMIT_EVERY = 100
 def send_test(blocks: str | None = None, subject: str | None = None, preview_text: str | None = None, name: str | None = None, recipient: str | None = None, email_width: int | None = None):
     """Send a test email to the given recipient (defaults to the logged-in user)."""
     if name and not blocks:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+        doc = frappe.get_doc("Letter", name)
+        frappe.has_permission("Letter", "read", doc=doc, throw=True)
         return doc.send_test_email(
             recipient=recipient,
             subject=subject,
@@ -66,7 +66,7 @@ def track_open(recipient_email: str | None = None, reference_name: str | None = 
 
     try:
         if frappe.in_test or verify_request():
-            if reference_doctype == "Letters Campaign" and reference_name and recipient_email:
+            if reference_doctype == "Letter" and reference_name and recipient_email:
                 _record_open(reference_name, recipient_email)
     except Exception:
         frappe.log_error(frappe.get_traceback(), "Letters track_open error")
@@ -77,32 +77,32 @@ def track_open(recipient_email: str | None = None, reference_name: str | None = 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_campaign_analytics(name: str):
     """Open-rate analytics for a campaign, aggregated over its recipient rows."""
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "read", doc=doc, throw=True)
     return doc.get_analytics()
 
 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_campaign_recipients(name: str, limit: int = 200):
     """Return the list of recipients for the most recent send of a campaign."""
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "read", doc=doc, throw=True)
     return doc.get_recipients(limit=limit)
 
 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_send_progress(name: str):
     """Return live send progress for a campaign (polled from the frontend)."""
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "read", doc=doc, throw=True)
     return doc.get_send_progress()
 
 
 @frappe.whitelist(methods=["POST"])
 def schedule_campaign(name: str, scheduled_at: str):
     """Mark a campaign to be sent at a future datetime (ISO-8601 string, server timezone)."""
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "write", doc=doc, throw=True)
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "write", doc=doc, throw=True)
     return doc.schedule(scheduled_at)
 
 
@@ -116,8 +116,12 @@ def send_campaign(name: str, recipients: str | None = None, email_group: str | N
       - recipients:     JSON string or list of email addresses
       - doctype_config: JSON string/dict with keys: doctype, email_field, filters
     """
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "write", doc=doc, throw=True)
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "write", doc=doc, throw=True)
+    if doc.status == "Sent":
+        frappe.throw(_("This letter has already been sent."), exc=frappe.ValidationError)
+    if doc.status == "Sending":
+        frappe.throw(_("This letter is currently sending."), exc=frappe.ValidationError)
     return doc.send(email_group=email_group, recipients=recipients, doctype_config=doctype_config)
 
 
@@ -126,13 +130,13 @@ def process_scheduled_sends():
     from frappe.utils import now_datetime
 
     due = frappe.get_all(
-        "Letters Campaign",
+        "Letter",
         filters={"status": "Scheduled", "scheduled_at": ["<=", now_datetime()]},
         fields=["name"],
     )
     for row in due:
         try:
-            campaign = frappe.qb.DocType("Letters Campaign")
+            campaign = frappe.qb.DocType("Letter")
             (
                 frappe.qb.update(campaign)
                 .set(campaign.status, "Draft")
@@ -142,7 +146,7 @@ def process_scheduled_sends():
             frappe.db.commit()
             if not claimed:
                 continue
-            campaign_owner = frappe.db.get_value("Letters Campaign", row.name, "owner")
+            campaign_owner = frappe.db.get_value("Letter", row.name, "owner")
             frappe.set_user(campaign_owner or frappe.session.user)
             try:
                 send_campaign(row.name)
@@ -151,7 +155,7 @@ def process_scheduled_sends():
         except Exception:
             frappe.log_error(frappe.get_traceback(), f"Letters scheduled send error: {row.name}")
             try:
-                frappe.db.set_value("Letters Campaign", row.name, "status", "Failed")
+                frappe.db.set_value("Letter", row.name, "status", "Failed")
                 frappe.db.commit()
             except Exception:
                 frappe.log_error(frappe.get_traceback(), f"Letters scheduled send cleanup error: {row.name}")
@@ -241,7 +245,7 @@ def _execute_send(send_doc_name, campaign_name):
 
         # Fall back to live campaign for sends queued before snapshot was introduced
         if not blocks_json:
-            doc         = frappe.get_doc("Letters Campaign", campaign_name)
+            doc         = frappe.get_doc("Letter", campaign_name)
             blocks_json = doc.blocks_json
             subject     = subject or doc.subject
             preview_text = preview_text or doc.preview_text or ""
@@ -263,7 +267,7 @@ def _execute_send(send_doc_name, campaign_name):
                     subject=subject,
                     message=html,
                     now=False,
-                    reference_doctype="Letters Campaign",
+                    reference_doctype="Letter",
                     reference_name=campaign_name,
                     email_read_tracker_url="/api/method/letters.letters.api.track_open",
                 )
@@ -299,7 +303,7 @@ def _execute_send(send_doc_name, campaign_name):
             update_modified=False,
         )
         frappe.db.set_value(
-            "Letters Campaign", campaign_name, "status", campaign_status,
+            "Letter", campaign_name, "status", campaign_status,
             update_modified=False,
         )
         frappe.db.commit()
@@ -308,7 +312,7 @@ def _execute_send(send_doc_name, campaign_name):
         frappe.log_error(frappe.get_traceback(), "Letters _execute_send error")
         try:
             frappe.db.set_value("Email Send", send_doc_name, "status", "Failed")
-            frappe.db.set_value("Letters Campaign", campaign_name, "status", "Failed")
+            frappe.db.set_value("Letter", campaign_name, "status", "Failed")
             recipient = frappe.qb.DocType("Email Send Recipient")
             (
                 frappe.qb.update(recipient)

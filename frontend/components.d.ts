@@ -32,6 +32,8 @@ declare module 'vue' {
     ImageUploader: typeof import('./src/components/ImageUploader.vue')['default']
     Inspector: typeof import('./src/components/Inspector.vue')['default']
     LayersPanel: typeof import('./src/components/LayersPanel.vue')['default']
+    LetterCard: typeof import('./src/components/LetterCard.vue')['default']
+    LetterThumbnail: typeof import('./src/components/LetterThumbnail.vue')['default']
     Link_list: typeof import('./src/components/blocks/link_list.vue')['default']
     LinkCheckerDialog: typeof import('./src/components/dialogs/LinkCheckerDialog.vue')['default']
     Product_card: typeof import('./src/components/blocks/product_card.vue')['default']

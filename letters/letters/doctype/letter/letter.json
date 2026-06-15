@@ -1,5 +1,5 @@
 {
-  "name": "Letters Campaign",
+  "name": "Letter",
   "module": "Letters",
   "doctype": "DocType",
   "autoname": "hash",
@@ -37,6 +37,14 @@
       "options": "Draft\nScheduled\nSending\nSent\nPartial\nFailed",
       "default": "Draft",
       "in_list_view": 1,
+      "in_standard_filter": 1
+    },
+    {
+      "fieldname": "folder",
+      "fieldtype": "Link",
+      "label": "Folder",
+      "options": "Letter Folder",
+      "in_list_view": 0,
       "in_standard_filter": 1
     },
     {

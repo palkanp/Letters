@@ -1,8 +1,8 @@
-// Client-side hooks for the Letters Campaign doctype.
+// Client-side hooks for the Letter doctype.
 // Adds a "Duplicate" action on the standard list view so users can
 // copy a campaign without opening the builder first.
 
-frappe.listview_settings["Letters Campaign"] = {
+frappe.listview_settings["Letter"] = {
   add_fields: ["status", "subject"],
 
   get_indicator(doc) {
@@ -22,7 +22,7 @@ frappe.listview_settings["Letters Campaign"] = {
     get_label() { return __("Open"); },
     get_description(doc) { return __("Open in Letters builder"); },
     action(doc) {
-      frappe.set_route("letters-builder", doc.name);
+      frappe.set_route("letter-builder", doc.name);
     },
   },
 

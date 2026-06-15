@@ -7,7 +7,7 @@ import { describeError, stripIds } from "../utils/builderHelpers";
 // debounced autosave), and the send / schedule / duplicate actions plus their
 // progress polling. BuilderPage wires the returned state straight into its
 // template; the editor store still owns the block tree itself.
-export function useCampaign(editorStore) {
+export function useLetter(editorStore, { initialName = null, onClose = null } = {}) {
   const subject       = ref("");
   const previewText   = ref("");
   // { type, email_group | recipients | (doctype + email_field + filters) }
@@ -73,7 +73,7 @@ export function useCampaign(editorStore) {
   });
 
   // ── Load ────────────────────────────────────────────────────────────────────
-  // Read campaign name from the Frappe route: /app/letters-builder/<name>
+  // Read campaign name from the Frappe route: /app/letter-builder/<name>
   // Fall back to legacy ?name= query param so old bookmarks still work.
   function getRouteParam() {
     if (window.frappe?.get_route) {
@@ -85,7 +85,7 @@ export function useCampaign(editorStore) {
 
   function setRouteParam(name) {
     if (window.frappe?.set_route) {
-      frappe.set_route("letters-builder", name);
+      frappe.set_route("letter-builder", name);
     } else {
       const url = new URL(window.location.href);
       url.searchParams.set("name", name);
@@ -94,17 +94,14 @@ export function useCampaign(editorStore) {
   }
 
   onMounted(async () => {
-    const initialName = getRouteParam();
-    if (initialName) {
-      await loadCampaign(initialName);
-      // Normalize legacy ?name= URLs to the path-based format on load.
-      setRouteParam(initialName);
-      // A freshly created campaign (e.g. from the Desk form) has no blocks yet —
-      // greet the user with the template picker instead of an empty canvas.
+    // When launched from the dashboard, initialName is passed as a prop.
+    // Otherwise fall back to the Frappe route / legacy query param.
+    const name = initialName || getRouteParam();
+    if (name) {
+      await loadCampaign(name);
+      setRouteParam(name);
       if (!editorStore.blocks.length) showTemplatePicker.value = true;
     } else {
-      // No campaign name in URL — show template picker so the user chooses a
-      // starting point before seeing the canvas.
       showTemplatePicker.value = true;
     }
   });
@@ -120,7 +117,7 @@ export function useCampaign(editorStore) {
       subject.value         = doc.subject || "";
       previewText.value     = doc.preview_text || "";
       recipientConfig.value = doc.recipient_config || null;
-      document.title = (doc.title || "Untitled Campaign") + " · Letters";
+      document.title = (doc.title || "Untitled Letter") + " · Letters";
       // Allow one Vue flush cycle before re-enabling dirty tracking
       await Promise.resolve();
     } catch (e) {
@@ -147,7 +144,7 @@ export function useCampaign(editorStore) {
       method: "letters.letters.api.save_campaign",
       args: {
         name: null,
-        title: "Untitled Campaign",
+        title: "Untitled Letter",
         subject: "",
         preview_text: "",
         email_width: 600,
@@ -174,7 +171,7 @@ export function useCampaign(editorStore) {
         method: "letters.letters.api.save_campaign",
         args: {
           name:         editorStore.campaignDoc?.name || null,
-          title:        editorStore.campaignName || "Untitled Campaign",
+          title:        editorStore.campaignName || "Untitled Letter",
           subject:      subject.value,
           preview_text: previewText.value,
           email_width:        editorStore.emailWidth,
@@ -189,7 +186,7 @@ export function useCampaign(editorStore) {
       setRouteParam(saved.name);
       editorStore.clearDirty();
       // Keep browser tab title in sync with the campaign name
-      document.title = (editorStore.campaignName || "Untitled Campaign") + " · Letters";
+      document.title = (editorStore.campaignName || "Untitled Letter") + " · Letters";
       // Brief "Saved" confirmation in the toolbar
       clearTimeout(_savedFlashTimer);
       savedFlash.value = true;

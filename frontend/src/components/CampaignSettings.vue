@@ -21,18 +21,18 @@
             <p class="text-ink-gray-9 px-2.5 py-2 text-base font-semibold">Settings</p>
             <p class="text-ink-gray-5 px-2.5 pt-2 pb-1 text-xs font-medium uppercase tracking-wide">Campaign</p>
             <nav class="space-y-0.5">
-              <Button
+              <button
                 v-for="s in sections"
                 :key="s.id"
-                variant="ghost"
-                :icon="s.icon"
-                :label="s.label"
-                class="w-full !justify-start !text-sm"
+                class="flex items-center gap-2 w-full px-2.5 py-1.5 rounded text-sm transition-colors"
                 :class="activeTab === s.id
-                  ? '!bg-surface-base !text-ink-gray-9 shadow-sm !font-medium'
-                  : '!text-ink-gray-5'"
+                  ? 'bg-surface-base text-ink-gray-9 shadow-sm font-medium'
+                  : 'text-ink-gray-5 hover:bg-surface-gray-3'"
                 @click="activeTab = s.id"
-              />
+              >
+                <FeatherIcon :name="s.icon" class="w-4 h-4 flex-shrink-0" />
+                {{ s.label }}
+              </button>
             </nav>
           </aside>
 

@@ -6,7 +6,7 @@ from ._content import ContentMixin
 from ._sending import SendingMixin
 
 
-class LettersCampaign(ContentMixin, SendingMixin, AnalyticsMixin, Document):
+class Letter(ContentMixin, SendingMixin, AnalyticsMixin, Document):
     def validate(self):
         if self.is_new():
             return

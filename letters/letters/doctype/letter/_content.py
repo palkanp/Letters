@@ -8,7 +8,7 @@ from frappe import _
 
 class ContentMixin:
     def as_builder_dict(self):
-        frappe.has_permission("Letters Campaign", "read", doc=self, throw=True)
+        frappe.has_permission("Letter", "read", doc=self, throw=True)
         from letters.letters.api.recipients import _load_recipient_config
 
         return {
@@ -33,10 +33,10 @@ class ContentMixin:
         return compiler.compile()
 
     def duplicate(self):
-        frappe.has_permission("Letters Campaign", "create", throw=True)
+        frappe.has_permission("Letter", "create", throw=True)
         new_doc = frappe.get_doc({
-            "doctype": "Letters Campaign",
-            "title": _unique_campaign_title(f"Copy of {self.title}"),
+            "doctype": "Letter",
+            "title": _unique_letter_title(f"Copy of {self.title}"),
             "subject": self.subject or "",
             "preview_text": self.preview_text or "",
             "status": "Draft",
@@ -48,10 +48,10 @@ class ContentMixin:
         return {"name": new_doc.name, "title": new_doc.title}
 
 
-def _unique_campaign_title(base):
-    """Return a title that doesn't collide with an existing Letters Campaign title."""
-    base = (base or "Untitled Campaign").strip() or "Untitled Campaign"
-    existing = frappe.db.get_all("Letters Campaign", filters={"title": ["like", f"{base}%"]}, pluck="title")
+def _unique_letter_title(base):
+    """Return a title that doesn't collide with an existing Letter title."""
+    base = (base or "Untitled Letter").strip() or "Untitled Letter"
+    existing = frappe.db.get_all("Letter", filters={"title": ["like", f"{base}%"]}, pluck="title")
     if base not in existing:
         return base
     n = 1

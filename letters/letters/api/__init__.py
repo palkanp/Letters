@@ -20,10 +20,11 @@ from .recipients import (
 from .campaigns import (
     get_campaign,
     save_campaign,
+    get_letters,
     get_templates,
     render_preview,
     duplicate_campaign,
-    _unique_campaign_title,
+    _unique_letter_title,
 )
 from .sending import (
     MAX_RECIPIENTS,

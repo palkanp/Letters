@@ -20,8 +20,8 @@ export default defineConfig({
       input: "src/main.js",
       output: {
         format: "iife",
-        entryFileNames: "letters-builder.js",
-        assetFileNames: "letters-builder.[ext]",
+        entryFileNames: "letter-builder.js",
+        assetFileNames: "letter-builder.[ext]",
         // IIFE bundles everything into one file — no separate chunk imports
         inlineDynamicImports: true,
       },

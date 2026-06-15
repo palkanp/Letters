@@ -14,13 +14,13 @@ function mountApp(target) {
 }
 
 // Inside the Frappe Desk this bundle is injected via the `page_js` hook.
-// Frappe creates `frappe.pages["letters-builder"]` and calls `on_page_load(wrapper)`
+// Frappe creates `frappe.pages["letter-builder"]` and calls `on_page_load(wrapper)`
 // once, when the page is first shown. That is the correct moment to mount Vue —
 // the wrapper element is guaranteed to be in the DOM. We must NOT use vue-router
-// here: the desk URL is `/app/letters-builder`, which no SPA route would match.
+// here: the desk URL is `/app/letter-builder`, which no SPA route would match.
 if (typeof window !== "undefined" && window.frappe && window.frappe.pages) {
-  const page = (frappe.pages["letters-builder"] =
-    frappe.pages["letters-builder"] || {});
+  const page = (frappe.pages["letter-builder"] =
+    frappe.pages["letter-builder"] || {});
 
   page.on_page_load = function (wrapper) {
     // frappe-ui's request/upload layer reads window.csrf_token, but Desk only
@@ -30,11 +30,11 @@ if (typeof window !== "undefined" && window.frappe && window.frappe.pages) {
       window.csrf_token = window.frappe.csrf_token;
     }
 
-    // Reuse the div from letters_builder.html if present, otherwise create one.
-    let el = wrapper.querySelector("#letters-builder");
+    // Reuse the div from letter_builder.html if present, otherwise create one.
+    let el = wrapper.querySelector("#letter-builder");
     if (!el) {
       el = document.createElement("div");
-      el.id = "letters-builder";
+      el.id = "letter-builder";
       wrapper.appendChild(el);
     }
     mountApp(el);
@@ -43,5 +43,5 @@ if (typeof window !== "undefined" && window.frappe && window.frappe.pages) {
 
 } else {
   // Standalone dev (vite dev server / index.html)
-  mountApp("#letters-builder");
+  mountApp("#letter-builder");
 }
