@@ -40,7 +40,7 @@
         @click="emit('open-settings')"
       >
         <span class="truncate text-sm font-medium text-ink-gray-8">
-          {{ campaignName || "Untitled Campaign" }}
+          {{ campaignName || "Untitled Letter" }}
         </span>
       </button>
       <Transition name="fade">

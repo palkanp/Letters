@@ -1,10 +1,10 @@
-frappe.ui.form.on("Letters Campaign", {
+frappe.ui.form.on("Letter", {
     refresh(frm) {
         // Builder entry point (restored): available on new and saved campaigns.
         frm.add_custom_button(__("Open in Letters Builder"), () => {
             const path = frm.is_new()
-                ? "/app/letters-builder"
-                : `/app/letters-builder?name=${encodeURIComponent(frm.doc.name)}`;
+                ? "/app/letter-builder"
+                : `/app/letter-builder?name=${encodeURIComponent(frm.doc.name)}`;
             window.open(path, "_blank");
         });
 
@@ -25,10 +25,10 @@ frappe.ui.form.on("Letters Campaign", {
 
 // Override the list view "New" button to go straight to the builder
 // (which shows the template picker instead of the blank Frappe form).
-frappe.listview_settings["Letters Campaign"] = {
+frappe.listview_settings["Letter"] = {
     onload(listview) {
         listview.page.set_primary_action(__("New Campaign"), () => {
-            window.open("/app/letters-builder", "_blank");
+            window.open("/app/letter-builder", "_blank");
         }, "plus");
     },
 };

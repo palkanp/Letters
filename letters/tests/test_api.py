@@ -81,9 +81,9 @@ import frappe  # noqa
 # Import mixin classes so we can bind real business-logic methods onto mock docs.
 # Frappe is already stubbed above so module-level `import frappe` in each mixin works.
 import types as _types
-from letters.letters.doctype.letters_campaign._content import ContentMixin
-from letters.letters.doctype.letters_campaign._sending import SendingMixin
-from letters.letters.doctype.letters_campaign._analytics import AnalyticsMixin
+from letters.letters.doctype.letter._content import ContentMixin
+from letters.letters.doctype.letter._sending import SendingMixin
+from letters.letters.doctype.letter._analytics import AnalyticsMixin
 
 
 # ---------------------------------------------------------------------------
@@ -174,7 +174,7 @@ class TestGetCampaign:
         api_module.get_campaign("CAMP-001")
 
         frappe_stub.has_permission.assert_called_with(
-            "Letters Campaign", "read", doc=doc, throw=True
+            "Letter", "read", doc=doc, throw=True
         )
 
     def test_returns_expected_fields(self):
@@ -230,7 +230,7 @@ class TestSendCampaignPermission:
         doc = _campaign_doc()
         self._run_send(doc)
         frappe_stub.has_permission.assert_called_with(
-            "Letters Campaign", "write", doc=doc, throw=True
+            "Letter", "write", doc=doc, throw=True
         )
 
     def test_permission_failure_propagates(self):
@@ -528,7 +528,7 @@ class TestExecuteSend:
         send_doc.recipients = recipients if recipients is not None else [_recipient("a@b.com")]
 
         def get_doc_se(doctype, name=None):
-            return campaign if doctype == "Letters Campaign" else send_doc
+            return campaign if doctype == "Letter" else send_doc
 
         frappe_stub.get_doc.side_effect = get_doc_se
         return campaign, send_doc
@@ -572,7 +572,7 @@ class TestExecuteSend:
         self._docs(recipients=[_recipient("a@b.com")])
         self._run()
         frappe_stub.db.set_value.assert_any_call(
-            "Letters Campaign", "CAMP-001", "status", "Sent",
+            "Letter", "CAMP-001", "status", "Sent",
             update_modified=False,
         )
 
@@ -596,7 +596,7 @@ class TestExecuteSend:
             update_modified=False,
         )
         frappe_stub.db.set_value.assert_any_call(
-            "Letters Campaign", "CAMP-001", "status", "Partial",
+            "Letter", "CAMP-001", "status", "Partial",
             update_modified=False,
         )
         assert rows[0].status == "Sent"
@@ -613,7 +613,7 @@ class TestExecuteSend:
             update_modified=False,
         )
         frappe_stub.db.set_value.assert_any_call(
-            "Letters Campaign", "CAMP-001", "status", "Failed",
+            "Letter", "CAMP-001", "status", "Failed",
             update_modified=False,
         )
 
@@ -630,7 +630,7 @@ class TestExecuteSend:
         with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
             C.return_value.compile.side_effect = ValueError("Unknown block type")
             api_module._execute_send("SD-001", "CAMP-001")
-        frappe_stub.db.set_value.assert_any_call("Letters Campaign", "CAMP-001", "status", "Failed")
+        frappe_stub.db.set_value.assert_any_call("Letter", "CAMP-001", "status", "Failed")
         frappe_stub.db.set_value.assert_any_call("Email Send", "SD-001", "status", "Failed")
 
     @pytest.mark.parametrize("send_mode", ["direct", "email_group"])
@@ -640,7 +640,7 @@ class TestExecuteSend:
         self._docs(recipients=[_recipient("a@b.com")], send_mode=send_mode)
         self._run()
         kw = frappe_stub.sendmail.call_args.kwargs
-        assert kw["reference_doctype"] == "Letters Campaign"
+        assert kw["reference_doctype"] == "Letter"
         assert kw["reference_name"] == "CAMP-001"
 
 
@@ -689,7 +689,7 @@ class TestEmailReadTracker:
         send_doc.send_mode = "direct"
         send_doc.email_group = None
         send_doc.recipients = [_recipient("a@b.com")]
-        frappe_stub.get_doc.side_effect = lambda dt, n=None: campaign if dt == "Letters Campaign" else send_doc
+        frappe_stub.get_doc.side_effect = lambda dt, n=None: campaign if dt == "Letter" else send_doc
         with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
             C.return_value.compile.return_value = "<html></html>"
             api_module._execute_send("SD-001", "CAMP-001")
@@ -724,7 +724,7 @@ class TestCampaignAnalytics:
         frappe_stub.get_doc.return_value = doc
         GETALL["Email Send"] = []
         api_module.get_campaign_analytics("CAMP-001")
-        frappe_stub.has_permission.assert_called_with("Letters Campaign", "read", doc=doc, throw=True)
+        frappe_stub.has_permission.assert_called_with("Letter", "read", doc=doc, throw=True)
 
 
 # ── send_campaign — saved recipient_config fallback (C1 / H1) ──────────────────
@@ -849,7 +849,7 @@ class TestProcessScheduledSends:
         """A due campaign whose send can't start (e.g. no saved audience) is
         marked Failed, not left silently reverted to Draft."""
         import datetime
-        GETALL["Letters Campaign"] = [FrappeDict(name="CAMP-DUE")]
+        GETALL["Letter"] = [FrappeDict(name="CAMP-DUE")]
         doc = _campaign_doc(name="CAMP-DUE")
         doc.recipient_config = ""  # send_campaign will raise
         frappe_stub.get_doc.return_value = doc
@@ -859,14 +859,14 @@ class TestProcessScheduledSends:
             api_module.process_scheduled_sends()
 
         frappe_stub.db.set_value.assert_any_call(
-            "Letters Campaign", "CAMP-DUE", "status", "Failed"
+            "Letter", "CAMP-DUE", "status", "Failed"
         )
 
     def test_skips_campaign_when_atomic_claim_fails(self):
         """If another worker already claimed the campaign (sql returns falsy),
         send_campaign must not be called for that row."""
         import datetime
-        GETALL["Letters Campaign"] = [FrappeDict(name="CAMP-RACE")]
+        GETALL["Letter"] = [FrappeDict(name="CAMP-RACE")]
         frappe_stub.db._cursor.rowcount = 0  # claim lost
         frappe_stub.utils.now_datetime = lambda: datetime.datetime(2099, 1, 1)
 
@@ -988,7 +988,7 @@ class TestSaveCampaign:
     def test_creates_new_campaign_when_no_name(self):
         new_doc = MagicMock()
         new_doc.name = "CAMP-NEW"
-        new_doc.title = "Untitled Campaign"
+        new_doc.title = "Untitled Letter"
         new_doc.status = "Draft"
         frappe_stub.get_doc.return_value = new_doc
         result = api_module.save_campaign(title="Brand New", blocks=json.dumps([]))

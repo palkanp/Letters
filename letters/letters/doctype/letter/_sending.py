@@ -9,7 +9,7 @@ from frappe import _
 class SendingMixin:
     def send_test_email(self, recipient=None, subject=None, preview_text=None, email_width=None):
         """Compile blocks and send a test email to `recipient` (defaults to session user)."""
-        frappe.has_permission("Letters Campaign", "read", doc=self, throw=True)
+        frappe.has_permission("Letter", "read", doc=self, throw=True)
         html = self.render_preview_html(
             preview_text=preview_text if preview_text is not None else self.preview_text,
             email_width=email_width,
@@ -34,7 +34,7 @@ class SendingMixin:
 
     def schedule(self, scheduled_at: str):
         """Mark this campaign to be sent at `scheduled_at` (ISO-8601, server timezone)."""
-        frappe.has_permission("Letters Campaign", "write", doc=self, throw=True)
+        frappe.has_permission("Letter", "write", doc=self, throw=True)
         from letters.letters.api.recipients import _recipient_args_from_config
 
         if self.status in ("Sent", "Sending"):
@@ -70,7 +70,7 @@ class SendingMixin:
         The per-recipient loop is enqueued as a background job so large lists
         don't block the web request.
         """
-        frappe.has_permission("Letters Campaign", "write", doc=self, throw=True)
+        frappe.has_permission("Letter", "write", doc=self, throw=True)
         from letters.letters.api.recipients import (
             _recipient_args_from_config, _suppressed_emails, _valid_emails,
         )
@@ -97,7 +97,7 @@ class SendingMixin:
         # Atomically claim the send: transition Draft/Scheduled → Sending only if
         # the campaign is still in a sendable state. rowcount==0 means another
         # request beat us to it (race condition) or the campaign is already sent.
-        campaign_qb = frappe.qb.DocType("Letters Campaign")
+        campaign_qb = frappe.qb.DocType("Letter")
         (
             frappe.qb.update(campaign_qb)
             .set(campaign_qb.status, "Sending")

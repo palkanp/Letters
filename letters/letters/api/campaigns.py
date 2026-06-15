@@ -6,13 +6,13 @@ import frappe
 from frappe import _
 
 from .recipients import _normalize_recipient_config
-from ..doctype.letters_campaign._content import _unique_campaign_title
+from ..doctype.letter._content import _unique_letter_title
 
 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_campaign(name: str):
-    doc = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "read", doc=doc, throw=True)
     return doc.as_builder_dict()
 
 
@@ -22,8 +22,8 @@ def save_campaign(name: str | None = None, title: str | None = None, subject: st
     normalized_config = _normalize_recipient_config(recipient_config)
 
     if name:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "write", doc=doc, throw=True)
+        doc = frappe.get_doc("Letter", name)
+        frappe.has_permission("Letter", "write", doc=doc, throw=True)
         if title is not None:
             doc.title = title
         if subject is not None:
@@ -42,10 +42,10 @@ def save_campaign(name: str | None = None, title: str | None = None, subject: st
         doc.blocks_json = blocks_json
         doc.save()
     else:
-        frappe.has_permission("Letters Campaign", "create", throw=True)
+        frappe.has_permission("Letter", "create", throw=True)
         doc = frappe.get_doc({
-            "doctype": "Letters Campaign",
-            "title": _unique_campaign_title(title or "Untitled Campaign"),
+            "doctype": "Letter",
+            "title": _unique_letter_title(title or "Untitled Letter"),
             "subject": subject or "",
             "preview_text": preview_text or "",
             "status": "Draft",
@@ -87,8 +87,8 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
     from letters.letters.utils.email_compiler import EmailCompiler
 
     if name and not blocks:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+        doc = frappe.get_doc("Letter", name)
+        frappe.has_permission("Letter", "read", doc=doc, throw=True)
         try:
             html = doc.render_preview_html(preview_text=preview_text, email_width=email_width)
             return {"html": html}
@@ -108,6 +108,6 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
 @frappe.whitelist(methods=["POST"])
 def duplicate_campaign(name: str):
     """Create an exact copy of a campaign as a new Draft."""
-    original = frappe.get_doc("Letters Campaign", name)
-    frappe.has_permission("Letters Campaign", "read", doc=original, throw=True)
+    original = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "read", doc=original, throw=True)
     return original.duplicate()

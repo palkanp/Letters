@@ -14,7 +14,7 @@ from unittest.mock import patch
 import frappe
 from frappe.tests import IntegrationTestCase
 
-from letters.letters.doctype.letters_campaign._content import _unique_campaign_title
+from letters.letters.doctype.letter._content import _unique_letter_title
 
 
 # ---------------------------------------------------------------------------
@@ -46,7 +46,7 @@ class LettersTestCase(IntegrationTestCase):
     def new_campaign(self, **kwargs):
         title = f"Test Campaign {frappe.generate_hash(length=8)}"
         doc = frappe.get_doc({
-            "doctype": "Letters Campaign",
+            "doctype": "Letter",
             "title": kwargs.get("title", title),
             "subject": kwargs.get("subject", "Test Subject"),
             "preview_text": kwargs.get("preview_text", ""),
@@ -56,7 +56,7 @@ class LettersTestCase(IntegrationTestCase):
             "recipient_config": kwargs.get("recipient_config", SAMPLE_RECIPIENT_CONFIG),
         })
         doc.insert(ignore_permissions=True)
-        self._created.append(("Letters Campaign", doc.name))
+        self._created.append(("Letter", doc.name))
         return doc
 
     def new_email_send(self, campaign_name, status="Sent", recipients=None):
@@ -163,31 +163,31 @@ class TestDuplicate(LettersTestCase):
     def test_creates_new_doc(self):
         original = self.new_campaign()
         result = original.duplicate()
-        self._created.append(("Letters Campaign", result["name"]))
+        self._created.append(("Letter", result["name"]))
         self.assertIn("name", result)
-        self.assertTrue(frappe.db.exists("Letters Campaign", result["name"]))
+        self.assertTrue(frappe.db.exists("Letter", result["name"]))
 
     def test_new_title_prefixed_with_copy_of(self):
         original = self.new_campaign()
         result = original.duplicate()
-        self._created.append(("Letters Campaign", result["name"]))
+        self._created.append(("Letter", result["name"]))
         self.assertIn("Copy of", result["title"])
         self.assertIn(original.title, result["title"])
 
     def test_copy_is_always_draft(self):
         original = self.new_campaign(status="Sent")
-        frappe.db.set_value("Letters Campaign", original.name, "status", "Sent")
+        frappe.db.set_value("Letter", original.name, "status", "Sent")
         original.reload()
         result = original.duplicate()
-        self._created.append(("Letters Campaign", result["name"]))
-        new_doc = frappe.get_doc("Letters Campaign", result["name"])
+        self._created.append(("Letter", result["name"]))
+        new_doc = frappe.get_doc("Letter", result["name"])
         self.assertEqual(new_doc.status, "Draft")
 
     def test_copy_inherits_blocks_and_subject(self):
         original = self.new_campaign(subject="Original Subject", blocks_json=SAMPLE_BLOCKS)
         result = original.duplicate()
-        self._created.append(("Letters Campaign", result["name"]))
-        new_doc = frappe.get_doc("Letters Campaign", result["name"])
+        self._created.append(("Letter", result["name"]))
+        new_doc = frappe.get_doc("Letter", result["name"])
         self.assertEqual(new_doc.subject, "Original Subject")
         self.assertEqual(new_doc.blocks_json, SAMPLE_BLOCKS)
 
@@ -212,7 +212,7 @@ class TestSchedule(LettersTestCase):
 
     def test_throws_when_already_sent(self):
         doc = self.new_campaign(status="Sent")
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sent")
+        frappe.db.set_value("Letter", doc.name, "status", "Sent")
         doc.reload()
         with self.assertRaises(frappe.ValidationError):
             doc.schedule("2099-01-01 10:00:00")
@@ -236,7 +236,7 @@ class TestSchedule(LettersTestCase):
 class TestSendValidation(LettersTestCase):
     def test_throws_when_already_sending(self):
         doc = self.new_campaign(status="Sending")
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sending")
+        frappe.db.set_value("Letter", doc.name, "status", "Sending")
         doc.reload()
         with self.assertRaises(frappe.ValidationError):
             doc.send(recipients=["a@example.com"])
@@ -266,7 +266,7 @@ class TestSendValidation(LettersTestCase):
         unsub = frappe.get_doc({
             "doctype": "Email Unsubscribe",
             "email": "only@example.com",
-            "reference_doctype": "Letters Campaign",
+            "reference_doctype": "Letter",
             "reference_name": doc.name,
             "global_unsubscribe": 0,
         })
@@ -315,7 +315,7 @@ class TestSendEnqueue(LettersTestCase):
         send_name = frappe.db.get_value("Email Send", {"campaign": doc.name}, "name")
         self._created.append(("Email Send", send_name))
         frappe.db.set_value("Email Send", send_name, "status", "Failed")
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Draft")
+        frappe.db.set_value("Letter", doc.name, "status", "Draft")
         doc.reload()
 
         with patch("frappe.enqueue") as mock_enqueue:
@@ -345,7 +345,7 @@ class TestSendSnapshot(LettersTestCase):
         doc = self.new_campaign(subject="Original Subject", blocks_json=SAMPLE_BLOCKS)
         with patch("frappe.enqueue"):
             doc.send(recipients=["a@example.com"])
-        frappe.db.set_value("Letters Campaign", doc.name, "subject", "Edited After Send")
+        frappe.db.set_value("Letter", doc.name, "subject", "Edited After Send")
         send_name = frappe.db.get_value("Email Send", {"campaign": doc.name}, "name")
         self._created.append(("Email Send", send_name))
         snap_subject = frappe.db.get_value("Email Send", send_name, "snapshot_subject")
@@ -357,14 +357,14 @@ class TestAtomicSendClaim(LettersTestCase):
 
     def test_throws_when_already_sending(self):
         doc = self.new_campaign()
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sending")
+        frappe.db.set_value("Letter", doc.name, "status", "Sending")
         doc.reload()
         with self.assertRaises(frappe.ValidationError):
             doc.send(recipients=["a@example.com"])
 
     def test_throws_when_already_sent(self):
         doc = self.new_campaign()
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sent")
+        frappe.db.set_value("Letter", doc.name, "status", "Sent")
         doc.reload()
         with self.assertRaises(frappe.ValidationError):
             doc.send(recipients=["a@example.com"])
@@ -375,7 +375,7 @@ class TestAtomicSendClaim(LettersTestCase):
             doc.send(recipients=["a@example.com"])
         send_name = frappe.db.get_value("Email Send", {"campaign": doc.name}, "name")
         self._created.append(("Email Send", send_name))
-        status = frappe.db.get_value("Letters Campaign", doc.name, "status")
+        status = frappe.db.get_value("Letter", doc.name, "status")
         self.assertEqual(status, "Sending")
 
 
@@ -534,38 +534,38 @@ class TestRecordOpen(LettersTestCase):
 
 
 # ---------------------------------------------------------------------------
-# _unique_campaign_title — regression for hash-named DocType bug
+# _unique_letter_title — regression for hash-named DocType bug
 # ---------------------------------------------------------------------------
 
 class TestUniqueCampaignTitle(LettersTestCase):
-    """_unique_campaign_title must check the title field, not the name (hash) field."""
+    """_unique_letter_title must check the title field, not the name (hash) field."""
 
     def test_returns_base_when_no_collision(self):
         base = f"Unique Title {frappe.generate_hash(length=8)}"
-        self.assertEqual(_unique_campaign_title(base), base)
+        self.assertEqual(_unique_letter_title(base), base)
 
     def test_appends_1_when_title_already_exists(self):
         base = f"Duplicate Title {frappe.generate_hash(length=8)}"
         doc = self.new_campaign(title=base)
-        result = _unique_campaign_title(base)
+        result = _unique_letter_title(base)
         self.assertEqual(result, f"{base} - 1")
 
     def test_increments_past_existing_suffixes(self):
         base = f"Multi Title {frappe.generate_hash(length=8)}"
         doc1 = self.new_campaign(title=base)
         doc2 = self.new_campaign(title=f"{base} - 1")
-        result = _unique_campaign_title(base)
+        result = _unique_letter_title(base)
         self.assertEqual(result, f"{base} - 2")
 
     def test_defaults_to_untitled_campaign_on_empty_input(self):
         # Should not raise; just return some valid non-empty title
-        result = _unique_campaign_title("")
-        self.assertTrue(result.startswith("Untitled Campaign"))
+        result = _unique_letter_title("")
+        self.assertTrue(result.startswith("Untitled Letter"))
 
     def test_copy_of_prefix_gets_unique_title(self):
         base = f"Copy Title {frappe.generate_hash(length=8)}"
         self.new_campaign(title=f"Copy of {base}")
-        result = _unique_campaign_title(f"Copy of {base}")
+        result = _unique_letter_title(f"Copy of {base}")
         self.assertEqual(result, f"Copy of {base} - 1")
 
 
@@ -581,21 +581,21 @@ class TestRenameValidation(LettersTestCase):
 
     def test_rename_allowed_on_sent(self):
         doc = self.new_campaign()
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sent")
+        frappe.db.set_value("Letter", doc.name, "status", "Sent")
         doc.reload()
         doc.title = f"Renamed Sent {frappe.generate_hash(length=6)}"
         doc.save()  # must not raise
 
     def test_rename_allowed_on_scheduled(self):
         doc = self.new_campaign()
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Scheduled")
+        frappe.db.set_value("Letter", doc.name, "status", "Scheduled")
         doc.reload()
         doc.title = f"Renamed Scheduled {frappe.generate_hash(length=6)}"
         doc.save()  # must not raise
 
     def test_rename_blocked_while_sending(self):
         doc = self.new_campaign()
-        frappe.db.set_value("Letters Campaign", doc.name, "status", "Sending")
+        frappe.db.set_value("Letter", doc.name, "status", "Sending")
         doc.reload()
         doc.title = f"Renamed Sending {frappe.generate_hash(length=6)}"
         with self.assertRaises(frappe.ValidationError):

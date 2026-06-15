@@ -1,5 +1,5 @@
 <template>
-  <div class="letters-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
+  <div class="letter-builder flex flex-col bg-surface-gray-1 font-sans overflow-hidden" style="height: 100vh">
 
     <!-- ── Top bar ─────────────────────────────────────────────────────────── -->
     <BuilderToolbar
@@ -236,7 +236,7 @@ import ScheduleDialog from "../components/dialogs/ScheduleDialog.vue";
 import { useZoom } from "../composables/useZoom";
 import { usePanelResize } from "../composables/usePanelResize";
 import { useBlockPicker } from "../composables/useBlockPicker";
-import { useCampaign } from "../composables/useCampaign";
+import { useLetter } from "../composables/useLetter";
 import { usePreview } from "../composables/usePreview";
 import { useLinkChecker } from "../composables/useLinkChecker";
 import { useTestEmail } from "../composables/useTestEmail";
@@ -257,7 +257,7 @@ const {
   sendProgress, campaignStatus,
   onTemplateSubmit, saveNow, saveCampaign,
   sendCampaign, scheduleCampaign, duplicateCampaign,
-} = useCampaign(editorStore);
+} = useLetter(editorStore);
 
 const { openPreview } = usePreview(editorStore, previewText);
 const { showLinkChecker, linkResults, checkingLinks, openLinkChecker, applyLinkFix } = useLinkChecker(editorStore, { flushSave: saveCampaign });

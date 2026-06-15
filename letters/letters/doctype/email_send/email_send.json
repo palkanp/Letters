@@ -10,8 +10,8 @@
     {
       "fieldname": "campaign",
       "fieldtype": "Link",
-      "label": "Letters Campaign",
-      "options": "Letters Campaign",
+      "label": "Letter",
+      "options": "Letter",
       "reqd": 1,
       "in_list_view": 1
     },

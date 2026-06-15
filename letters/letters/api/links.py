@@ -197,8 +197,8 @@ def _run_link_check(blocks_data, preview_text, email_width):
 def _resolve_link_check_args(blocks, name):
     """Shared input resolution for sync and async link-check paths."""
     if name:
-        doc = frappe.get_doc("Letters Campaign", name)
-        frappe.has_permission("Letters Campaign", "read", doc=doc, throw=True)
+        doc = frappe.get_doc("Letter", name)
+        frappe.has_permission("Letter", "read", doc=doc, throw=True)
         blocks_data = json.loads(doc.blocks_json or "[]")
         preview_text = doc.preview_text or ""
         email_width = getattr(doc, "email_width", None) or 600

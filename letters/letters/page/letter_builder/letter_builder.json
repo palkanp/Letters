@@ -1,9 +1,9 @@
 {
   "doctype": "Page",
   "module": "Letters",
-  "name": "letters-builder",
-  "page_name": "letters-builder",
-  "title": "Letters Builder",
+  "name": "letter-builder",
+  "page_name": "letter-builder",
+  "title": "Letter Builder",
   "roles": [
     {
       "role": "System Manager"
