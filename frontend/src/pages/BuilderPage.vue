@@ -24,7 +24,7 @@
 
       <!-- Permanent left sidebar: Layers + Add block -->
       <aside
-        class="flex-shrink-0 bg-white border-r border-outline-gray-1 flex flex-col relative"
+        class="flex-shrink-0 bg-surface-base border-r border-outline-gray-1 flex flex-col relative"
         :style="{ width: leftPanelWidth + 'px' }"
       >
         <!-- Drag handle (right edge) -->
