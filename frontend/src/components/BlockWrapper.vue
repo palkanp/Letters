@@ -53,42 +53,70 @@
       class="absolute inset-x-0 -bottom-px h-0.5 bg-blue-500 rounded-full z-20 pointer-events-none"
     />
 
-    <!-- ── Padding handles — purple indicators appear when block is selected ── -->
+    <!-- ── Spacing bands — orange, outside the content, draggable ─────────── -->
+    <!-- Top spacing band: sits in the paddingTop area of the outer div -->
+    <div
+      v-if="selected && spacingTop > 0"
+      class="absolute inset-x-0 top-0 flex items-center justify-center cursor-ns-resize z-10 select-none"
+      :style="{ height: `${spacingTop}px` }"
+      @pointerdown.prevent.stop="startSpacingDrag('top', $event)"
+      @click.stop
+    >
+      <div class="absolute inset-0 bg-orange-400 opacity-20" />
+      <span class="relative text-[10px] font-mono text-orange-600 font-semibold z-10 pointer-events-none">{{ spacingTop }}px</span>
+    </div>
+    <!-- Bottom spacing band -->
+    <div
+      v-if="selected && spacingBottom > 0"
+      class="absolute inset-x-0 bottom-0 flex items-center justify-center cursor-ns-resize z-10 select-none"
+      :style="{ height: `${spacingBottom}px` }"
+      @pointerdown.prevent.stop="startSpacingDrag('bottom', $event)"
+      @click.stop
+    >
+      <div class="absolute inset-0 bg-orange-400 opacity-20" />
+      <span class="relative text-[10px] font-mono text-orange-600 font-semibold z-10 pointer-events-none">{{ spacingBottom }}px</span>
+    </div>
+
+    <!-- ── Padding handles — purple bars at inner edges, visible when selected ── -->
     <!-- Top -->
     <div
       v-if="selected"
-      class="absolute inset-x-6 top-0 h-3 cursor-ns-resize z-10 flex items-start justify-center group/pad"
+      class="absolute inset-x-8 cursor-ns-resize z-11 flex items-center justify-center group/pad"
+      :style="{ top: `${spacingTop}px`, height: '12px' }"
       @pointerdown.prevent.stop="startPaddingDrag('top', $event)"
       @click.stop
     >
-      <div class="w-8 h-1 mt-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
+      <div class="w-10 h-1.5 rounded-full bg-violet-500 opacity-70 group-hover/pad:opacity-100 transition-opacity" />
     </div>
     <!-- Bottom -->
     <div
       v-if="selected"
-      class="absolute inset-x-6 bottom-0 h-3 cursor-ns-resize z-10 flex items-end justify-center group/pad"
+      class="absolute inset-x-8 cursor-ns-resize z-11 flex items-center justify-center group/pad"
+      :style="{ bottom: `${spacingBottom}px`, height: '12px' }"
       @pointerdown.prevent.stop="startPaddingDrag('bottom', $event)"
       @click.stop
     >
-      <div class="w-8 h-1 mb-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
+      <div class="w-10 h-1.5 rounded-full bg-violet-500 opacity-70 group-hover/pad:opacity-100 transition-opacity" />
     </div>
     <!-- Left -->
     <div
       v-if="selected"
-      class="absolute inset-y-6 left-0 w-3 cursor-ew-resize z-10 flex items-center justify-start group/pad"
+      class="absolute left-0 cursor-ew-resize z-11 flex items-center justify-center group/pad"
+      :style="{ top: `${spacingTop}px`, bottom: `${spacingBottom}px`, width: '12px' }"
       @pointerdown.prevent.stop="startPaddingDragH('left', $event)"
       @click.stop
     >
-      <div class="h-8 w-1 ml-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
+      <div class="w-1.5 h-10 rounded-full bg-violet-500 opacity-70 group-hover/pad:opacity-100 transition-opacity" />
     </div>
     <!-- Right -->
     <div
       v-if="selected"
-      class="absolute inset-y-6 right-0 w-3 cursor-ew-resize z-10 flex items-center justify-end group/pad"
+      class="absolute right-0 cursor-ew-resize z-11 flex items-center justify-center group/pad"
+      :style="{ top: `${spacingTop}px`, bottom: `${spacingBottom}px`, width: '12px' }"
       @pointerdown.prevent.stop="startPaddingDragH('right', $event)"
       @click.stop
     >
-      <div class="h-8 w-1 mr-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
+      <div class="w-1.5 h-10 rounded-full bg-violet-500 opacity-70 group-hover/pad:opacity-100 transition-opacity" />
     </div>
 
     <!-- ── Corner resize handle (bottom-right, top-level blocks only) ────── -->
@@ -194,14 +222,17 @@ const blockSizeStyle = computed(() => {
 });
 
 // ── Spacing wrapper style ────────────────────────────────────────────────────
+const spacingTop    = computed(() => Number(props.block.props?.spacing_top    ?? 0));
+const spacingBottom = computed(() => Number(props.block.props?.spacing_bottom ?? 0));
+
 const spacingStyle = computed(() => {
-  const t  = props.block.props?.spacing_top  ?? 0;
-  const b  = props.block.props?.spacing_bottom ?? 0;
+  const t  = spacingTop.value;
+  const b  = spacingBottom.value;
   const bg = props.block.props?.background_color;
   const hasBg = bg && bg !== "transparent";
   return {
-    paddingTop:      t > 0 ? `${t}px` : undefined,
-    paddingBottom:   b > 0 ? `${b}px` : undefined,
+    paddingTop:      t > 0 ? `${t}px`  : undefined,
+    paddingBottom:   b > 0 ? `${b}px`  : undefined,
     backgroundColor: (t > 0 || b > 0) && hasBg ? bg : undefined,
   };
 });
@@ -303,6 +334,36 @@ function startPaddingDragH(edge, e) {
     const clamped = Math.max(0, Math.round(raw / 4) * 4);
     store.updateBlockPropsLive(props.block.id, { [propKey]: clamped });
     showTip(`${edge === 'left' ? '←' : '→'} ${clamped}px`);
+  }
+
+  function onUp() {
+    e.target.removeEventListener("pointermove", onMove);
+    e.target.removeEventListener("pointerup",   onUp);
+  }
+
+  e.target.addEventListener("pointermove", onMove);
+  e.target.addEventListener("pointerup",   onUp);
+}
+
+// ── Spacing drag (orange bands above/below content) ─────────────────────────
+function startSpacingDrag(edge, e) {
+  store.selectBlock(props.block.id);
+  e.target.setPointerCapture(e.pointerId);
+
+  const propKey  = `spacing_${edge}`;
+  const startY   = e.clientY;
+  const startVal = Number(props.block.props[propKey] ?? 0);
+
+  store.updateBlockProps(props.block.id, { [propKey]: startVal });
+
+  function onMove(ev) {
+    const delta   = ev.clientY - startY;
+    // Dragging down = increase spacing for both top and bottom bands
+    const sign    = edge === "top" ? 1 : 1;
+    const raw     = startVal + sign * delta;
+    const clamped = Math.max(0, Math.round(raw / 4) * 4);
+    store.updateBlockPropsLive(props.block.id, { [propKey]: clamped });
+    showTip(`spacing ${edge === "top" ? "↑" : "↓"} ${clamped}px`);
   }
 
   function onUp() {

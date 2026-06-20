@@ -30,7 +30,12 @@
       "Bash(node -e \"console.log\\(require.resolve\\('frappe-ui/vite', {paths:['/Users/palkanparsana/Desktop/Letters/frontend']}\\)\\)\")",
       "Bash(python3 -c \"import json,sys; p=json.load\\(sys.stdin\\); print\\(p.get\\('exports',{}\\).get\\('./vite'\\)\\); print\\('unplugin-icons' in json.dumps\\(p\\)\\)\")",
       "Bash(python3 -m pytest letters/tests/ -q)",
-      "Bash(cd /tmp/frappe-skills && cat README.md && echo \"=== SKILL DIRS ===\" && find skills -maxdepth 2 -not -path '*/.git/*' | sort)"
+      "Bash(cd /tmp/frappe-skills && cat README.md && echo \"=== SKILL DIRS ===\" && find skills -maxdepth 2 -not -path '*/.git/*' | sort)",
+      "Bash(gh api *)",
+      "WebFetch(domain:api.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Read(//Users/palkanparsana/.claude/**)",
+      "Bash(mkdir -p /Users/palkanparsana/Desktop/Letters/.claude/skills/frappe-ui)"
     ]
   }
 }
