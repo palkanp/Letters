@@ -31,41 +31,32 @@
       }"
     />
 
-    <!-- ── Spacing bands (orange) — always show thin line when selected;
-         expands with a fill + label when spacing > 0 ───────────────────── -->
-    <!-- Top -->
+    <!-- ── Spacing bands (orange) — always visible; expands + shows value when > 0 ── -->
+    <!-- Top: always at least 10px tall so it's draggable even at spacing=0 -->
     <div
       v-if="selected"
-      class="absolute inset-x-0 top-0 flex items-center justify-center cursor-ns-resize z-30 select-none"
-      :style="{ height: spacingTop > 0 ? `${spacingTop}px` : '6px' }"
+      class="absolute inset-x-0 top-0 flex items-center justify-center cursor-ns-resize z-30 select-none group/sp"
+      :style="{ height: `${Math.max(10, spacingTop)}px` }"
       @pointerdown.prevent.stop="startSpacingDrag('top', $event)"
       @click.stop
     >
-      <div
-        class="absolute inset-0 transition-colors"
-        :class="spacingTop > 0 ? 'bg-orange-400 opacity-30' : 'bg-orange-300 opacity-0 hover:opacity-20'"
-      />
-      <span
-        v-if="spacingTop > 0"
-        class="relative text-[10px] font-mono text-orange-700 font-semibold z-10 pointer-events-none bg-white/70 px-1 rounded"
-      >{{ spacingTop }}px</span>
+      <div class="absolute inset-0 bg-orange-400 opacity-30 group-hover/sp:opacity-50 transition-opacity" />
+      <span class="relative text-[10px] font-mono text-orange-800 font-semibold z-10 pointer-events-none bg-white/80 px-1 rounded leading-tight">
+        {{ spacingTop > 0 ? `${spacingTop}px` : '↕' }}
+      </span>
     </div>
     <!-- Bottom -->
     <div
       v-if="selected"
-      class="absolute inset-x-0 bottom-0 flex items-center justify-center cursor-ns-resize z-30 select-none"
-      :style="{ height: spacingBottom > 0 ? `${spacingBottom}px` : '6px' }"
+      class="absolute inset-x-0 bottom-0 flex items-center justify-center cursor-ns-resize z-30 select-none group/sp"
+      :style="{ height: `${Math.max(10, spacingBottom)}px` }"
       @pointerdown.prevent.stop="startSpacingDrag('bottom', $event)"
       @click.stop
     >
-      <div
-        class="absolute inset-0 transition-colors"
-        :class="spacingBottom > 0 ? 'bg-orange-400 opacity-30' : 'bg-orange-300 opacity-0 hover:opacity-20'"
-      />
-      <span
-        v-if="spacingBottom > 0"
-        class="relative text-[10px] font-mono text-orange-700 font-semibold z-10 pointer-events-none bg-white/70 px-1 rounded"
-      >{{ spacingBottom }}px</span>
+      <div class="absolute inset-0 bg-orange-400 opacity-30 group-hover/sp:opacity-50 transition-opacity" />
+      <span class="relative text-[10px] font-mono text-orange-800 font-semibold z-10 pointer-events-none bg-white/80 px-1 rounded leading-tight">
+        {{ spacingBottom > 0 ? `${spacingBottom}px` : '↕' }}
+      </span>
     </div>
 
     <!-- ── Padding handles (purple) — z-30 so they're above content ──────── -->
