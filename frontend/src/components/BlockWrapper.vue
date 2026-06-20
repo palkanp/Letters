@@ -7,7 +7,7 @@
     ]"
     :style="{
       ...spacingStyle, ...props.extraStyle,
-      ...blockBorderStyle,
+      ...blockBorderStyle, ...blockSizeStyle,
     }"
     :data-block-id="block.id"
     @mouseenter="isHovered = true"
@@ -93,6 +93,23 @@
       <div class="h-10 w-1 mr-0.5 rounded-full bg-gray-400 opacity-0 group-hover:opacity-60 transition-opacity" />
     </div>
 
+    <!-- ── Width resize handle (right edge, top-level blocks) ────────────── -->
+    <div
+      v-if="selected && isTopLevel"
+      title="Drag to resize width"
+      class="absolute top-1/2 -translate-y-1/2 -right-7 w-6 h-8 flex items-center justify-center
+             cursor-ew-resize select-none rounded
+             text-ink-gray-3 hover:text-ink-gray-7 hover:bg-surface-gray-3 transition-all z-10"
+      @pointerdown.prevent.stop="startWidthDrag($event)"
+      @click.stop
+    >
+      <svg width="6" height="14" viewBox="0 0 6 14" fill="currentColor">
+        <circle cx="3" cy="2"  r="1.4"/>
+        <circle cx="3" cy="7"  r="1.4"/>
+        <circle cx="3" cy="12" r="1.4"/>
+      </svg>
+    </div>
+
     <!-- ── Padding tooltip ────────────────────────────────────────────────── -->
     <Transition
       enter-active-class="transition-opacity duration-100"
@@ -169,6 +186,21 @@ const topLevelContainerStyle = computed(() => {
   return {
     width: w,
     ...(a && a !== "left" ? { margin: marginMap[a] } : {}),
+  };
+});
+
+// ── Block size (width/height from Size panel) ────────────────────────────────
+// Containers use topLevelContainerStyle for width; children inside containers
+// already get block_width applied via childFlexStyle. This only activates for
+// top-level non-container blocks (image, text, etc.) where the Size panel inputs
+// would otherwise have no visual effect.
+const blockSizeStyle = computed(() => {
+  if (props.block.type === "container" || !isTopLevel.value) return {};
+  const w = props.block.props?.block_width;
+  const h = props.block.props?.block_height;
+  return {
+    ...(w && w !== "auto" && w !== "" ? { width: w } : {}),
+    ...(h && h !== "auto" && h !== "" ? { minHeight: h } : {}),
   };
 });
 
@@ -292,6 +324,37 @@ function startPaddingDragH(edge, e) {
     const clamped = Math.max(0, Math.round(raw / 4) * 4);
     store.updateBlockPropsLive(props.block.id, { [propKey]: clamped });
     showTip(`${edge === 'left' ? '←' : '→'} ${clamped}px`);
+  }
+
+  function onUp() {
+    e.target.removeEventListener("pointermove", onMove);
+    e.target.removeEventListener("pointerup",   onUp);
+  }
+
+  e.target.addEventListener("pointermove", onMove);
+  e.target.addEventListener("pointerup",   onUp);
+}
+
+// ── Canvas width resize ──────────────────────────────────────────────────────
+function startWidthDrag(e) {
+  store.selectBlock(props.block.id);
+  e.target.setPointerCapture(e.pointerId);
+
+  // Read the block element's current rendered width as the starting point.
+  // The block element is the parent of the drag handle's parent (the outer div).
+  const blockEl = e.currentTarget.parentElement;
+  const startX = e.clientX;
+  const startW = blockEl ? blockEl.offsetWidth : 200;
+
+  // Snapshot so undo collapses the drag to a single step
+  const widthKey = props.block.type === "container" ? "width" : "block_width";
+  store.updateBlockProps(props.block.id, { [widthKey]: `${startW}px` });
+
+  function onMove(ev) {
+    const delta = ev.clientX - startX;
+    const clamped = Math.max(60, Math.round(startW + delta));
+    store.updateBlockPropsLive(props.block.id, { [widthKey]: `${clamped}px` });
+    showTip(`↔ ${clamped}px`);
   }
 
   function onUp() {

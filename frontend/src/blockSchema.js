@@ -142,6 +142,10 @@ export const BLOCK_SCHEMA = {
     defaults: {
       image_url: "",
       alt: "",
+      image_width: "100%",
+      image_align: "center",
+      image_fit: "cover",
+      image_height: "",
       background_color: "#ffffff",
       border: "none",
       border_radius: "0",
@@ -157,6 +161,26 @@ export const BLOCK_SCHEMA = {
           { key: "image_url", label: "Image URL", type: "text", placeholder: "https://example.com" },
           { key: "link_url", label: "Link URL", type: "text", placeholder: "https://example.com" },
           { key: "alt", label: "Alt text", type: "text", placeholder: "Describe the image" },
+        ],
+      },
+      {
+        id: "layout",
+        title: "Layout",
+        fields: [
+          { key: "image_align", label: "Align", type: "align", hint: "Position the image horizontally within the block" },
+          { key: "image_width", label: "Width", type: "text", placeholder: "100%", hint: "Width of the image — 100% fills the block, e.g. 300px or 50%" },
+          { key: "image_height", label: "Height", type: "text", placeholder: "auto", hint: "Fixed height for the image area, e.g. 200px" },
+          {
+            key: "image_fit",
+            label: "Fit",
+            type: "select",
+            options: [
+              { label: "Cover (crop to fill)", value: "cover" },
+              { label: "Contain (fit inside)",  value: "contain" },
+              { label: "Fill (stretch)",         value: "fill" },
+            ],
+            hint: "How the image fills its area when a fixed height is set",
+          },
         ],
       },
       {

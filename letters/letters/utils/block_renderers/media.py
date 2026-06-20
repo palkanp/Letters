@@ -11,8 +11,12 @@ class ImageRenderer(BlockRenderer):
         image_url     = _abs_image_src(p.get("image_url", ""))
         alt           = escape(p.get("alt", ""))
         bg            = escape(p.get("background_color", "#ffffff"))
-        border        = escape(p.get("border", "0.5px solid #383838"))
+        border        = escape(p.get("border", ""))
         border_radius = escape(p.get("border_radius", "0"))
+        image_width   = p.get("image_width", "100%") or "100%"
+        image_height  = p.get("image_height", "") or ""
+        image_align   = p.get("image_align", "center") or "center"
+        image_fit     = p.get("image_fit", "cover") or "cover"
 
         border_style = f"border:{border};" if border and border != "none" else ""
         radius_style = f"border-radius:{border_radius};" if border_radius and border_radius != "0" else ""
@@ -22,9 +26,32 @@ class ImageRenderer(BlockRenderer):
 
         link_url = _safe_url(p.get("link_url", ""))
 
+        # Build width / height attributes for email-safe rendering.
+        # Pixel widths use a width attribute; percent widths use max-width in CSS.
+        if image_width.endswith("px"):
+            w_attr  = f' width="{image_width.replace("px", "")}"'
+            w_style = f"width:{image_width};max-width:100%;"
+        elif image_width == "100%":
+            w_attr  = ' width="100%"'
+            w_style = "width:100%;max-width:100%;"
+        else:
+            w_attr  = ""
+            w_style = f"width:{image_width};max-width:100%;"
+
+        if image_height and image_height != "auto":
+            h_num   = image_height.replace("px", "")
+            h_attr  = f' height="{h_num}"'
+            h_style = f"height:{image_height};object-fit:{image_fit};"
+        else:
+            h_attr  = ""
+            h_style = "height:auto;"
+
+        align_map = {"left": "left", "center": "center", "right": "right"}
+        td_align  = align_map.get(image_align, "center")
+
         img_tag = (
-            f'<img src="{image_url}" width="100%" alt="{alt}"'
-            f' style="display:block;max-width:100%;height:auto;{border_style}{radius_style}" />'
+            f'<img src="{image_url}"{w_attr}{h_attr} alt="{alt}"'
+            f' style="display:block;{w_style}{h_style}{border_style}{radius_style}" />'
         )
         img_content = (
             f'<a href="{link_url}" style="display:block;text-decoration:none;">{img_tag}</a>'
@@ -36,7 +63,7 @@ class ImageRenderer(BlockRenderer):
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
-            f'<tr><td style="padding:{padding};">'
+            f'<tr><td align="{td_align}" style="padding:{padding};">'
             f'{img_content}'
             f'</td></tr>'
             f'</table>'
