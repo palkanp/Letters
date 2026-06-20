@@ -6,7 +6,7 @@
       isDragOver === 'after'  ? 'border-b-2 border-b-blue-500' : '',
     ]"
     :style="{
-      ...spacingStyle, ...topLevelContainerStyle, ...props.extraStyle,
+      ...spacingStyle, ...props.extraStyle,
       ...blockBorderStyle,
     }"
     :data-block-id="block.id"
@@ -106,8 +106,9 @@
       >{{ paddingTip }}</div>
     </Transition>
 
-    <!-- Inner content wrapper: clips to border-radius without hiding the drag grip -->
-    <div :style="contentClipStyle">
+    <!-- Inner content wrapper: clips to border-radius without hiding the drag grip.
+         Also carries the width constraint so the outer div's background fills the full row. -->
+    <div :style="{ ...contentClipStyle, ...topLevelContainerStyle }">
       <slot />
     </div>
 
