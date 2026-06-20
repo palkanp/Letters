@@ -53,81 +53,56 @@
       class="absolute inset-x-0 -bottom-px h-0.5 bg-blue-500 rounded-full z-20 pointer-events-none"
     />
 
-    <!-- ── Padding top handle ─────────────────────────────────────────────── -->
+    <!-- ── Padding handles — purple indicators appear when block is selected ── -->
+    <!-- Top -->
     <div
       v-if="selected"
-      class="absolute inset-x-6 top-0 h-2.5 cursor-ns-resize z-10 flex items-start justify-center group"
+      class="absolute inset-x-6 top-0 h-3 cursor-ns-resize z-10 flex items-start justify-center group/pad"
       @pointerdown.prevent.stop="startPaddingDrag('top', $event)"
       @click.stop
     >
-      <div class="w-10 h-1 mt-0.5 rounded-full bg-gray-400 opacity-0 group-hover:opacity-60 transition-opacity" />
+      <div class="w-8 h-1 mt-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
     </div>
-
-    <!-- ── Padding bottom handle ──────────────────────────────────────────── -->
+    <!-- Bottom -->
     <div
       v-if="selected"
-      class="absolute inset-x-6 bottom-0 h-2.5 cursor-ns-resize z-10 flex items-end justify-center group"
+      class="absolute inset-x-6 bottom-0 h-3 cursor-ns-resize z-10 flex items-end justify-center group/pad"
       @pointerdown.prevent.stop="startPaddingDrag('bottom', $event)"
       @click.stop
     >
-      <div class="w-10 h-1 mb-0.5 rounded-full bg-gray-400 opacity-0 group-hover:opacity-60 transition-opacity" />
+      <div class="w-8 h-1 mb-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
     </div>
-
-    <!-- ── Padding left handle ───────────────────────────────────────────── -->
+    <!-- Left -->
     <div
       v-if="selected"
-      class="absolute inset-y-6 left-0 w-2.5 cursor-ew-resize z-10 flex items-center justify-start group"
+      class="absolute inset-y-6 left-0 w-3 cursor-ew-resize z-10 flex items-center justify-start group/pad"
       @pointerdown.prevent.stop="startPaddingDragH('left', $event)"
       @click.stop
     >
-      <div class="h-10 w-1 ml-0.5 rounded-full bg-gray-400 opacity-0 group-hover:opacity-60 transition-opacity" />
+      <div class="h-8 w-1 ml-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
     </div>
-
-    <!-- ── Padding right handle ──────────────────────────────────────────── -->
+    <!-- Right -->
     <div
       v-if="selected"
-      class="absolute inset-y-6 right-0 w-2.5 cursor-ew-resize z-10 flex items-center justify-end group"
+      class="absolute inset-y-6 right-0 w-3 cursor-ew-resize z-10 flex items-center justify-end group/pad"
       @pointerdown.prevent.stop="startPaddingDragH('right', $event)"
       @click.stop
     >
-      <div class="h-10 w-1 mr-0.5 rounded-full bg-gray-400 opacity-0 group-hover:opacity-60 transition-opacity" />
+      <div class="h-8 w-1 mr-0.5 rounded-full bg-violet-400 opacity-40 group-hover/pad:opacity-90 transition-opacity" />
     </div>
 
-    <!-- ── Width resize handle (right edge, top-level blocks) ────────────── -->
+    <!-- ── Corner resize handle (bottom-right, top-level blocks only) ────── -->
+    <!-- White circle with blue border — drag diagonally to resize width + height simultaneously -->
     <div
       v-if="selected && isTopLevel"
-      title="Drag to resize width"
-      class="absolute top-1/2 -translate-y-1/2 -right-7 w-6 h-8 flex items-center justify-center
-             cursor-ew-resize select-none rounded
-             text-ink-gray-3 hover:text-ink-gray-7 hover:bg-surface-gray-3 transition-all z-10"
-      @pointerdown.prevent.stop="startWidthDrag($event)"
+      title="Drag to resize"
+      class="absolute -bottom-1.5 -right-1.5 w-3 h-3 rounded-full bg-white border-2 border-blue-500
+             cursor-se-resize select-none z-30 shadow-sm hover:scale-125 transition-transform"
+      @pointerdown.prevent.stop="startCornerDrag($event)"
       @click.stop
-    >
-      <svg width="6" height="14" viewBox="0 0 6 14" fill="currentColor">
-        <circle cx="3" cy="2"  r="1.4"/>
-        <circle cx="3" cy="7"  r="1.4"/>
-        <circle cx="3" cy="12" r="1.4"/>
-      </svg>
-    </div>
+    />
 
-    <!-- ── Height resize handle (bottom edge, top-level blocks) ──────────── -->
-    <div
-      v-if="selected && isTopLevel"
-      title="Drag to resize height"
-      class="absolute left-1/2 -translate-x-1/2 -bottom-7 h-6 w-8 flex items-center justify-center
-             cursor-ns-resize select-none rounded
-             text-ink-gray-3 hover:text-ink-gray-7 hover:bg-surface-gray-3 transition-all z-10"
-      @pointerdown.prevent.stop="startHeightDrag($event)"
-      @click.stop
-    >
-      <svg width="14" height="6" viewBox="0 0 14 6" fill="currentColor">
-        <circle cx="2"  cy="3" r="1.4"/>
-        <circle cx="7"  cy="3" r="1.4"/>
-        <circle cx="12" cy="3" r="1.4"/>
-      </svg>
-    </div>
-
-    <!-- ── Padding tooltip ────────────────────────────────────────────────── -->
+    <!-- ── Tooltip (padding / resize feedback) ──────────────────────────── -->
     <Transition
       enter-active-class="transition-opacity duration-100"
       leave-active-class="transition-opacity duration-100"
@@ -167,8 +142,7 @@ const store  = useEditorStore();
 const selected  = computed(() => store.selectedBlockId === props.block.id);
 const isHovered = ref(false);
 
-// Only top-level blocks (directly in store.blocks) support drag-to-reorder.
-// Child blocks inside containers should not interfere with the top-level order.
+// Only top-level blocks (directly in store.blocks) support drag-to-reorder and canvas resize.
 const isTopLevel = computed(() => store.blocks.some((b) => b.id === props.block.id));
 
 // ── Block-level border + corner radius ───────────────────────────────────────
@@ -190,9 +164,6 @@ const contentClipStyle = computed(() => {
 });
 
 // ── Top-level container width + alignment ────────────────────────────────────
-// Width is only applied here when the container is top-level (not inside another
-// container's childFlexStyle). Child containers get their width via the parent's
-// childFlexStyle to avoid double-application (% of % bug).
 const topLevelContainerStyle = computed(() => {
   if (props.block.type !== "container" || !isTopLevel.value) return {};
   const w = props.block.props?.width;
@@ -206,13 +177,14 @@ const topLevelContainerStyle = computed(() => {
   };
 });
 
-// ── Block size (width/height from Size panel) ────────────────────────────────
-// Containers use topLevelContainerStyle for width; children inside containers
-// already get block_width applied via childFlexStyle. This only activates for
-// top-level non-container blocks (image, text, etc.) where the Size panel inputs
-// would otherwise have no visual effect.
+// ── Block size (block_width / block_height from Size panel or canvas drag) ───
+// - container: uses topLevelContainerStyle instead
+// - image: uses image_width/image_height internally (inside image.vue); block_width
+//   is NOT applied here so image blocks stay full-width by default and the image
+//   element controls its own displayed size
+// - children inside containers: already get block_width via childFlexStyle
 const blockSizeStyle = computed(() => {
-  if (props.block.type === "container" || !isTopLevel.value) return {};
+  if (['container', 'image'].includes(props.block.type) || !isTopLevel.value) return {};
   const w = props.block.props?.block_width;
   const h = props.block.props?.block_height;
   return {
@@ -222,8 +194,6 @@ const blockSizeStyle = computed(() => {
 });
 
 // ── Spacing wrapper style ────────────────────────────────────────────────────
-// Use padding (not margin) so the gap inherits the block's own background color
-// instead of exposing the canvas surface color.
 const spacingStyle = computed(() => {
   const t  = props.block.props?.spacing_top  ?? 0;
   const b  = props.block.props?.spacing_bottom ?? 0;
@@ -237,9 +207,6 @@ const spacingStyle = computed(() => {
 });
 
 // ── Drag-to-reorder ──────────────────────────────────────────────────────────
-// _dragSourceIndex is intentionally module-level (not reactive ref) so that all
-// BlockWrapper instances share a single drag source at a time. Only one top-level
-// block can be dragged at once, so this is safe and avoids cross-instance state.
 let _dragSourceIndex = null;
 const isDragOver = ref(null); // 'before' | 'after' | null
 
@@ -247,7 +214,6 @@ function onDragStart(e) {
   if (!isTopLevel.value) return;
   _dragSourceIndex = props.index;
   e.dataTransfer.effectAllowed = "move";
-  // Set minimal ghost (transparent 1×1 pixel)
   const ghost = document.createElement("div");
   ghost.style.cssText = "width:1px;height:1px;position:fixed;top:-9999px;";
   document.body.appendChild(ghost);
@@ -275,9 +241,8 @@ function onDrop(e) {
 
   if (fromIndex === props.index) { _dragSourceIndex = null; return; }
 
-  // Calculate destination index accounting for the removal of the source
   let dest = dropBefore ? props.index : props.index + 1;
-  if (fromIndex < dest) dest--; // source removal shifts remaining items left
+  if (fromIndex < dest) dest--;
   store.moveBlock(fromIndex, dest);
   _dragSourceIndex = null;
 }
@@ -302,7 +267,6 @@ function startPaddingDrag(edge, e) {
   const startY   = e.clientY;
   const startVal = parseInt(props.block.props[propKey] ?? DEFAULT_PADDING[edge]);
 
-  // Snapshot history once at drag start so undo restores the full drag in one step
   store.updateBlockProps(props.block.id, { [propKey]: startVal });
 
   function onMove(ev) {
@@ -322,7 +286,6 @@ function startPaddingDrag(edge, e) {
   e.target.addEventListener("pointerup",   onUp);
 }
 
-// Horizontal drag for left / right padding
 function startPaddingDragH(edge, e) {
   store.selectBlock(props.block.id);
   e.target.setPointerCapture(e.pointerId);
@@ -331,7 +294,6 @@ function startPaddingDragH(edge, e) {
   const startX   = e.clientX;
   const startVal = parseInt(props.block.props[propKey] ?? DEFAULT_PADDING[edge]);
 
-  // Snapshot history once at drag start
   store.updateBlockProps(props.block.id, { [propKey]: startVal });
 
   function onMove(ev) {
@@ -352,67 +314,42 @@ function startPaddingDragH(edge, e) {
   e.target.addEventListener("pointerup",   onUp);
 }
 
-// ── Canvas width resize ──────────────────────────────────────────────────────
-function startWidthDrag(e) {
-  store.selectBlock(props.block.id);
-  e.target.setPointerCapture(e.pointerId);
-
-  // Read the block element's current rendered width as the starting point.
-  // The block element is the parent of the drag handle's parent (the outer div).
-  const blockEl = e.currentTarget.parentElement;
-  const startX = e.clientX;
-  const startW = blockEl ? blockEl.offsetWidth : 200;
-
-  // Snapshot so undo collapses the drag to a single step
-  const widthKey = props.block.type === "container" ? "width" : "block_width";
-  store.updateBlockProps(props.block.id, { [widthKey]: `${startW}px` });
-
-  function onMove(ev) {
-    const delta = ev.clientX - startX;
-    const clamped = Math.max(60, Math.min(store.emailWidth, Math.round(startW + delta)));
-    store.updateBlockPropsLive(props.block.id, { [widthKey]: `${clamped}px` });
-    showTip(`↔ ${clamped}px`);
-  }
-
-  function onUp() {
-    e.target.removeEventListener("pointermove", onMove);
-    e.target.removeEventListener("pointerup",   onUp);
-  }
-
-  e.target.addEventListener("pointermove", onMove);
-  e.target.addEventListener("pointerup",   onUp);
-}
-
-// ── Canvas height resize ─────────────────────────────────────────────────────
-function startHeightDrag(e) {
+// ── Corner resize (width + height simultaneously) ────────────────────────────
+// Maps each block type to the prop keys that control its displayed width/height:
+//   container  → width  / height  (container schema props)
+//   spacer     → —      / height  (number, no meaningful width resize)
+//   image      → image_width / image_height  (image element dims within block)
+//   others     → block_width / block_height  (shown in Inspector Size section)
+function startCornerDrag(e) {
   store.selectBlock(props.block.id);
   e.target.setPointerCapture(e.pointerId);
 
   const blockEl = e.currentTarget.parentElement;
-  const startY = e.clientY;
-  const startH = blockEl ? blockEl.offsetHeight : 100;
+  const startX  = e.clientX;
+  const startY  = e.clientY;
+  const startW  = blockEl ? blockEl.offsetWidth  : 200;
+  const startH  = blockEl ? blockEl.offsetHeight : 100;
 
-  // Which prop controls height for this block type:
-  // - spacer   → "height" (number, in px)
-  // - container → "height" (string like "200px")
-  // - image    → "image_height" (string like "200px")
-  // - others   → "block_height" (string like "200px")
-  const heightKey = props.block.type === "spacer" || props.block.type === "container"
-    ? "height"
-    : props.block.type === "image"
-    ? "image_height"
-    : "block_height";
+  const wKey = props.block.type === "container" ? "width"
+             : props.block.type === "image"     ? "image_width"
+             : "block_width";
 
-  // Snapshot for undo
-  const snapVal = props.block.type === "spacer" ? startH : `${startH}px`;
-  store.updateBlockProps(props.block.id, { [heightKey]: snapVal });
+  const hKey = props.block.type === "container" || props.block.type === "spacer" ? "height"
+             : props.block.type === "image"     ? "image_height"
+             : "block_height";
+
+  // Snapshot for undo — spacer height is a plain number, all others are strings
+  const snapH = props.block.type === "spacer" ? startH : `${startH}px`;
+  store.updateBlockProps(props.block.id, { [wKey]: `${startW}px`, [hKey]: snapH });
 
   function onMove(ev) {
-    const delta = ev.clientY - startY;
-    const clamped = Math.max(8, Math.round(startH + delta));
-    const val = props.block.type === "spacer" ? clamped : `${clamped}px`;
-    store.updateBlockPropsLive(props.block.id, { [heightKey]: val });
-    showTip(`↕ ${clamped}px`);
+    const dx   = ev.clientX - startX;
+    const dy   = ev.clientY - startY;
+    const newW = Math.max(60, Math.min(store.emailWidth, Math.round(startW + dx)));
+    const newH = Math.max(8,  Math.round(startH + dy));
+    const hVal = props.block.type === "spacer" ? newH : `${newH}px`;
+    store.updateBlockPropsLive(props.block.id, { [wKey]: `${newW}px`, [hKey]: hVal });
+    showTip(`${newW} × ${newH}px`);
   }
 
   function onUp() {
