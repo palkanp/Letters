@@ -168,8 +168,9 @@ export const BLOCK_SCHEMA = {
         title: "Layout",
         fields: [
           { key: "image_align", label: "Align", type: "align", hint: "Position the image horizontally within the block" },
-          { key: "image_width", label: "Width", type: "text", placeholder: "100%", hint: "Width of the image — 100% fills the block, e.g. 300px or 50%" },
-          { key: "image_height", label: "Height", type: "text", placeholder: "auto", hint: "Fixed height for the image area, e.g. 200px" },
+          { key: "block_width", label: "Column width", type: "text", placeholder: "auto", hint: "When inside a row container, sets this column's width — e.g. 200px or 40%" },
+          { key: "image_width", label: "Image width", type: "text", placeholder: "100%", hint: "Width of the image element — 100% fills the column, e.g. 300px or 50%" },
+          { key: "image_height", label: "Image height", type: "text", placeholder: "auto", hint: "Fixed height for the image area, e.g. 200px" },
           {
             key: "image_fit",
             label: "Fit",

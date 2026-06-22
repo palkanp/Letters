@@ -115,8 +115,7 @@
         </div>
       </div>
 
-      <!-- Size — shown only for blocks that don't have dedicated size controls in their schema sections.
-           container uses its own Layout section; image uses its Layout section; spacer/divider have their own height/width fields. -->
+      <!-- Size — hidden for types that control their own dimensions in schema sections -->
       <div v-if="!['container', 'image', 'spacer', 'divider'].includes(block.type)" class="border-b border-outline-gray-1">
         <Button
           variant="ghost"
@@ -224,6 +223,18 @@
               <TextInput type="number" size="sm" :min="0" :max="200"
                 :modelValue="block.props.spacing_bottom ?? 4"
                 @update:modelValue="set('spacing_bottom', Number($event))"
+              />
+            </PropRow>
+            <PropRow label="Left" compact>
+              <TextInput type="number" size="sm" :min="0" :max="200"
+                :modelValue="block.props.spacing_left ?? 0"
+                @update:modelValue="set('spacing_left', Number($event))"
+              />
+            </PropRow>
+            <PropRow label="Right" compact>
+              <TextInput type="number" size="sm" :min="0" :max="200"
+                :modelValue="block.props.spacing_right ?? 0"
+                @update:modelValue="set('spacing_right', Number($event))"
               />
             </PropRow>
           </div>

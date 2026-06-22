@@ -141,9 +141,21 @@ class TestSpacingWrapper:
 
     def test_spacing_wraps_in_table(self):
         result = _spacing_wrapper("<p>x</p>", {"spacing_top": 20, "spacing_bottom": 10})
-        assert "padding-top:20px" in result
-        assert "padding-bottom:10px" in result
+        assert "padding:20px 0px 10px 0px;" in result
         assert "<p>x</p>" in result
+
+    def test_left_right_spacing(self):
+        result = _spacing_wrapper("<p>x</p>", {"spacing_left": 16, "spacing_right": 8})
+        assert "padding:0px 8px 0px 16px;" in result
+        assert "<p>x</p>" in result
+
+    def test_all_four_sides(self):
+        result = _spacing_wrapper("<p>x</p>", {"spacing_top": 10, "spacing_bottom": 20, "spacing_left": 8, "spacing_right": 4})
+        assert "padding:10px 4px 20px 8px;" in result
+
+    def test_zero_left_right_returns_inner_unchanged(self):
+        inner = "<p>hello</p>"
+        assert _spacing_wrapper(inner, {"spacing_left": 0, "spacing_right": 0}) == inner
 
 
 # ── HeroRenderer ──────────────────────────────────────────────────────────────
