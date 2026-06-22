@@ -84,9 +84,14 @@
 
           <!-- Text -->
           <div class="flex-1">
+            <p
+              v-if="block.props.heading"
+              class="m-0 mb-1.5 font-bold text-base leading-snug"
+              :style="{ color: block.props.heading_color || '#111827', fontFamily: fontStack(block.props.font_family, 'Arial, Helvetica, sans-serif') }"
+            >{{ block.props.heading }}</p>
             <EditableDiv
-              class="outline-none leading-relaxed text-ink-gray-7"
-              :style="{ fontFamily: fontStack(block.props.font_family, 'Arial, Helvetica, sans-serif') }"
+              class="outline-none leading-relaxed"
+              :style="{ fontFamily: fontStack(block.props.font_family, 'Arial, Helvetica, sans-serif'), color: block.props.text_color || '#555555' }"
               :model-value="block.props.text"
               @update:model-value="update('text', $event)"
               @click.stop="store.selectBlock(block.id)"

@@ -84,11 +84,13 @@ class ImageTextRenderer(BlockRenderer):
         font          = font_stack(p, "Arial,sans-serif")
 
         img_px = img_width.replace("px", "") if img_width.endswith("px") else "160"
+        bg     = escape(p.get("background_color", ""))
+        bg_style = f"background-color:{bg};" if bg and bg not in ("transparent", "") else ""
 
         pt = int(p.get("padding_top",    20))
-        pr = int(p.get("padding_right",  32))
+        pr = int(p.get("padding_right",  16))
         pb = int(p.get("padding_bottom", 20))
-        pl = int(p.get("padding_left",   32))
+        pl = int(p.get("padding_left",   16))
 
         if layout_mode == "wrap":
             # Float pattern: image aligned left/right, text flows around it
@@ -105,13 +107,15 @@ class ImageTextRenderer(BlockRenderer):
                 f'<p style="margin:0 0 6px;font-family:{font};font-size:16px;'
                 f'font-weight:700;color:{heading_color};line-height:1.3;">{heading_text}</p>'
             ) if heading_text else ""
+            text_color = escape(p.get("text_color", "#555555"))
             html = (
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="{bg_style}">'
                 f'<tr><td style="padding:{pt}px {pr}px {pb}px {pl}px;">'
                 f'{img_html}'
                 f'{heading_html}'
                 f'<p style="margin:0;font-family:{font};font-size:15px;'
-                f'color:#333333;line-height:1.6;">{text}</p>'
+                f'color:{text_color};line-height:1.6;">{text}</p>'
                 f'</td></tr></table>'
             )
         else:
@@ -119,7 +123,7 @@ class ImageTextRenderer(BlockRenderer):
             # Block padding wraps the outer table; inner cells only need the gap between image and text.
             gap          = 20
             outer_pad    = f"{pt}px {pr}px {pb}px {pl}px"
-            text_color   = escape(p.get("text_color", "#333333"))
+            text_color   = escape(p.get("text_color", "#555555"))
             img_pad      = f"0 {gap}px 0 0" if position == "left" else f"0 0 0 {gap}px"
             text_pad_str = "0" if position == "left" else "0"
             img_cell = (
@@ -147,7 +151,8 @@ class ImageTextRenderer(BlockRenderer):
             )
             cells = (img_cell + text_cell) if position == "left" else (text_cell + img_cell)
             html = (
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+                f' style="{bg_style}">'
                 f'<tr><td style="padding:{outer_pad};">'
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
                 f'<tr>{cells}</tr>'

@@ -251,7 +251,10 @@ export const BLOCK_SCHEMA = {
     ],
     defaults: {
       image_url: "",
+      heading: "",
+      heading_color: "#111827",
       text: "Describe the image here. Keep it short and compelling.",
+      text_color: "#555555",
       image_position: "left",
       image_width: "160px",
       layout_mode: "side",
@@ -285,6 +288,15 @@ export const BLOCK_SCHEMA = {
               { label: "Text wraps image", value: "wrap" },
             ],
           },
+        ],
+      },
+      {
+        id: "text",
+        title: "Text",
+        fields: [
+          { key: "heading", label: "Heading", type: "text", placeholder: "Optional heading" },
+          { key: "heading_color", label: "Heading color", type: "color" },
+          { key: "text_color", label: "Text color", type: "color" },
         ],
       },
       {
