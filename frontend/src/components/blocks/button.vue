@@ -50,6 +50,7 @@ const buttonStyle = computed(() => ({
   borderRadius:    props.block.props.border_radius || "8px",
   fontFamily:      fontStack(props.block.props.font_family, "Arial, Helvetica, sans-serif"),
   fontSize:        props.block.props.font_size || "14px",
+  letterSpacing:   props.block.props.letter_spacing || undefined,
   padding:         PADDING_MAP[props.block.props.button_padding] || PADDING_MAP.normal,
 }));
 

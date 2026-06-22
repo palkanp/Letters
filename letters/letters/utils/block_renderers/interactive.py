@@ -24,14 +24,20 @@ class ButtonRenderer(BlockRenderer):
         font           = font_stack(p, "Arial,sans-serif")
         btn_padding_key = p.get("button_padding", "normal")
         btn_padding    = self._BTN_PADDING.get(btn_padding_key, self._BTN_PADDING["normal"])
+        letter_spacing = escape(p.get("letter_spacing", ""))
+        ls_style       = f"letter-spacing:{letter_spacing};" if letter_spacing and letter_spacing != "normal" else ""
+        outer_bg       = escape(p.get("background_color", ""))
+        outer_bg_style = f"background-color:{outer_bg};" if outer_bg and outer_bg not in ("transparent", "") else ""
 
         padding = _padding(p, 20, 16, 20, 16)
         html = (
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+            f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+            f' style="{outer_bg_style}">'
             f'<tr><td align="{align}" style="padding:{padding};">'
             f'<a href="{url}" style="display:inline-block;padding:{btn_padding};'
             f'background-color:{bg};color:{color};font-family:{font};'
-            f'font-size:{font_size};font-weight:500;text-decoration:none;border-radius:{radius};">'
+            f'font-size:{font_size};font-weight:500;text-decoration:none;'
+            f'border-radius:{radius};{ls_style}">'
             f'{label}</a>'
             f'</td></tr></table>'
         )

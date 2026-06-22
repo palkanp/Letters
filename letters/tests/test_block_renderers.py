@@ -242,6 +242,23 @@ class TestButtonRenderer:
     def test_default_label_fallback(self):
         assert "Click here" in self._r({})
 
+    def test_letter_spacing_applied(self):
+        html = self._r({"label": "Buy", "letter_spacing": "0.1em"})
+        assert "letter-spacing:0.1em;" in html
+
+    def test_letter_spacing_normal_omitted(self):
+        html = self._r({"label": "Buy", "letter_spacing": "normal"})
+        assert "letter-spacing" not in html
+
+    def test_background_color_applied(self):
+        html = self._r({"label": "Buy", "background_color": "#f0f0f0"})
+        assert "background-color:#f0f0f0;" in html
+
+    def test_transparent_background_omitted(self):
+        html = self._r({"label": "Buy", "background_color": "transparent"})
+        # transparent should not add a background-color on the outer table
+        assert html.count("background-color") == 1  # only the button itself
+
 
 # ── ColumnsRenderer ───────────────────────────────────────────────────────────
 

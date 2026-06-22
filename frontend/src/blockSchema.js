@@ -308,6 +308,7 @@ export const BLOCK_SCHEMA = {
       url: "#",
       color: "#111827",
       text_color: "#ffffff",
+      background_color: "#ffffff",
       align: "center",
       border_radius: "8px",
       font_family: "Arial",
@@ -331,6 +332,7 @@ export const BLOCK_SCHEMA = {
           fontField,
           { key: "color", label: "Button color", type: "color" },
           { key: "text_color", label: "Text color", type: "color" },
+          { key: "background_color", label: "Background", type: "color" },
           { key: "font_size", label: "Font size", type: "text", placeholder: "14px" },
           {
             key: "button_padding",
