@@ -43,16 +43,19 @@ def _padding(props: dict, dt: int = 20, dr: int = 16, db: int = 20, dl: int = 16
 
 
 def _spacing_wrapper(inner_html: str, props: dict) -> str:
-    """Wrap a block's HTML in a table row that applies spacing on all four sides."""
+    """Wrap a block's HTML in a table row that applies spacing and background color."""
     top    = int(props.get("spacing_top", 0))
     bottom = int(props.get("spacing_bottom", 0))
     left   = int(props.get("spacing_left", 0))
     right  = int(props.get("spacing_right", 0))
-    if top == 0 and bottom == 0 and left == 0 and right == 0:
+    bg     = props.get("background_color", "")
+    bg_style = f"background-color:{bg};" if bg and bg not in ("transparent", "") else ""
+    if top == 0 and bottom == 0 and left == 0 and right == 0 and not bg_style:
         return inner_html
     padding = f"padding:{top}px {right}px {bottom}px {left}px;"
     return (
-        f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+        f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
+        f' style="{bg_style}">'
         f'<tr><td style="{padding}">'
         f'{inner_html}'
         f'</td></tr></table>'

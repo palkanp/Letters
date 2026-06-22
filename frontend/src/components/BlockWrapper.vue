@@ -213,7 +213,7 @@ const spacingStyle = computed(() => {
     paddingBottom:   b > 0 ? `${b}px` : undefined,
     paddingLeft:     l > 0 ? `${l}px` : undefined,
     paddingRight:    r > 0 ? `${r}px` : undefined,
-    backgroundColor: (t > 0 || b > 0 || l > 0 || r > 0) && hasBg ? bg : undefined,
+    backgroundColor: hasBg ? bg : undefined,
   };
 });
 

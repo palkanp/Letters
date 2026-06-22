@@ -59,13 +59,19 @@ class ImageRenderer(BlockRenderer):
             else img_tag
         )
 
+        caption = escape(p.get("caption", ""))
         padding = _padding(p, 16, 16, 16, 16)
+        caption_row = (
+            f'<tr><td align="{td_align}" style="padding:4px 0 0;font-family:Arial,sans-serif;'
+            f'font-size:12px;color:#6b7280;">{caption}</td></tr>'
+        ) if caption else ""
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
             f'<tr><td align="{td_align}" style="padding:{padding};">'
             f'{img_content}'
             f'</td></tr>'
+            f'{caption_row}'
             f'</table>'
         )
         return _spacing_wrapper(html, p)

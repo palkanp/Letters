@@ -105,8 +105,11 @@ class ContainerRenderer(BlockRenderer):
             explicit_widths = [_child_width(c) for c in children]
             default_width   = f"{round(100 / count)}%"  # equal share for implicit cells
 
-            # Build valign map from align prop
-            _valign_map = {"left": "top", "center": "middle", "right": "bottom"}
+            # Map the parent container's vertical_align to HTML valign for all cells
+            _va_map = {"center": "middle", "flex-start": "top", "top": "top",
+                       "flex-end": "bottom", "bottom": "bottom", "middle": "middle"}
+            row_valign   = _va_map.get(p.get("vertical_align", ""), "top")
+            valign_css   = {"top": "top", "middle": "middle", "bottom": "bottom"}.get(row_valign, "top")
 
             cells = ""
             for idx, child in enumerate(children):
@@ -114,10 +117,9 @@ class ContainerRenderer(BlockRenderer):
                 right_pad = 0 if idx == len(children) - 1 else half_gap
                 w = explicit_widths[idx] or default_width
                 width_attr = f' width="{w}"'
-                valign     = _valign_map.get(child.get("props", {}).get("align", ""), "top")
                 cells += (
-                    f'<td{width_attr} valign="{valign}"'
-                    f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:top;">'
+                    f'<td{width_attr} valign="{row_valign}"'
+                    f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
                     f'{_render_child(child)}'
                     f'</td>'
                 )

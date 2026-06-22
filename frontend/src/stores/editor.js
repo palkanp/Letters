@@ -576,27 +576,30 @@ export const useEditorStore = defineStore("editor", () => {
     _seedHistory();
   }
 
-  /** Replace canvas with a template (array of {type, props?} objects). */
+  /** Replace canvas with a template (array of {type, props?, children?, label?} objects). */
   function loadTemplate(templateBlocks) {
     _pushHistory(true);
     selectedBlockId.value = null;
-    // Use _createBlock defaults then merge any provided props
-    blocks.value = templateBlocks.map((tpl) => {
-      // "rich_text" was merged into "text" — never instantiate the legacy type.
+
+    function buildFromTemplate(tpl) {
       const type = tpl.type === "rich_text" ? "text" : tpl.type;
       const b = _createBlock(type, nextId());
+      if (tpl.label) b.label = tpl.label;
       if (tpl.props) Object.assign(b.props, tpl.props);
-      if (tpl.type === "columns" && tpl.columns) {
+      // Recursively build container children
+      if (tpl.children?.length) {
+        b.children = tpl.children.map(buildFromTemplate);
+      }
+      // Handle legacy columns blocks
+      if (tpl.columns) {
         b.columns = tpl.columns.map(col => ({
-          blocks: (col.blocks || []).map(cb => {
-            const child = _createBlock(cb.type, nextId());
-            if (cb.props) Object.assign(child.props, cb.props);
-            return child;
-          }),
+          blocks: (col.blocks || []).map(buildFromTemplate),
         }));
       }
       return b;
-    });
+    }
+
+    blocks.value = templateBlocks.map(buildFromTemplate);
     markDirty();
   }
 
