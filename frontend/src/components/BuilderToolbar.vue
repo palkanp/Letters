@@ -8,10 +8,10 @@
           variant="ghost"
           size="sm"
           aria-label="Campaign menu"
-          class="flex-shrink-0 gap-1 pl-1.5 pr-1"
+          class="flex-shrink-0 gap-1 pl-1.5 pr-1 focus-visible:!ring-0"
         >
           <template #prefix>
-            <span class="w-6 h-6 rounded-md bg-ink-gray-9 text-ink-white flex items-center justify-center text-xs font-bold flex-shrink-0">L</span>
+            <span class="w-6 h-6 rounded-md bg-[var(--ink-gray-9)] text-ink-white flex items-center justify-center text-xs font-bold flex-shrink-0">L</span>
           </template>
           <template #suffix>
             <span :class="`lucide-${open ? 'chevron-up' : 'chevron-down'} size-3.5 text-ink-gray-4`" aria-hidden="true" />

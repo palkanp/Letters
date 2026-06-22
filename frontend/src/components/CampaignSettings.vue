@@ -14,18 +14,19 @@
         <div class="absolute inset-0 bg-black/60" @click="close" />
 
         <!-- Panel: left nav + right content -->
-        <div class="bg-surface-base relative flex w-full max-w-3xl h-[560px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden">
+        <div class="bg-surface-base relative flex w-full max-w-3xl h-[560px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden border border-outline-gray-2">
 
           <!-- Left nav -->
-          <aside class="bg-surface-gray-2 border-outline-gray-2 w-52 flex-shrink-0 border-r p-3 flex flex-col">
-            <p class="text-ink-gray-9 px-2.5 py-2 text-base font-semibold">Settings</p>
-            <p class="text-ink-gray-5 px-2.5 pt-2 pb-1 text-xs font-medium uppercase tracking-wide">Campaign</p>
-            <nav class="space-y-0.5">
+          <aside class="bg-surface-gray-2 border-outline-gray-2 w-52 flex-shrink-0 border-r flex flex-col">
+            <div class="flex items-center h-[60px] px-4 flex-shrink-0">
+              <span class="text-ink-gray-9 text-base font-semibold">Settings</span>
+            </div>
+            <nav class="space-y-0.5 p-3">
               <Button
                 v-for="s in sections"
                 :key="s.id"
                 variant="ghost"
-                class="w-full justify-start px-2.5 py-1.5 text-sm"
+                class="w-full !justify-start px-2.5 py-1.5 text-sm"
                 :class="activeTab === s.id
                   ? 'bg-surface-base text-ink-gray-9 shadow-sm font-medium'
                   : 'text-ink-gray-5 hover:bg-surface-gray-3'"

@@ -5,7 +5,7 @@
 /* --surface-base was in a locally-modified frappe-ui that got wiped by npm install.
    Define it here so bg-surface-base works in both themes. */
 :root { --surface-base: #ffffff; }
-[data-theme="dark"] { --surface-base: #111111; }
+[data-theme="dark"] { --surface-base: #1a1a1a; }
 
 html, body {
   margin: 0;
