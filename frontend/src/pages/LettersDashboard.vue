@@ -168,6 +168,7 @@
                 ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8')
                 : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
               aria-label="Grid view"
+              data-testid="view-grid"
               @click="viewMode = 'grid'"
             />
             <Button
@@ -179,6 +180,7 @@
                 ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8')
                 : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
               aria-label="List view"
+              data-testid="view-list"
               @click="viewMode = 'list'"
             />
           </div>
