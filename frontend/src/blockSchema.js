@@ -35,6 +35,7 @@ const letterSpacingField = { key: "letter_spacing", label: "Letter spacing", typ
   { label: "Snug (−0.01em)",  value: "-0.01em" },
   { label: "Wide (0.05em)",   value: "0.05em"  },
   { label: "Wider (0.1em)",   value: "0.1em"   },
+  { label: "Tracked (0.15em)",value: "0.15em"  },
   { label: "Widest (0.2em)",  value: "0.2em"   },
 ]};
 
@@ -207,7 +208,11 @@ export const BLOCK_SCHEMA = {
     defaults: {
       label: "SECTION TITLE",
       text_color: "#383838",
+      font_size: "11px",
+      font_weight: "600",
+      letter_spacing: "0.15em",
       line_color: "#ededed",
+      line_thickness: 0.5,
       line_position: "below",
       align: "left",
       font_family: "Arial",
@@ -223,7 +228,9 @@ export const BLOCK_SCHEMA = {
           { key: "text_color", label: "Text color", type: "color" },
           { key: "font_size", label: "Font size", type: "text", placeholder: "11px" },
           fontWeightField(),
+          letterSpacingField,
           { key: "line_color", label: "Line color", type: "color" },
+          { key: "line_thickness", label: "Line thickness", type: "number", placeholder: "0.5" },
           {
             key: "line_position",
             label: "Line",
@@ -235,7 +242,6 @@ export const BLOCK_SCHEMA = {
             ],
           },
           { key: "align", label: "Alignment", type: "align" },
-          letterSpacingField,
           ...borderFields,
         ],
       },

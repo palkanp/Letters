@@ -37,10 +37,10 @@ export function useBlockPicker(editorStore) {
     { type: "quote",         label: "Quote",        icon: "message-square" },
     { type: "video_thumb",   label: "Video",        icon: "play-circle" },
     { type: "link_list",     label: "Link List",    icon: "list" },
+    { type: "section_label", label: "Section Label", icon: "tag" },
     { type: "footer",        label: "Footer",       icon: "align-justify" },
     { section: "Other" },
     { type: "social",        label: "Social",       icon: "share-2" },
-    { type: "section_label", label: "Section",      icon: "tag" },
   ];
 
   function onAddBlock() {

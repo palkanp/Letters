@@ -5,18 +5,18 @@
       <div
         v-if="block.props.line_position === 'above'"
         class="w-full mb-3"
-        :style="{ borderTop: `1px solid ${block.props.line_color || '#ededed'}` }"
+        :style="{ borderTop: `${block.props.line_thickness || 0.5}px solid ${block.props.line_color || '#ededed'}` }"
       />
 
       <!-- Label text -->
       <EditableDiv
-        class="inline-block tracking-widest uppercase outline-none"
+        class="inline-block uppercase outline-none"
         :style="{
           color: block.props.text_color || '#383838',
           fontFamily: fontStack(block.props.font_family, 'Arial, Helvetica, sans-serif'),
           fontSize: block.props.font_size || '11px',
           fontWeight: block.props.font_weight || '600',
-          letterSpacing: '0.99px',
+          letterSpacing: block.props.letter_spacing || '0.15em',
         }"
         :model-value="block.props.label"
         @update:model-value="update('label', $event)"
@@ -27,7 +27,7 @@
       <div
         v-if="block.props.line_position === 'below' || !block.props.line_position"
         class="w-full mt-3"
-        :style="{ borderTop: `1px solid ${block.props.line_color || '#ededed'}` }"
+        :style="{ borderTop: `${block.props.line_thickness || 0.5}px solid ${block.props.line_color || '#ededed'}` }"
       />
     </div>
   </BlockWrapper>

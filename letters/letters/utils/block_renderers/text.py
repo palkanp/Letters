@@ -42,16 +42,18 @@ class HeroRenderer(BlockRenderer):
 class SectionLabelRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p = block.get("props", {})
-        label         = escape(p.get("label", ""))
-        text_color    = escape(p.get("text_color", "#383838"))
-        line_color    = escape(p.get("line_color", "#ededed"))
-        line_position = p.get("line_position", "below")
-        align         = escape(p.get("align", "left"))
-        font_size     = escape(p.get("font_size", "11px"))
-        font_weight   = escape(str(p.get("font_weight", "600")))
-        font          = font_stack(p, "Arial,sans-serif")
+        label          = escape(p.get("label", ""))
+        text_color     = escape(p.get("text_color", "#383838"))
+        line_color     = escape(p.get("line_color", "#ededed"))
+        line_thickness = p.get("line_thickness", 0.5)
+        line_position  = p.get("line_position", "below")
+        align          = escape(p.get("align", "left"))
+        font_size      = escape(p.get("font_size", "11px"))
+        font_weight    = escape(str(p.get("font_weight", "600")))
+        letter_spacing = escape(p.get("letter_spacing", "0.15em"))
+        font           = font_stack(p, "Arial,sans-serif")
 
-        line_html = f'<hr style="border:0;border-top:1px solid {line_color};margin:8px 0 0;" />'
+        line_html = f'<hr style="border:0;border-top:{line_thickness}px solid {line_color};margin:8px 0 0;" />'
         above_line = line_html if line_position == "above" else ""
         below_line = line_html if line_position in ("below", "") or not line_position else ""
 
@@ -61,7 +63,7 @@ class SectionLabelRenderer(BlockRenderer):
             f'<tr><td style="padding:{padding};" align="{align}">'
             f'{above_line}'
             f'<span style="font-family:{font};font-size:{font_size};font-weight:{font_weight};'
-            f'color:{text_color};text-transform:uppercase;letter-spacing:1px;'
+            f'color:{text_color};text-transform:uppercase;letter-spacing:{letter_spacing};'
             f'line-height:1.2;">{label}</span>'
             f'{below_line}'
             f'</td></tr></table>'
