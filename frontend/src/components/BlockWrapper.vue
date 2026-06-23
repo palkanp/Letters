@@ -31,88 +31,88 @@
       }"
     />
 
-    <!-- ── Spacing pills (orange) — outside the selection ring ───────────── -->
-    <!-- Top: pill sits above the content boundary (in spacing zone or above block) -->
+    <!-- ── Spacing pills (orange) — 3px outside the selection ring ──────── -->
+    <!-- Top -->
     <div
       v-if="selected"
       class="absolute z-30 select-none cursor-ns-resize flex items-center justify-center group/sp"
-      :style="{ top: `${spacingTop}px`, left: '50%', width: '36px', height: '12px', transform: 'translate(-50%, -100%)' }"
+      :style="{ top: `${spacingTop}px`, left: pillCenterX, width: '28px', height: '8px', transform: 'translate(-50%, calc(-100% - 3px))' }"
       @pointerdown.prevent.stop="startSpacingDrag('top', $event)"
       @click.stop
     >
-      <div class="w-8 h-1.5 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-4 h-1 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
     </div>
     <!-- Bottom -->
     <div
       v-if="selected"
       class="absolute z-30 select-none cursor-ns-resize flex items-center justify-center group/sp"
-      :style="{ bottom: `${spacingBottom}px`, left: '50%', width: '36px', height: '12px', transform: 'translate(-50%, 100%)' }"
+      :style="{ bottom: `${spacingBottom}px`, left: pillCenterX, width: '28px', height: '8px', transform: 'translate(-50%, calc(100% + 3px))' }"
       @pointerdown.prevent.stop="startSpacingDrag('bottom', $event)"
       @click.stop
     >
-      <div class="w-8 h-1.5 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-4 h-1 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
     </div>
     <!-- Left -->
     <div
       v-if="selected"
       class="absolute z-30 select-none cursor-ew-resize flex items-center justify-center group/sp"
-      :style="{ left: `${spacingLeft}px`, top: '50%', width: '12px', height: '36px', transform: 'translate(-100%, -50%)' }"
+      :style="{ left: `${spacingLeft}px`, top: pillCenterY, width: '8px', height: '28px', transform: 'translate(calc(-100% - 3px), -50%)' }"
       @pointerdown.prevent.stop="startSpacingDrag('left', $event)"
       @click.stop
     >
-      <div class="w-1.5 h-8 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-1 h-4 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
     </div>
     <!-- Right -->
     <div
       v-if="selected"
       class="absolute z-30 select-none cursor-ew-resize flex items-center justify-center group/sp"
-      :style="{ right: `${spacingRight}px`, top: '50%', width: '12px', height: '36px', transform: 'translate(100%, -50%)' }"
+      :style="{ right: `${spacingRight}px`, top: pillCenterY, width: '8px', height: '28px', transform: 'translate(calc(100% + 3px), -50%)' }"
       @pointerdown.prevent.stop="startSpacingDrag('right', $event)"
       @click.stop
     >
-      <div class="w-1.5 h-8 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-1 h-4 rounded-full bg-orange-400 opacity-60 group-hover/sp:opacity-85 transition-opacity shadow-sm" />
     </div>
 
-    <!-- ── Padding handles (purple) — positioned inside the selection ring ── -->
+    <!-- ── Padding handles (purple) — 3px inside the selection ring ──────── -->
     <!-- Top padding -->
     <div
       v-if="selected"
       class="absolute z-30 flex items-center justify-center cursor-ns-resize group/pad"
-      :style="{ top: `${spacingTop}px`, left: `${spacingLeft + 32}px`, right: `${spacingRight + 32}px`, height: '12px' }"
+      :style="{ top: `${spacingTop + 3}px`, left: pillCenterX, width: '16px', height: '8px', transform: 'translateX(-50%)' }"
       @pointerdown.prevent.stop="startPaddingDrag('top', $event)"
       @click.stop
     >
-      <div class="w-8 h-1.5 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-4 h-1 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
     </div>
     <!-- Bottom padding -->
     <div
       v-if="selected"
       class="absolute z-30 flex items-center justify-center cursor-ns-resize group/pad"
-      :style="{ bottom: `${spacingBottom}px`, left: `${spacingLeft + 32}px`, right: `${spacingRight + 32}px`, height: '12px' }"
+      :style="{ bottom: `${spacingBottom + 3}px`, left: pillCenterX, width: '16px', height: '8px', transform: 'translateX(-50%)' }"
       @pointerdown.prevent.stop="startPaddingDrag('bottom', $event)"
       @click.stop
     >
-      <div class="w-8 h-1.5 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-4 h-1 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
     </div>
     <!-- Left padding -->
     <div
       v-if="selected"
       class="absolute z-30 flex items-center justify-center cursor-ew-resize group/pad"
-      :style="{ top: `${spacingTop}px`, bottom: `${spacingBottom}px`, left: `${spacingLeft}px`, width: '12px' }"
+      :style="{ left: `${spacingLeft + 3}px`, top: pillCenterY, width: '8px', height: '16px', transform: 'translateY(-50%)' }"
       @pointerdown.prevent.stop="startPaddingDragH('left', $event)"
       @click.stop
     >
-      <div class="w-1.5 h-8 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-1 h-4 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
     </div>
     <!-- Right padding -->
     <div
       v-if="selected"
       class="absolute z-30 flex items-center justify-center cursor-ew-resize group/pad"
-      :style="{ top: `${spacingTop}px`, bottom: `${spacingBottom}px`, right: `${spacingRight}px`, width: '12px' }"
+      :style="{ right: `${spacingRight + 3}px`, top: pillCenterY, width: '8px', height: '16px', transform: 'translateY(-50%)' }"
       @pointerdown.prevent.stop="startPaddingDragH('right', $event)"
       @click.stop
     >
-      <div class="w-1.5 h-8 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
+      <div class="w-1 h-4 rounded-full bg-violet-500 opacity-60 group-hover/pad:opacity-85 transition-opacity shadow-sm" />
     </div>
 
     <!-- ── Corner resize dot (bottom-right of content area) ─────────────── -->
@@ -200,6 +200,11 @@ const spacingTop    = computed(() => Number(props.block.props?.spacing_top    ??
 const spacingBottom = computed(() => Number(props.block.props?.spacing_bottom ?? 0));
 const spacingLeft   = computed(() => Number(props.block.props?.spacing_left   ?? 0));
 const spacingRight  = computed(() => Number(props.block.props?.spacing_right  ?? 0));
+
+// Center of the content area (inside the selection ring) for pill alignment.
+// When spacing is asymmetric, 50% of the block ≠ center of the content area.
+const pillCenterX = computed(() => `calc(${spacingLeft.value}px + (100% - ${spacingLeft.value + spacingRight.value}px) / 2)`);
+const pillCenterY = computed(() => `calc(${spacingTop.value}px + (100% - ${spacingTop.value + spacingBottom.value}px) / 2)`);
 
 const spacingStyle = computed(() => {
   const t  = spacingTop.value;
