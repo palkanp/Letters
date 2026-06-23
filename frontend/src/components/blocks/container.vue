@@ -18,45 +18,10 @@
         <div
           v-for="(child, childIndex) in block.children"
           :key="child.id"
-          class="relative group/child rounded transition-colors"
-          :class="childDragOver === childIndex ? 'ring-2 ring-blue-400' : ''"
+          class="relative rounded"
           :style="childFlexStyle(child)"
-          draggable="true"
           @click.stop="store.selectBlock(child.id)"
-          @dragstart.stop="onChildDragStart(childIndex, $event)"
-          @dragover.stop.prevent="onChildDragOver(childIndex, $event)"
-          @dragleave.stop="childDragOver = null"
-          @drop.stop.prevent="onChildDrop(childIndex)"
-          @dragend.stop="childDragFrom = null; childDragOver = null"
         >
-          <!-- Drop indicator -->
-          <div v-if="childDragOver === childIndex && childDragFrom !== null && childDragFrom !== childIndex"
-            class="absolute inset-x-0 -top-px h-0.5 bg-blue-500 rounded-full pointer-events-none z-20" />
-          <!-- Drag grip -->
-          <div
-            class="absolute top-1/2 -translate-y-1/2 -left-5 w-4 h-6 flex items-center justify-center
-                   cursor-grab active:cursor-grabbing select-none rounded
-                   text-ink-gray-3 hover:text-ink-gray-5 hover:bg-surface-gray-2 transition-all z-20
-                   opacity-0 group-hover/child:opacity-100"
-            @click.stop
-          >
-            <svg width="8" height="12" viewBox="0 0 8 12" fill="currentColor">
-              <circle cx="2" cy="2"  r="1.2"/><circle cx="6" cy="2"  r="1.2"/>
-              <circle cx="2" cy="6"  r="1.2"/><circle cx="6" cy="6"  r="1.2"/>
-              <circle cx="2" cy="10" r="1.2"/><circle cx="6" cy="10" r="1.2"/>
-            </svg>
-          </div>
-          <!-- Remove child button -->
-          <Button
-            variant="ghost"
-            icon="lucide-x"
-            size="sm"
-            title="Remove block"
-            aria-label="Remove block"
-            class="absolute -top-2 -right-2 !w-5 !h-5 !rounded-full border border-outline-gray-2
-                   shadow-sm z-20 opacity-0 group-hover/child:opacity-100 transition-opacity"
-            @click.stop="store.removeBlock(child.id)"
-          />
           <!-- Render the child block -->
           <BlockRenderer :block="child" :index="childIndex" />
         </div>
@@ -81,10 +46,9 @@
 </template>
 
 <script setup>
-import { computed, ref, inject } from "vue";
+import { computed, inject } from "vue";
 import BlockWrapper from "../BlockWrapper.vue";
 import BlockRenderer from "../BlockRenderer.vue";
-import { Button } from "frappe-ui";
 import { useEditorStore } from "../../stores/editor";
 import { usePadding } from "../../composables/usePadding";
 
@@ -131,22 +95,4 @@ function childFlexStyle(child) {
 
 const alignSelfMap = { left: "flex-start", center: "center", right: "flex-end" };
 
-const childDragFrom = ref(null);
-const childDragOver = ref(null);
-
-function onChildDragStart(index, e) {
-  childDragFrom.value = index;
-  e.dataTransfer.effectAllowed = "move";
-}
-function onChildDragOver(index) {
-  if (childDragFrom.value === null) return;
-  childDragOver.value = index;
-}
-function onChildDrop(toIndex) {
-  const from = childDragFrom.value;
-  childDragFrom.value = null;
-  childDragOver.value = null;
-  if (from === null || from === toIndex) return;
-  store.moveChildBlock(props.block.id, from, toIndex);
-}
 </script>
