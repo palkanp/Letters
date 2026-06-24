@@ -14,7 +14,9 @@ def seed_templates():
     import os
 
     fixture_path = os.path.join(
-        frappe.get_app_path("letters"), "fixtures", "letters_template.json"
+        frappe.get_app_path('letters'), 
+        "letters", "fixtures", 
+        "letters_template.json"
     )
     with open(fixture_path) as f:
         templates = json.load(f)
