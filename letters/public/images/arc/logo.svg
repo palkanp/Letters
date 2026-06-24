@@ -1,0 +1,8 @@
+<svg viewBox="0 0 152 36" xmlns="http://www.w3.org/2000/svg">
+  <!-- Arc mark: a rising arc with a spark dot at the apex -->
+  <path d="M 4 28 A 14 14 0 0 1 32 28" fill="none" stroke="#2555D4" stroke-width="2.5" stroke-linecap="round"/>
+  <circle cx="18" cy="14" r="2.5" fill="#2555D4"/>
+  <!-- Wordmark -->
+  <text x="44" y="22" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="3" fill="#EEF2FF">ARC</text>
+  <text x="44" y="34" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="400" letter-spacing="2" fill="#6B7280">2026</text>
+</svg>

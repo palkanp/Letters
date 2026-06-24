@@ -238,16 +238,20 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
     try {
       const cfg  = recipientConfig.value;
       const args = { name: editorStore.letterDoc?.name };
-      if (cfg.type === "group") {
-        args.email_group = cfg.email_group;
-      } else if (cfg.type === "paste") {
-        args.recipients = JSON.stringify(cfg.recipients);
-      } else if (cfg.type === "doctype") {
-        args.doctype_config = JSON.stringify({
-          doctype:     cfg.doctype,
-          email_field: cfg.email_field,
-          filters:     cfg.filters || {},
-        });
+      // Array = multi-source config already saved; backend reads it directly.
+      // Single-object (legacy) = pass individual args for backward compat.
+      if (!Array.isArray(cfg)) {
+        if (cfg.type === "group") {
+          args.email_group = cfg.email_group;
+        } else if (cfg.type === "paste") {
+          args.recipients = JSON.stringify(cfg.recipients);
+        } else if (cfg.type === "doctype") {
+          args.doctype_config = JSON.stringify({
+            doctype:     cfg.doctype,
+            email_field: cfg.email_field,
+            filters:     cfg.filters || {},
+          });
+        }
       }
       const res = await frappe.call({ method: "letters.letters.api.send_letter", args });
       const { count, skipped_invalid } = res.message;
