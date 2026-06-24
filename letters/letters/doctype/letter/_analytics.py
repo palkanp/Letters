@@ -56,13 +56,35 @@ class AnalyticsMixin:
         )
         if not send:
             return []
-        return frappe.get_all(
+        sent = frappe.get_all(
             "Email Send Recipient",
             filters={"parent": send},
             fields=["email", "status", "opened", "opened_on"],
             order_by="email asc",
             limit=int(limit),
         )
+
+        # Also surface emails that were suppressed for this letter (unsubscribed).
+        # These were never inserted into Email Send Recipient, so we look them up
+        # from Email Unsubscribe scoped to this letter + its folder.
+        or_filters = [{"reference_doctype": "Letter", "reference_name": self.name}]
+        folder = frappe.db.get_value("Letter", self.name, "folder")
+        if folder:
+            or_filters.append({"reference_doctype": "Letter Folder", "reference_name": folder})
+
+        suppressed_rows = frappe.get_all(
+            "Email Unsubscribe",
+            or_filters=or_filters,
+            fields=["email"],
+            distinct=True,
+        )
+        sent_emails = {r.email for r in sent}
+        excluded = [
+            frappe._dict(email=r.email, status="Excluded", opened=0, opened_on=None)
+            for r in suppressed_rows
+            if r.email not in sent_emails
+        ]
+        return sent + excluded
 
     def get_send_progress(self):
         frappe.has_permission("Letter", "read", doc=self, throw=True)

@@ -10,10 +10,14 @@ from .recipients import (
     get_doctype_filter_fields,
     count_doctype_recipients,
     get_email_groups,
+    create_email_group_from_source,
     _is_email_field,
     _load_recipient_config,
     _normalize_recipient_config,
     _recipient_args_from_config,
+    _has_recipient_config,
+    _resolve_single_source_emails,
+    _resolve_multi_source,
     _suppressed_emails,
     _valid_emails,
 )
@@ -43,6 +47,10 @@ from .sending import (
     _bulk_insert_recipients,
     _enqueue_send,
     _execute_send,
+)
+from .unsubscribe import (
+    unsubscribe_redirect,
+    save_preferences,
 )
 from .links import (
     check_links,

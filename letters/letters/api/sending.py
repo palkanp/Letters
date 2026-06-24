@@ -269,6 +269,15 @@ def _execute_send(send_doc_name, letter_name):
                     now=False,
                     reference_doctype="Letter",
                     reference_name=letter_name,
+                    # Email-group sends use Frappe's native unsubscribe (sets
+                    # Email Group Member.unsubscribed). All other sends use a
+                    # custom portal page that lets recipients manage folder-level
+                    # or global opt-outs.
+                    unsubscribe_method=(
+                        None if send_doc.send_mode == "email_group"
+                        else "letters.letters.api.unsubscribe.unsubscribe_redirect"
+                        if send_doc.include_unsubscribe else None
+                    ),
                     unsubscribe_message=_("Unsubscribe") if send_doc.include_unsubscribe else None,
                     add_unsubscribe_link=1 if send_doc.include_unsubscribe else 0,
                     email_read_tracker_url="/api/method/letters.letters.api.track_open",

@@ -35,7 +35,7 @@ class SendingMixin:
     def schedule(self, scheduled_at: str):
         """Mark this letter to be sent at `scheduled_at` (ISO-8601, server timezone)."""
         frappe.has_permission("Letter", "write", doc=self, throw=True)
-        from letters.letters.api.recipients import _recipient_args_from_config
+        from letters.letters.api.recipients import _has_recipient_config
 
         if self.status in ("Sent", "Sending"):
             frappe.throw(_("This letter has already been sent or is currently sending."))
@@ -44,8 +44,7 @@ class SendingMixin:
         if not self.subject:
             frappe.throw(_("Letter has no subject line."))
 
-        recip = _recipient_args_from_config(self)
-        if not any(recip):
+        if not _has_recipient_config(self):
             frappe.throw(_("Choose recipients before scheduling this letter."))
 
         dt = frappe.utils.get_datetime(scheduled_at)
@@ -72,7 +71,9 @@ class SendingMixin:
         """
         frappe.has_permission("Letter", "write", doc=self, throw=True)
         from letters.letters.api.recipients import (
-            _recipient_args_from_config, _suppressed_emails, _valid_emails,
+            _has_recipient_config, _load_recipient_config,
+            _recipient_args_from_config, _resolve_multi_source,
+            _suppressed_emails, _valid_emails,
         )
         from letters.letters.api.sending import (
             MAX_RECIPIENTS, _bulk_insert_recipients, _enqueue_send, _resume_send,
@@ -95,8 +96,8 @@ class SendingMixin:
             return _resume_send(existing[0].name, self.name, self)
 
         # Atomically claim the send: transition Draft/Scheduled → Sending only if
-        # the campaign is still in a sendable state. rowcount==0 means another
-        # request beat us to it (race condition) or the campaign is already sent.
+        # the letter is still in a sendable state. rowcount==0 means another
+        # request beat us to it (race condition) or the letter is already sent.
         letter_qb = frappe.qb.DocType("Letter")
         (
             frappe.qb.update(letter_qb)
@@ -112,16 +113,42 @@ class SendingMixin:
             frappe.throw(_("This letter has already been sent or is currently sending."))
         self.status = "Sending"
 
-        # Fall back to the letter's saved audience when no explicit source is passed
-        if not (email_group or doctype_config or recipients):
-            recipients, email_group, doctype_config = _recipient_args_from_config(self)
-            if not (email_group or doctype_config or recipients):
+        # ── Resolve recipients ─────────────────────────────────────────────────
+        # When explicit args are passed (legacy / direct API call) use them.
+        # Otherwise read from the letter's saved recipient_config, which may be
+        # the new multi-source array format or the old single-source object.
+        # Scope suppression to this specific letter (+ its folder + global).
+        suppressed_fn = lambda: _suppressed_emails(self.name)
+
+        email_group = email_group  # local alias; may stay None
+        if email_group or doctype_config or recipients:
+            # Explicit args — route through the legacy single-source resolver
+            recipient_list, email_group, mode, invalid_count = _resolve_recipients(
+                email_group, recipients, doctype_config, MAX_RECIPIENTS,
+                suppressed_fn, _valid_emails,
+            )
+        else:
+            sources = _load_recipient_config(self)
+            if not sources:
                 frappe.throw(_("This letter has no saved recipients. Open it and choose an audience before sending."))
 
-        recipient_list, email_group, mode, invalid_count = _resolve_recipients(
-            email_group, recipients, doctype_config, MAX_RECIPIENTS,
-            _suppressed_emails, _valid_emails,
-        )
+            if len(sources) == 1:
+                # Single source — use the legacy path so email_group mode is preserved
+                src = sources[0]
+                eg  = src.get("email_group") if src.get("type") == "group" else None
+                dc  = {k: src[k] for k in ("doctype", "email_field", "filters") if k in src} if src.get("type") == "doctype" else None
+                rc  = src.get("recipients") if src.get("type") == "paste" else None
+                recipient_list, email_group, mode, invalid_count = _resolve_recipients(
+                    eg, rc, dc, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
+                )
+            else:
+                # Multi-source array — merge, dedup, validate
+                recipient_list, invalid_count = _resolve_multi_source(
+                    sources, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
+                    letter_name=self.name,
+                )
+                email_group = None
+                mode = "direct"
 
         # Snapshot the content at send time so edits after clicking Send can't
         # change what recipients receive. _execute_send reads from the snapshot.

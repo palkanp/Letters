@@ -1,0 +1,70 @@
+{% extends "templates/web.html" %}
+
+{% block page_content %}
+<div class="container" style="max-width: 520px; padding: 40px 16px;">
+
+  {% if saved %}
+  <div class="alert alert-success mb-4">
+    Your email preferences have been saved.
+  </div>
+  {% endif %}
+
+  <h4 class="mb-1">Email preferences</h4>
+
+  {% if not email %}
+  <p class="text-muted">No email address provided. Please use the unsubscribe link from a received email.</p>
+  {% else %}
+  <p class="text-muted mb-4" style="font-size: 14px;">Managing preferences for <strong>{{ email }}</strong></p>
+
+  <form method="post" action="/api/method/letters.letters.api.unsubscribe.save_preferences">
+    <input type="hidden" name="email" value="{{ email }}">
+    <input type="hidden" name="letter" value="{{ letter }}">
+    <input type="hidden" name="cmd" value="letters.letters.api.unsubscribe.save_preferences">
+
+    {% if folders %}
+    <div class="mb-4">
+      <p class="fw-semibold mb-2" style="font-size: 14px;">Unsubscribe from specific categories</p>
+      <div class="border rounded" style="overflow: hidden;">
+        {% for folder in folders %}
+        <label class="d-flex align-items-center gap-2 px-3 py-2 {% if not loop.last %}border-bottom{% endif %}" style="cursor: pointer; margin: 0; font-weight: normal;">
+          <input
+            type="checkbox"
+            name="unsubscribe_folders"
+            value="{{ folder.name }}"
+            {% if folder.is_unsubscribed %}checked{% endif %}
+            style="margin: 0;"
+          >
+          <span style="font-size: 14px;">{{ folder.folder_name }}</span>
+          {% if folder.is_unsubscribed %}
+          <span class="text-muted ms-auto" style="font-size: 12px;">Unsubscribed</span>
+          {% endif %}
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% else %}
+    <p class="text-muted mb-4" style="font-size: 13px;">No letter categories are configured.</p>
+    {% endif %}
+
+    <div class="mb-4">
+      <p class="fw-semibold mb-2" style="font-size: 14px;">Unsubscribe from everything</p>
+      <label class="d-flex align-items-center gap-2 border rounded px-3 py-2" style="cursor: pointer; margin: 0; font-weight: normal;">
+        <input
+          type="checkbox"
+          name="global_unsubscribe"
+          value="1"
+          {% if is_globally_unsubscribed %}checked{% endif %}
+          style="margin: 0;"
+        >
+        <div>
+          <span style="font-size: 14px; display: block;">Opt out of all Frappe emails</span>
+          <span class="text-muted" style="font-size: 12px;">You will not receive any emails from this system.</span>
+        </div>
+      </label>
+    </div>
+
+    <button type="submit" class="btn btn-primary btn-sm">Save preferences</button>
+  </form>
+  {% endif %}
+</div>
+{% endblock %}

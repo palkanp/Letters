@@ -9,7 +9,12 @@ from frappe import _
 
 
 def _load_recipient_config(doc):
-    """Parse the campaign's saved audience selection into a dict (or None)."""
+    """Parse the letter's saved audience selection.
+
+    Returns a list of source dicts (new multi-source format), a single source
+    dict wrapped in a list (old single-source format, normalised on read), or
+    None when nothing is stored.
+    """
     raw = getattr(doc, "recipient_config", None)
     if not raw:
         return None
@@ -17,14 +22,18 @@ def _load_recipient_config(doc):
         cfg = json.loads(raw) if isinstance(raw, str) else raw
     except (ValueError, TypeError):
         return None
-    return cfg if isinstance(cfg, dict) else None
+    if isinstance(cfg, list):
+        return cfg if cfg else None
+    if isinstance(cfg, dict):
+        return [cfg]
+    return None
 
 
 
 
 def _normalize_recipient_config(value):
-    """Coerce an incoming recipient_config (object or JSON string) to a stored
-    JSON string, or "" to clear it. Returns None to mean 'leave unchanged'."""
+    """Coerce an incoming recipient_config (object, list, or JSON string) to a
+    stored JSON string, or "" to clear it. Returns None to mean 'leave unchanged'."""
     if value is None:
         return None
     if isinstance(value, (dict, list)):
@@ -38,12 +47,15 @@ def _normalize_recipient_config(value):
 
 
 def _recipient_args_from_config(doc):
-    """Translate the campaign's saved recipient_config into the (recipients,
-    email_group, doctype_config) triple that send_campaign resolves. Returns
-    (None, None, None) when nothing usable is stored."""
-    cfg = _load_recipient_config(doc)
-    if not cfg:
+    """Legacy single-source helper — kept for backward compatibility with direct
+    send calls that pass explicit email_group/recipients/doctype_config args.
+
+    Returns (recipients, email_group, doctype_config) triple.  For the new
+    multi-source array format callers should use _resolve_multi_source instead."""
+    sources = _load_recipient_config(doc)
+    if not sources:
         return None, None, None
+    cfg = sources[0]
     ctype = cfg.get("type")
     if ctype == "group" and cfg.get("email_group"):
         return None, cfg["email_group"], None
@@ -56,6 +68,119 @@ def _recipient_args_from_config(doc):
             "filters":     cfg.get("filters") or {},
         }
     return None, None, None
+
+
+
+
+def _has_recipient_config(doc):
+    """Return True when the doc has at least one usable recipient source."""
+    sources = _load_recipient_config(doc)
+    if not sources:
+        return False
+    for src in sources:
+        t = src.get("type")
+        if t == "group" and src.get("email_group"):
+            return True
+        if t == "paste" and src.get("recipients"):
+            return True
+        if t == "doctype" and src.get("doctype") and src.get("email_field"):
+            return True
+    return False
+
+
+
+
+def _resolve_single_source_emails(source):
+    """Resolve one source config dict to a raw (unsuppressed) list of emails."""
+    stype = source.get("type")
+    emails = []
+
+    if stype == "group":
+        members = frappe.get_all(
+            "Email Group Member",
+            filters={"email_group": source.get("email_group", ""), "unsubscribed": 0},
+            pluck="email",
+        )
+        emails = [e for e in members if e]
+
+    elif stype == "paste":
+        emails = [e for e in (source.get("recipients") or []) if e]
+
+    elif stype == "doctype":
+        dt        = source.get("doctype", "")
+        email_fld = source.get("email_field", "")
+        filters   = dict(source.get("filters") or {})
+        if dt and email_fld:
+            frappe.has_permission(dt, "read", throw=True)
+            filters[email_fld] = ["!=", ""]
+            rows = frappe.get_all(dt, filters=filters, pluck=email_fld, limit=50001)
+            emails = [str(r).strip() for r in rows if r]
+
+    return emails
+
+
+
+
+def _resolve_multi_source(sources, max_recipients, suppressed_fn, valid_fn, letter_name=None):
+    """Resolve a list of source configs to a final deduplicated, validated
+    email list after suppression.  Returns (email_list, invalid_count).
+
+    When letter_name is provided, also snapshots the resolved email list back
+    into each source's resolved_emails field on recipient_config so the sent
+    view can display per-source recipients exactly.
+    """
+    seen = set()
+    merged = []
+    per_source = []  # parallel list of resolved emails per source (pre-dedup within source)
+
+    for src in (sources or []):
+        raw = _resolve_single_source_emails(src)
+        source_emails = []
+        for email in raw:
+            e = email.strip().lower()
+            if e and e not in seen:
+                seen.add(e)
+                merged.append(email.strip())
+                source_emails.append(email.strip())
+        per_source.append(source_emails)
+
+    suppressed = suppressed_fn()
+    suppressed_lower = {s.lower() for s in suppressed} if suppressed else set()
+    if suppressed_lower:
+        merged = [e for e in merged if e.lower() not in suppressed_lower]
+        per_source = [
+            [e for e in src_emails if e.lower() not in suppressed_lower]
+            for src_emails in per_source
+        ]
+
+    if not merged:
+        frappe.throw(_("No recipients found across all selected audience sources."))
+
+    valid, invalid_count = valid_fn(merged)
+    if not valid:
+        frappe.throw(_("No valid email addresses to send to."))
+
+    if len(valid) > max_recipients:
+        frappe.throw(_(
+            "This audience has more than {0} recipients, which is above the "
+            "per-letter limit. Narrow your filters or split the send."
+        ).format(max_recipients))
+
+    # Snapshot resolved emails back into recipient_config so the sent view
+    # can show per-source recipient lists without re-querying.
+    if letter_name and sources:
+        valid_set = {e.lower() for e in valid}
+        updated = []
+        for src, src_emails in zip(sources, per_source):
+            updated.append({
+                **src,
+                "resolved_emails": [e for e in src_emails if e.lower() in valid_set],
+            })
+        frappe.db.set_value(
+            "Letter", letter_name, "recipient_config", json.dumps(updated)
+        )
+
+    return valid, invalid_count
 
 
 
@@ -209,20 +334,22 @@ def get_email_groups():
 
 
 
-def _suppressed_emails():
-    """Addresses that have unsubscribed from Letters (any campaign) or globally.
+def _suppressed_emails(letter_name=None):
+    """Suppressed emails for a specific letter send.
 
-    Reuses Frappe's native Email Unsubscribe store, which is populated by the
-    signed unsubscribe footer Frappe injects into every campaign email (see the
-    reference_doctype/reference_name passed in _execute_send). Filtering here
-    makes an unsubscribe apply across *all* Letters campaigns, not just resends
-    of the one the recipient clicked from."""
+    Scoped to: global unsubscribes + unsubscribes from this specific letter +
+    unsubscribes from the letter's folder. Scoping to the letter name means
+    clicking "Unsubscribe" on Letter A will NOT suppress future sends of Letter B.
+    """
+    or_filters = [{"global_unsubscribe": 1}]
+    if letter_name:
+        or_filters.append({"reference_doctype": "Letter", "reference_name": letter_name})
+        folder = frappe.db.get_value("Letter", letter_name, "folder")
+        if folder:
+            or_filters.append({"reference_doctype": "Letter Folder", "reference_name": folder})
     rows = frappe.get_all(
         "Email Unsubscribe",
-        or_filters=[
-            {"reference_doctype": "Letter"},
-            {"global_unsubscribe": 1},
-        ],
+        or_filters=or_filters,
         pluck="email",
         distinct=True,
     )
@@ -236,3 +363,43 @@ def _valid_emails(emails):
     client). Returns (valid_emails, dropped_count)."""
     valid = [e for e in emails if frappe.utils.validate_email_address(e, throw=False)]
     return valid, len(emails) - len(valid)
+
+
+
+
+@frappe.whitelist(methods=["POST"])
+def create_email_group_from_source(title: str, source_config: str):
+    """Resolve a single source config and save the result as a new Frappe Email Group.
+
+    Returns the new group's name, title, and member count so the frontend can
+    convert the source block to a group-type block pointing at the new group.
+    """
+    source = json.loads(source_config) if isinstance(source_config, str) else source_config
+    if not isinstance(source, dict):
+        frappe.throw(_("Invalid source configuration."))
+
+    emails_raw = _resolve_single_source_emails(source)
+    valid, _ = _valid_emails(emails_raw)
+    if not valid:
+        frappe.throw(_("No valid email addresses found in this source."))
+
+    group = frappe.get_doc({"doctype": "Email Group", "title": title})
+    group.insert()
+
+    now  = frappe.utils.now()
+    user = frappe.session.user
+    fields = [
+        "name", "creation", "modified", "modified_by", "owner", "docstatus",
+        "idx", "email_group", "email", "unsubscribed",
+    ]
+    values = [
+        (
+            frappe.generate_hash(length=10), now, now, user, user, 0,
+            idx + 1, group.name, email, 0,
+        )
+        for idx, email in enumerate(valid)
+    ]
+    frappe.db.bulk_insert("Email Group Member", fields=fields, values=values)
+    frappe.db.commit()
+
+    return {"name": group.name, "title": group.title, "count": len(valid)}
