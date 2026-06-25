@@ -85,4 +85,4 @@ class EmailCompiler:
             renderer = RENDERER_MAP.get(block["type"])
             if renderer:
                 parts.append(renderer.render(block))
-        return "\n".join(parts)
+        return "".join(parts)

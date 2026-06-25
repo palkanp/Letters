@@ -1,6 +1,6 @@
-from base64 import b64encode
 from functools import lru_cache
 from html import escape
+from pathlib import Path
 from typing import Any
 
 from .base import BlockRenderer, _padding, _safe_url, _spacing_wrapper
@@ -8,16 +8,41 @@ from .base import BlockRenderer, _padding, _safe_url, _spacing_wrapper
 
 @lru_cache(maxsize=256)
 def _social_icon_img(svg_path: str, color: str, label: str, size: int = 24) -> str:
-    """Build a base64 data-URI <img> for a monochrome social icon SVG path."""
-    svg = (
+    """Return an <img> tag for a social icon, hosting it as a static SVG file.
+
+    data: URIs are blocked by Gmail and most email clients, so we write a
+    color-keyed SVG file to the Frappe site's public directory and reference
+    it with an absolute URL.  The file is written once per (platform, color)
+    pair and cached in memory afterwards.
+    """
+    color_key = color.lstrip("#").lower()
+    platform  = label.lower().replace(" / ", "-").replace(" ", "-")
+    filename  = f"{platform}-{color_key}.svg"
+
+    svg_content = (
         f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"'
         f' width="{size}" height="{size}">'
         f'<path fill="{color}" d="{svg_path}"/>'
         f'</svg>'
     )
-    encoded = b64encode(svg.encode()).decode()
+
+    try:
+        import frappe
+        icons_dir = Path(frappe.get_site_path("public", "files", "social-icons"))
+        icons_dir.mkdir(parents=True, exist_ok=True)
+        icon_file = icons_dir / filename
+        if not icon_file.exists():
+            icon_file.write_text(svg_content, encoding="utf-8")
+        from frappe.utils import get_url
+        src = escape(get_url(f"/files/social-icons/{filename}"))
+    except Exception:
+        # Outside Frappe (unit tests / local dev without context) — fall back to data URI
+        from base64 import b64encode
+        encoded = b64encode(svg_content.encode()).decode()
+        src = f"data:image/svg+xml;base64,{encoded}"
+
     return (
-        f'<img src="data:image/svg+xml;base64,{encoded}"'
+        f'<img src="{src}"'
         f' width="{size}" height="{size}" alt="{label}"'
         f' style="display:block;border:0;">'
     )

@@ -1,0 +1,7 @@
+<svg viewBox="0 0 136 32" xmlns="http://www.w3.org/2000/svg">
+  <!-- Kiln mark: firing chamber dome with interior arch -->
+  <path d="M2 28 L2 15 Q14 2 26 15 L26 28" fill="none" stroke="#2A2218" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M8 28 L8 20 Q14 13 20 20 L20 28" fill="none" stroke="#2A2218" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Wordmark -->
+  <text x="34" y="22" font-family="Georgia, 'Times New Roman', serif" font-size="15" font-weight="400" fill="#2A2218" letter-spacing="3">KILN</text>
+</svg>

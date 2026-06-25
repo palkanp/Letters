@@ -1,74 +1,75 @@
 {
-  "name": "Letters Template",
-  "module": "Letters",
-  "doctype": "DocType",
-  "issingle": 0,
-  "istable": 0,
-  "is_submittable": 0,
-  "track_changes": 0,
-  "autoname": "field:title",
-  "naming_rule": "By fieldname",
-  "fields": [
-    {
-      "fieldname": "title",
-      "fieldtype": "Data",
-      "label": "Title",
-      "reqd": 1,
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "thumbnail",
-      "fieldtype": "Attach Image",
-      "label": "Thumbnail",
-      "description": "Optional preview image shown in the template picker"
-    },
-    {
-      "fieldname": "blocks_json",
-      "fieldtype": "Code",
-      "label": "Blocks JSON",
-      "options": "JSON",
-      "description": "Block data that seeds the campaign when this template is selected",
-      "reqd": 1
-    },
-    {
-      "fieldname": "sort_order",
-      "fieldtype": "Int",
-      "label": "Sort Order",
-      "default": "0",
-      "description": "Lower numbers appear first in the picker"
-    },
-    {
-      "fieldname": "is_active",
-      "fieldtype": "Check",
-      "label": "Active",
-      "default": "1",
-      "description": "Inactive templates are hidden from the picker"
-    }
-  ],
-  "permissions": [
-    {
-      "role": "System Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1
-    },
-    {
-      "role": "Letters Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 0
-    },
-    {
-      "role": "Marketing Manager",
-      "read": 1,
-      "write": 0,
-      "create": 0,
-      "delete": 0
-    }
-  ],
-  "sort_field": "sort_order",
-  "sort_order": "ASC"
+ "name": "Letters Template",
+ "module": "Letters",
+ "doctype": "DocType",
+ "issingle": 0,
+ "istable": 0,
+ "is_submittable": 0,
+ "track_changes": 0,
+ "autoname": "field:title",
+ "naming_rule": "By fieldname",
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "thumbnail",
+   "fieldtype": "Attach Image",
+   "label": "Thumbnail",
+   "description": "Optional preview image shown in the template picker"
+  },
+  {
+   "fieldname": "blocks_json",
+   "fieldtype": "Code",
+   "label": "Blocks JSON",
+   "options": "JSON",
+   "description": "Block data that seeds the campaign when this template is selected",
+   "reqd": 1
+  },
+  {
+   "fieldname": "sort_order",
+   "fieldtype": "Int",
+   "label": "Sort Order",
+   "default": "0",
+   "description": "Lower numbers appear first in the picker"
+  },
+  {
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "label": "Active",
+   "default": "1",
+   "description": "Inactive templates are hidden from the picker"
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Letters Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0
+  },
+  {
+   "role": "Marketing Manager",
+   "read": 1,
+   "write": 0,
+   "create": 0,
+   "delete": 0
+  }
+ ],
+ "sort_field": "sort_order",
+ "sort_order": "ASC",
+ "allow_rename": 1
 }

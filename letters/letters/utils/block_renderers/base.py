@@ -43,16 +43,23 @@ def _padding(props: dict, dt: int = 20, dr: int = 16, db: int = 20, dl: int = 16
 
 
 def _spacing_wrapper(inner_html: str, props: dict) -> str:
-    """Wrap a block's HTML in a table row that applies spacing and background color."""
-    top    = int(props.get("spacing_top", 0))
+    """Wrap a block's HTML in a spacing table when explicit spacing is set.
+
+    Each renderer already applies its own background-color directly on its
+    outermost table. Wrapping again with the same bg when spacing is zero
+    creates redundant nested tables that can produce sub-pixel seams between
+    consecutive dark-background sections in scaled previews (e.g. Arc template
+    thumbnail). Only wrap when there is actual non-zero spacing.
+    """
+    top    = int(props.get("spacing_top",    0))
     bottom = int(props.get("spacing_bottom", 0))
-    left   = int(props.get("spacing_left", 0))
-    right  = int(props.get("spacing_right", 0))
-    bg     = props.get("background_color", "")
-    bg_style = f"background-color:{bg};" if bg and bg not in ("transparent", "") else ""
-    if top == 0 and bottom == 0 and left == 0 and right == 0 and not bg_style:
+    left   = int(props.get("spacing_left",   0))
+    right  = int(props.get("spacing_right",  0))
+    if top == 0 and bottom == 0 and left == 0 and right == 0:
         return inner_html
-    padding = f"padding:{top}px {right}px {bottom}px {left}px;"
+    bg       = props.get("background_color", "")
+    bg_style = f"background-color:{bg};" if bg and bg not in ("transparent", "") else ""
+    padding  = f"padding:{top}px {right}px {bottom}px {left}px;"
     return (
         f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
         f' style="{bg_style}">'
