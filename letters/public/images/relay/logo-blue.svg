@@ -1,0 +1,12 @@
+<svg viewBox="0 0 138 36" xmlns="http://www.w3.org/2000/svg">
+  <!-- Relay mark: input node → relay node → two output nodes (signal branching) -->
+  <circle cx="6" cy="18" r="3" fill="#3B6BA8"/>
+  <line x1="9" y1="18" x2="19" y2="18" stroke="#3B6BA8" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="22" cy="18" r="3" fill="none" stroke="#3B6BA8" stroke-width="1.5"/>
+  <line x1="25" y1="18" x2="31" y2="11" stroke="#3B6BA8" stroke-width="1.5" stroke-linecap="round"/>
+  <line x1="25" y1="18" x2="31" y2="25" stroke="#3B6BA8" stroke-width="1.5" stroke-linecap="round"/>
+  <circle cx="34" cy="11" r="2.5" fill="#3B6BA8"/>
+  <circle cx="34" cy="25" r="2.5" fill="#3B6BA8"/>
+  <!-- Wordmark -->
+  <text x="48" y="23" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700" letter-spacing="2.5" fill="#1C3557">RELAY</text>
+</svg>
