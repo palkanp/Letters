@@ -35,7 +35,8 @@
       "WebFetch(domain:api.github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "Read(//Users/palkanparsana/.claude/**)",
-      "Bash(mkdir -p /Users/palkanparsana/Desktop/Letters/.claude/skills/frappe-ui)"
+      "Bash(mkdir -p /Users/palkanparsana/Desktop/Letters/.claude/skills/frappe-ui)",
+      "Bash(git push *)"
     ]
   }
 }

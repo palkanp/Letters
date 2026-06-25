@@ -19,6 +19,7 @@ declare module 'vue' {
     ColorPicker: typeof import('./src/components/ColorPicker.vue')['default']
     Columns: typeof import('./src/components/blocks/columns.vue')['default']
     Container: typeof import('./src/components/blocks/container.vue')['default']
+    DateRangeControl: typeof import('./src/components/DateRangeControl.vue')['default']
     Divider: typeof import('./src/components/blocks/divider.vue')['default']
     DoctypeTab: typeof import('./src/components/DoctypeTab.vue')['default']
     EditableDiv: typeof import('./src/components/EditableDiv.vue')['default']

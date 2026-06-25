@@ -45,102 +45,94 @@
           <div
             v-for="(row, i) in filterRows"
             :key="i"
-            class="flex items-center gap-2 px-3 py-1.5"
+            class="px-3 py-1.5 space-y-1.5"
           >
-            <!-- Field selector -->
-            <Select
-              :model-value="row.field"
-              :options="filterFieldOptions"
-              placeholder="Field"
-              size="sm"
-              class="w-32 flex-shrink-0"
-              @update:model-value="v => setRowField(i, v)"
-            />
-
-            <!-- Operator selector -->
-            <Select
-              :model-value="row.op"
-              :options="operatorsFor(row.field)"
-              size="sm"
-              class="w-36 flex-shrink-0"
-              @update:model-value="v => onOpChange(i, v)"
-            />
-
-            <!-- Value input -->
-            <template v-if="row.op === 'is'">
+            <!-- Field + operator + value (single-value operators) on one line -->
+            <div class="flex items-center gap-2">
               <Select
-                :model-value="row.value"
-                :options="[{ label: 'Set', value: 'set' }, { label: 'Not Set', value: 'not set' }]"
+                :model-value="row.field"
+                :options="filterFieldOptions"
+                placeholder="Field"
                 size="sm"
-                class="flex-1"
-                @update:model-value="v => (filterRows[i].value = v)"
+                class="w-32 flex-shrink-0"
+                @update:model-value="v => setRowField(i, v)"
               />
-            </template>
-
-            <template v-else-if="row.op === 'Timespan'">
               <Select
-                :model-value="row.value"
-                :options="TIMESPAN_OPTIONS"
-                placeholder="Select period"
+                :model-value="row.op"
+                :options="operatorsFor(row.field)"
                 size="sm"
-                class="flex-1"
-                @update:model-value="v => (filterRows[i].value = v)"
+                class="w-36 flex-shrink-0"
+                @update:model-value="v => onOpChange(i, v)"
               />
-            </template>
 
-            <template v-else-if="row.op === 'Between' && isDateField(row.field)">
-              <DatePicker :model-value="row.value?.[0] || ''" size="sm" placeholder="From" class="flex-1" @update:model-value="v => setBetween(i, 0, v)" />
-              <DatePicker :model-value="row.value?.[1] || ''" size="sm" placeholder="To"   class="flex-1" @update:model-value="v => setBetween(i, 1, v)" />
-            </template>
+              <!-- Single-value inputs inline -->
+              <template v-if="row.op === 'is'">
+                <Select
+                  :model-value="row.value"
+                  :options="[{ label: 'Set', value: 'set' }, { label: 'Not Set', value: 'not set' }]"
+                  size="sm"
+                  class="flex-1"
+                  @update:model-value="v => (filterRows[i].value = v)"
+                />
+              </template>
+              <template v-else-if="row.op === 'Timespan'">
+                <Select
+                  :model-value="row.value"
+                  :options="TIMESPAN_OPTIONS"
+                  placeholder="Select period"
+                  size="sm"
+                  class="flex-1"
+                  @update:model-value="v => (filterRows[i].value = v)"
+                />
+              </template>
+              <template v-else-if="row.op === 'Between' && isDateField(row.field)">
+                <DateRangeControl :model-value="row.value" class="flex-1" @update:model-value="v => (filterRows[i].value = v)" />
+              </template>
+              <template v-else-if="isSelectField(row.field)">
+                <Select
+                  :model-value="row.value"
+                  :options="selectOptionsFor(row.field)"
+                  placeholder="Select value"
+                  size="sm"
+                  class="flex-1"
+                  @update:model-value="v => (filterRows[i].value = v)"
+                />
+              </template>
+              <template v-else-if="isLinkField(row.field)">
+                <Autocomplete
+                  :model-value="{ label: row.value, value: row.value }"
+                  :options="linkOptions[row.field] || []"
+                  placeholder="Search…"
+                  size="sm"
+                  class="flex-1"
+                  @update:query="q => fetchLinkOptions(row.field, q)"
+                  @update:model-value="v => (filterRows[i].value = v?.value ?? '')"
+                />
+              </template>
+              <template v-else-if="isDateField(row.field)">
+                <DatePicker
+                  :model-value="row.value"
+                  size="sm"
+                  class="flex-1"
+                  @update:model-value="v => (filterRows[i].value = v)"
+                />
+              </template>
+              <template v-else>
+                <TextInput
+                  :model-value="row.value"
+                  placeholder="Value"
+                  size="sm"
+                  class="flex-1"
+                  @update:model-value="v => (filterRows[i].value = v)"
+                />
+              </template>
 
-            <!-- Select fieldtype — show static options dropdown -->
-            <template v-else-if="isSelectField(row.field)">
-              <Select
-                :model-value="row.value"
-                :options="selectOptionsFor(row.field)"
-                placeholder="Select value"
-                size="sm"
-                class="flex-1"
-                @update:model-value="v => (filterRows[i].value = v)"
-              />
-            </template>
+              <button
+                class="flex-shrink-0 size-5 flex items-center justify-center text-ink-gray-3 hover:text-ink-red-4 rounded"
+                @click="filterRows.splice(i, 1)"
+              >×</button>
+            </div>
 
-            <!-- Link fieldtype — autocomplete via frappe.desk.search.search_link -->
-            <template v-else-if="isLinkField(row.field)">
-              <Autocomplete
-                :model-value="{ label: row.value, value: row.value }"
-                :options="linkOptions[row.field] || []"
-                placeholder="Search…"
-                size="sm"
-                class="flex-1"
-                @update:query="q => fetchLinkOptions(row.field, q)"
-                @update:model-value="v => (filterRows[i].value = v?.value ?? '')"
-              />
-            </template>
-
-            <template v-else-if="isDateField(row.field)">
-              <DatePicker
-                :model-value="row.value"
-                size="sm"
-                class="flex-1"
-                @update:model-value="v => (filterRows[i].value = v)"
-              />
-            </template>
-
-            <template v-else>
-              <TextInput
-                :model-value="row.value"
-                placeholder="Value"
-                size="sm"
-                class="flex-1"
-                @update:model-value="v => (filterRows[i].value = v)"
-              />
-            </template>
-
-            <button
-              class="flex-shrink-0 size-5 flex items-center justify-center text-ink-gray-3 hover:text-ink-red-4 rounded"
-              @click="filterRows.splice(i, 1)"
-            >×</button>
           </div>
 
           <div v-if="filterRows.length === 0" class="px-3 py-2.5 text-xs text-ink-gray-4">
@@ -171,6 +163,7 @@
 <script setup>
 import { ref, computed, watch, onMounted } from "vue";
 import { Select, TextInput, DatePicker, Button, Autocomplete } from "frappe-ui";
+import DateRangeControl from "./DateRangeControl.vue";
 
 const props = defineProps({
   modelValue: { type: Object, default: null },
