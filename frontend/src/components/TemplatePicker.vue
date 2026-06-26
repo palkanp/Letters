@@ -5,18 +5,10 @@
       <!-- Header -->
       <div class="border-outline-gray-2 flex-shrink-0 px-8 pt-7 pb-5 border-b flex items-start justify-between gap-4">
         <div>
-          <h2 class="text-ink-gray-9 text-xl font-semibold">New Campaign</h2>
+          <h2 class="text-ink-gray-9 text-xl font-semibold">New Letter</h2>
           <p class="text-ink-gray-5 text-sm mt-1">Start from a template or begin with a blank canvas.</p>
         </div>
-        <button
-          class="text-ink-gray-4 hover:text-ink-gray-7 transition-colors mt-0.5 flex-shrink-0"
-          aria-label="Close"
-          @click="$emit('close')"
-        >
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <Button variant="ghost" icon="lucide-x" size="sm" class="flex-shrink-0 mt-0.5" aria-label="Close" @click="$emit('close')" />
       </div>
 
       <!-- Grid -->
@@ -42,9 +34,7 @@
           <div class="group flex flex-col gap-0 rounded-xl border-2 border-dashed border-outline-gray-2 overflow-hidden transition-all hover:border-blue-500">
             <div class="relative bg-surface-gray-2 h-48 flex flex-col items-center justify-center gap-2 overflow-hidden">
               <div class="bg-surface-base border-outline-gray-2 w-10 h-10 rounded-full border-2 flex items-center justify-center">
-                <svg class="text-ink-gray-5 w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
+                <span class="lucide-plus size-5 text-ink-gray-5" aria-hidden="true" />
               </div>
               <span class="text-ink-gray-5 text-xs">Blank canvas</span>
               <!-- Hover overlay -->

@@ -67,9 +67,6 @@
       />
     </div>
 
-    <div v-if="store.blocks.length > 1" class="px-3 py-2 border-t border-outline-gray-1">
-      <p class="text-xs text-ink-gray-3 text-center">Drag to reorder · double-click to rename</p>
-    </div>
   </div>
 </template>
 

@@ -5,7 +5,7 @@
     @click="$emit('open', letter.name)"
   >
     <!-- Thumbnail area -->
-    <div class="h-32 relative [clip-path:inset(0_round_0.5rem)]" :class="props.isDark ? '' : 'border border-outline-gray-2 shadow-sm'">
+    <div class="h-36 relative [clip-path:inset(0_round_0.5rem)]" :class="props.isDark ? '' : 'border border-outline-gray-2 shadow-sm'">
       <LetterThumbnail :name="letter.name" icon-class="w-8 h-8" />
       <!-- Status badge -->
       <Badge

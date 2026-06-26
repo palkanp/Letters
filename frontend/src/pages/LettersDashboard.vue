@@ -185,7 +185,7 @@
             />
           </div>
 
-          <Button variant="solid" :loading="creating" icon-left="lucide-plus" @click="createNew">
+          <Button variant="solid" icon-left="lucide-plus" @click="createNew">
             New Letter
           </Button>
         </div>
@@ -201,7 +201,7 @@
         <div v-else-if="!visibleLetters.length" class="flex flex-col items-center justify-center h-48 gap-3">
           <span class="lucide-mail size-10 text-ink-gray-3" aria-hidden="true" />
           <p class="text-sm text-ink-gray-5">{{ search || activeStatus ? "No letters match your filters." : "No letters yet." }}</p>
-          <Button v-if="!search && !activeStatus" variant="subtle" :loading="creating" icon-left="lucide-plus" @click="createNew">
+          <Button v-if="!search && !activeStatus" variant="subtle" icon-left="lucide-plus" @click="createNew">
             Create your first letter
           </Button>
         </div>
@@ -368,7 +368,6 @@ const emit = defineEmits(["open-letter", "new-letter"]);
 const letters = ref([]);
 const allFolders = ref([]);
 const loading = ref(false);
-const creating = ref(false);
 const search = ref("");
 const activeFolder = ref(null);
 const activeStatus = ref(null);
@@ -486,17 +485,8 @@ async function load() {
   }
 }
 
-async function createNew() {
-  creating.value = true;
-  try {
-    const res = await frappe.call({
-      method: "letters.letters.api.save_letter",
-      args: activeFolder.value ? { folder: activeFolder.value } : {},
-    });
-    if (res.message?.name) openLetter(res.message.name);
-  } finally {
-    creating.value = false;
-  }
+function createNew() {
+  emit("new-letter");
 }
 
 async function duplicateLetter(letter) {
