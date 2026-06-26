@@ -34,7 +34,8 @@
   <!-- alignment -->
   <TabButtons
     v-else-if="field.type === 'align'"
-    :buttons="alignOptions"
+    class="w-full [&>div]:flex [&>div]:w-full [&_button]:!flex-1"
+    :buttons="field.noJustify ? alignOptionsNoJustify : alignOptions"
     :model-value="value"
     @update:model-value="emit('change', $event)"
   />
@@ -42,6 +43,7 @@
   <!-- vertical alignment -->
   <TabButtons
     v-else-if="field.type === 'valign'"
+    class="w-full [&>div]:flex [&>div]:w-full [&_button]:!flex-1"
     :buttons="valignOptions"
     :model-value="value"
     @update:model-value="emit('change', $event)"
@@ -50,6 +52,7 @@
   <!-- direction -->
   <TabButtons
     v-else-if="field.type === 'direction'"
+    class="w-full [&>div]:flex [&>div]:w-full [&_button]:!flex-1"
     :buttons="directionOptions"
     :model-value="value"
     @update:model-value="emit('change', $event)"
@@ -71,40 +74,24 @@
   </div>
 
   <!-- number -->
-  <div v-else-if="field.type === 'number'" class="flex items-center gap-1.5">
-    <TextInput
-      type="number"
-      :min="field.min"
-      :max="field.max"
-      size="sm"
-      :model-value="value"
-      @update:model-value="emit('change', Number($event))"
-    />
-    <span v-if="field.unit" class="text-xs text-ink-gray-4 flex-shrink-0">{{ field.unit }}</span>
-  </div>
+  <TextInput
+    v-else-if="field.type === 'number'"
+    type="text"
+    size="sm"
+    class="w-full"
+    :model-value="value != null ? `${value}${field.unit || ''}` : ''"
+    @update:model-value="emit('change', parseInt($event) || 0)"
+  />
 
   <!-- dimension -->
-  <div v-else-if="field.type === 'dimension'" class="flex items-center gap-1">
-    <TextInput
-      type="number"
-      :min="0"
-      size="sm"
-      class="flex-1 min-w-0"
-      :model-value="parsedDim.num"
-      @update:model-value="emit('change', $event + parsedDim.unit)"
-    />
-    <TabButtons
-      :buttons="[{ value: 'px', label: 'px' }, { value: '%', label: '%' }]"
-      :model-value="parsedDim.unit"
-      @update:model-value="emit('change', parsedDim.num + $event)"
-    />
-    <Button
-      size="sm"
-      :variant="value === 'auto' ? 'solid' : 'outline'"
-      class="flex-shrink-0 !text-[11px] !px-1.5 !py-0.5 !h-auto !min-h-0"
-      @click="emit('change', 'auto')"
-    >auto</Button>
-  </div>
+  <TextInput
+    v-else-if="field.type === 'dimension'"
+    type="text"
+    size="sm"
+    :placeholder="field.placeholder || 'auto'"
+    :model-value="value"
+    @update:model-value="emit('change', $event || undefined)"
+  />
 
   <!-- default: text -->
   <TextInput
@@ -140,21 +127,13 @@ const hasBooleanOptions = computed(() =>
   resolvedOptions.value?.some((o) => typeof o.value === "boolean") ?? false
 );
 
-function parseDimension(val) {
-  if (!val || val === "auto") return { num: 0, unit: "px" };
-  const m = String(val).match(/^(\d*\.?\d+)(px|%)$/);
-  if (m) return { num: parseFloat(m[1]), unit: m[2] };
-  const n = parseFloat(val);
-  return { num: isNaN(n) ? 0 : n, unit: val.includes("px") ? "px" : "%" };
-}
-const parsedDim = computed(() => parseDimension(props.value));
-
 const alignOptions = [
   { value: "left",    icon: "align-left",    label: "Left",    hideLabel: true },
   { value: "center",  icon: "align-center",  label: "Center",  hideLabel: true },
   { value: "right",   icon: "align-right",   label: "Right",   hideLabel: true },
   { value: "justify", icon: "align-justify", label: "Justify", hideLabel: true },
 ];
+const alignOptionsNoJustify = alignOptions.slice(0, 3);
 const valignOptions = [
   { value: "flex-start", icon: "chevron-up",   label: "Top",    hideLabel: true },
   { value: "center",     icon: "minus",         label: "Middle", hideLabel: true },

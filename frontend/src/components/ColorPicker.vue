@@ -1,23 +1,24 @@
 <template>
   <Popover placement="bottom-start" transition="default">
     <template #target="{ togglePopover }">
-      <div class="flex items-center gap-1.5 w-full">
-        <button
-          type="button"
-          class="w-5 h-5 rounded flex-shrink-0 border cursor-pointer hover:scale-110 transition-transform focus:outline-none focus-visible:ring focus-visible:ring-outline-gray-3"
-          :style="{ backgroundColor: modelValue || '#ffffff' }"
-          :title="modelValue || 'Pick a color'"
-          @click="togglePopover"
-        />
-        <TextInput
-          size="sm"
-          type="text"
-          class="flex-1 min-w-0"
-          :modelValue="modelValue"
-          placeholder="None"
-          @update:modelValue="$emit('update:modelValue', $event)"
-        />
-      </div>
+      <TextInput
+        size="sm"
+        type="text"
+        class="w-full"
+        :modelValue="modelValue"
+        placeholder="None"
+        @update:modelValue="$emit('update:modelValue', $event)"
+      >
+        <template #prefix>
+          <button
+            type="button"
+            class="w-4 h-4 rounded flex-shrink-0 border cursor-pointer hover:scale-110 transition-transform focus:outline-none focus-visible:ring focus-visible:ring-outline-gray-3"
+            :style="{ backgroundColor: modelValue || '#ffffff' }"
+            :title="modelValue || 'Pick a color'"
+            @click.stop="togglePopover"
+          />
+        </template>
+      </TextInput>
     </template>
 
     <template #body-main="{ close }">

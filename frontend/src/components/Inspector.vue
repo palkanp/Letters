@@ -111,7 +111,7 @@
         </Button>
         <div v-show="openSections.has(section.id)" class="px-3 pb-4 flex flex-col gap-2">
           <PropRow
-            v-for="field in section.fields"
+            v-for="field in section.fields.filter(f => !f.showWhen || f.showWhen(block?.props))"
             :key="field.key"
             :label="field.label"
             :hint="field.hint"
@@ -137,71 +137,23 @@
             />
           </template>
         </Button>
-        <div v-show="openSections.has('__size')" class="px-3 pb-4">
-          <div class="grid grid-cols-2 gap-x-2 gap-y-1">
-            <PropRow label="Width" compact>
-              <TextInput type="text" size="sm" placeholder="auto"
-                :modelValue="block.props.block_width ?? ''"
-                @update:modelValue="set('block_width', $event || undefined)"
-              />
-            </PropRow>
-            <PropRow label="Height" compact>
-              <TextInput type="text" size="sm" placeholder="auto"
-                :modelValue="block.props.block_height ?? ''"
-                @update:modelValue="set('block_height', $event || undefined)"
-              />
-            </PropRow>
-          </div>
-        </div>
-      </div>
-
-      <!-- Padding -->
-      <div class="border-b border-outline-gray-1">
-        <Button
-          variant="ghost"
-          class="w-full justify-between px-3 py-2.5"
-          @click="toggleSection('__padding')"
-        >
-          <span class="text-xs font-semibold text-ink-gray-9">Padding</span>
-          <template #suffix>
-            <span
-              class="lucide-chevron-down size-3.5 text-ink-gray-4 transition-transform duration-150"
-              :class="openSections.has('__padding') ? '' : '-rotate-90'"
-              aria-hidden="true"
+        <div v-show="openSections.has('__size')" class="px-3 pb-4 flex flex-col gap-0">
+          <PropRow label="Width">
+            <TextInput type="text" size="sm" placeholder="auto"
+              :modelValue="block.props.block_width ?? ''"
+              @update:modelValue="set('block_width', $event || undefined)"
             />
-          </template>
-        </Button>
-        <div v-show="openSections.has('__padding')" class="px-3 pb-4">
-          <div class="grid grid-cols-2 gap-x-2 gap-y-1">
-            <PropRow label="Top" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.padding_top ?? 20"
-                @update:modelValue="set('padding_top', Number($event))"
-              />
-            </PropRow>
-            <PropRow label="Bottom" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.padding_bottom ?? 20"
-                @update:modelValue="set('padding_bottom', Number($event))"
-              />
-            </PropRow>
-            <PropRow label="Left" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.padding_left ?? 16"
-                @update:modelValue="set('padding_left', Number($event))"
-              />
-            </PropRow>
-            <PropRow label="Right" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.padding_right ?? 16"
-                @update:modelValue="set('padding_right', Number($event))"
-              />
-            </PropRow>
-          </div>
+          </PropRow>
+          <PropRow label="Height">
+            <TextInput type="text" size="sm" placeholder="auto"
+              :modelValue="block.props.block_height ?? ''"
+              @update:modelValue="set('block_height', $event || undefined)"
+            />
+          </PropRow>
         </div>
       </div>
 
-      <!-- Spacing -->
+      <!-- Padding & Spacing -->
       <div class="border-b border-outline-gray-1">
         <Button
           variant="ghost"
@@ -217,33 +169,27 @@
             />
           </template>
         </Button>
-        <div v-show="openSections.has('__spacing')" class="px-3 pb-4">
-          <div class="grid grid-cols-2 gap-x-2 gap-y-1">
-            <PropRow label="Top" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.spacing_top ?? 4"
-                @update:modelValue="set('spacing_top', Number($event))"
+        <div v-show="openSections.has('__spacing')" class="px-3 pb-4 flex flex-col gap-0">
+          <PropRow label="Padding">
+            <div @focusout.stop="commitPadding">
+              <TextInput
+                type="text" size="sm" placeholder="20px 16px"
+                :modelValue="localPadding"
+                @update:modelValue="localPadding = $event"
+                @keydown.enter.prevent="commitPadding"
               />
-            </PropRow>
-            <PropRow label="Bottom" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.spacing_bottom ?? 4"
-                @update:modelValue="set('spacing_bottom', Number($event))"
+            </div>
+          </PropRow>
+          <PropRow label="Margin">
+            <div @focusout.stop="commitSpacing">
+              <TextInput
+                type="text" size="sm" placeholder="4px 0px"
+                :modelValue="localSpacing"
+                @update:modelValue="localSpacing = $event"
+                @keydown.enter.prevent="commitSpacing"
               />
-            </PropRow>
-            <PropRow label="Left" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.spacing_left ?? 0"
-                @update:modelValue="set('spacing_left', Number($event))"
-              />
-            </PropRow>
-            <PropRow label="Right" compact>
-              <TextInput type="number" size="sm" :min="0" :max="200"
-                :modelValue="block.props.spacing_right ?? 0"
-                @update:modelValue="set('spacing_right', Number($event))"
-              />
-            </PropRow>
-          </div>
+            </div>
+          </PropRow>
         </div>
       </div>
 
@@ -252,7 +198,7 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from "vue";
+import { computed, nextTick, reactive, ref, watch } from "vue";
 import { TextInput, Button, Slider } from "frappe-ui";
 import ColorPicker from "./ColorPicker.vue";
 import FieldControl from "./FieldControl.vue";
@@ -288,7 +234,6 @@ watch(
     openSections.clear();
     if (type && BLOCK_SCHEMA[type]) {
       BLOCK_SCHEMA[type].sections.forEach((s) => openSections.add(s.id));
-      openSections.add("__padding");
       openSections.add("__spacing");
     }
   },
@@ -297,6 +242,60 @@ watch(
 function toggleSection(id) {
   if (openSections.has(id)) openSections.delete(id);
   else openSections.add(id);
+}
+
+const PADDING_DEFAULTS = { top: 20, right: 16, bottom: 20, left: 16 };
+const SPACING_DEFAULTS = { top: 4, right: 0, bottom: 4, left: 0 };
+
+function getBoxShorthand(props, prefix, defaults) {
+  const t = props[`${prefix}_top`]    ?? defaults.top;
+  const r = props[`${prefix}_right`]  ?? defaults.right;
+  const b = props[`${prefix}_bottom`] ?? defaults.bottom;
+  const l = props[`${prefix}_left`]   ?? defaults.left;
+  if (t === r && r === b && b === l) return `${t}px`;
+  if (t === b && r === l) return `${t}px ${r}px`;
+  return `${t}px ${r}px ${b}px ${l}px`;
+}
+
+function setBoxShorthand(value, prefix) {
+  if (!block.value) return;
+  const parts = String(value).trim().split(/\s+/).map(v => parseInt(v, 10)).filter(n => !isNaN(n));
+  if (!parts.length) return;
+  let t, r, b, l;
+  if (parts.length === 1)      { [t, r, b, l] = [parts[0], parts[0], parts[0], parts[0]]; }
+  else if (parts.length === 2) { [t, r, b, l] = [parts[0], parts[1], parts[0], parts[1]]; }
+  else if (parts.length === 3) { [t, r, b, l] = [parts[0], parts[1], parts[2], parts[1]]; }
+  else                         { [t, r, b, l] = parts; }
+  store.updateBlockProps(block.value.id, {
+    [`${prefix}_top`]: t, [`${prefix}_right`]: r,
+    [`${prefix}_bottom`]: b, [`${prefix}_left`]: l,
+  });
+}
+
+// Local refs for in-progress editing — only commit on blur/Enter to avoid cursor jumps
+const localPadding = ref("");
+const localSpacing = ref("");
+
+watch(
+  () => block.value?.id,
+  () => {
+    localPadding.value = block.value ? getBoxShorthand(block.value.props, "padding", PADDING_DEFAULTS) : "";
+    localSpacing.value = block.value ? getBoxShorthand(block.value.props, "spacing", SPACING_DEFAULTS) : "";
+  },
+  { immediate: true },
+);
+
+function commitPadding() {
+  setBoxShorthand(localPadding.value, "padding");
+  nextTick(() => {
+    if (block.value) localPadding.value = getBoxShorthand(block.value.props, "padding", PADDING_DEFAULTS);
+  });
+}
+function commitSpacing() {
+  setBoxShorthand(localSpacing.value, "spacing");
+  nextTick(() => {
+    if (block.value) localSpacing.value = getBoxShorthand(block.value.props, "spacing", SPACING_DEFAULTS);
+  });
 }
 
 function value(key) { return block.value?.props?.[key]; }

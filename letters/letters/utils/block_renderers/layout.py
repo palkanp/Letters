@@ -98,7 +98,9 @@ class ContainerRenderer(BlockRenderer):
             # balance them, which is why the preview looked fine but the inbox
             # did not.
             def _child_width(child: dict):
-                w = child.get("props", {}).get("width", "")
+                props = child.get("props", {})
+                # block_width is set by image/text blocks; width is set by sub-containers
+                w = props.get("block_width", "") or props.get("width", "")
                 if w and w not in ("auto", "100%", "0px", ""):
                     return w
                 return None

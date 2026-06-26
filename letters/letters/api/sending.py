@@ -275,7 +275,7 @@ def _execute_send(send_doc_name, letter_name):
                     # or global opt-outs.
                     unsubscribe_method=(
                         None if send_doc.send_mode == "email_group"
-                        else "letters.letters.api.unsubscribe.unsubscribe_redirect"
+                        else "/api/method/letters.letters.api.unsubscribe.unsubscribe_redirect"
                         if send_doc.include_unsubscribe else None
                     ),
                     unsubscribe_message=_("Unsubscribe") if send_doc.include_unsubscribe else None,
