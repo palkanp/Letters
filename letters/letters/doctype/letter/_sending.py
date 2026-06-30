@@ -113,65 +113,72 @@ class SendingMixin:
             frappe.throw(_("This letter has already been sent or is currently sending."))
         self.status = "Sending"
 
-        # ── Resolve recipients ─────────────────────────────────────────────────
-        # When explicit args are passed (legacy / direct API call) use them.
-        # Otherwise read from the letter's saved recipient_config, which may be
-        # the new multi-source array format or the old single-source object.
-        # Scope suppression to this specific letter (+ its folder + global).
-        suppressed_fn = lambda: _suppressed_emails(self.name)
+        try:
+            # ── Resolve recipients ─────────────────────────────────────────────────
+            # When explicit args are passed (legacy / direct API call) use them.
+            # Otherwise read from the letter's saved recipient_config, which may be
+            # the new multi-source array format or the old single-source object.
+            # Scope suppression to this specific letter (+ its folder + global).
+            suppressed_fn = lambda: _suppressed_emails(self.name)
 
-        email_group = email_group  # local alias; may stay None
-        if email_group or doctype_config or recipients:
-            # Explicit args — route through the legacy single-source resolver
-            recipient_list, email_group, mode, invalid_count = _resolve_recipients(
-                email_group, recipients, doctype_config, MAX_RECIPIENTS,
-                suppressed_fn, _valid_emails,
-            )
-        else:
-            sources = _load_recipient_config(self)
-            if not sources:
-                frappe.throw(_("This letter has no saved recipients. Open it and choose an audience before sending."))
-
-            if len(sources) == 1:
-                # Single source — use the legacy path so email_group mode is preserved
-                src = sources[0]
-                eg  = src.get("email_group") if src.get("type") == "group" else None
-                dc  = {k: src[k] for k in ("doctype", "email_field", "filters") if k in src} if src.get("type") == "doctype" else None
-                rc  = src.get("recipients") if src.get("type") == "paste" else None
+            email_group = email_group  # local alias; may stay None
+            if email_group or doctype_config or recipients:
+                # Explicit args — route through the legacy single-source resolver
                 recipient_list, email_group, mode, invalid_count = _resolve_recipients(
-                    eg, rc, dc, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
+                    email_group, recipients, doctype_config, MAX_RECIPIENTS,
+                    suppressed_fn, _valid_emails,
                 )
             else:
-                # Multi-source array — merge, dedup, validate
-                recipient_list, invalid_count = _resolve_multi_source(
-                    sources, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
-                    letter_name=self.name,
-                )
-                email_group = None
-                mode = "direct"
+                sources = _load_recipient_config(self)
+                if not sources:
+                    frappe.throw(_("This letter has no saved recipients. Open it and choose an audience before sending."))
 
-        # Snapshot the content at send time so edits after clicking Send can't
-        # change what recipients receive. _execute_send reads from the snapshot.
-        send_doc = frappe.get_doc({
-            "doctype": "Email Send",
-            "letter": self.name,
-            "status": "Sending",
-            "send_mode": mode,
-            "email_group": email_group or "",
-            "total_recipients": len(recipient_list),
-            "sent_count": 0,
-            "snapshot_subject":      self.subject,
-            "snapshot_preview_text": self.preview_text or "",
-            "snapshot_email_width":  getattr(self, "email_width", None) or 600,
-            "snapshot_blocks":       self.blocks_json,
-            "include_unsubscribe":   1 if getattr(self, "include_unsubscribe", False) else 0,
-        })
-        send_doc.insert(ignore_permissions=True)
-        _bulk_insert_recipients(send_doc.name, recipient_list)
-        frappe.db.commit()
+                if len(sources) == 1:
+                    # Single source — use the legacy path so email_group mode is preserved
+                    src = sources[0]
+                    eg  = src.get("email_group") if src.get("type") == "group" else None
+                    dc  = {k: src[k] for k in ("doctype", "email_field", "filters") if k in src} if src.get("type") == "doctype" else None
+                    rc  = src.get("recipients") if src.get("type") == "paste" else None
+                    recipient_list, email_group, mode, invalid_count = _resolve_recipients(
+                        eg, rc, dc, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
+                    )
+                else:
+                    # Multi-source array — merge, dedup, validate
+                    recipient_list, invalid_count = _resolve_multi_source(
+                        sources, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
+                        letter_name=self.name,
+                    )
+                    email_group = None
+                    mode = "direct"
 
-        _enqueue_send(send_doc.name, self.name)
-        return {"queued": True, "count": len(recipient_list), "mode": mode, "skipped_invalid": invalid_count}
+            # Snapshot the content at send time so edits after clicking Send can't
+            # change what recipients receive. _execute_send reads from the snapshot.
+            send_doc = frappe.get_doc({
+                "doctype": "Email Send",
+                "letter": self.name,
+                "status": "Sending",
+                "send_mode": mode,
+                "email_group": email_group or "",
+                "total_recipients": len(recipient_list),
+                "sent_count": 0,
+                "snapshot_subject":      self.subject,
+                "snapshot_preview_text": self.preview_text or "",
+                "snapshot_email_width":  getattr(self, "email_width", None) or 600,
+                "snapshot_blocks":       self.blocks_json,
+                "include_unsubscribe":   1 if getattr(self, "include_unsubscribe", False) else 0,
+            })
+            send_doc.insert(ignore_permissions=True)
+            _bulk_insert_recipients(send_doc.name, recipient_list)
+            frappe.db.commit()
+
+            _enqueue_send(send_doc.name, self.name)
+            return {"queued": True, "count": len(recipient_list), "mode": mode, "skipped_invalid": invalid_count}
+
+        except Exception:
+            frappe.db.set_value("Letter", self.name, "status", "Draft", update_modified=False)
+            self.status = "Draft"
+            frappe.db.commit()
+            raise
 
 
 def _resolve_recipients(email_group, recipients, doctype_config, max_recipients, suppressed_fn, valid_fn):

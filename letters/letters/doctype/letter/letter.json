@@ -1,119 +1,119 @@
 {
-  "name": "Letter",
-  "module": "Letters",
-  "doctype": "DocType",
-  "autoname": "hash",
-  "naming_rule": "Random",
-  "title_field": "title",
-  "issingle": 0,
-  "istable": 0,
-  "is_submittable": 0,
-  "allow_rename": 1,
-  "track_changes": 1,
-  "fields": [
-    {
-      "fieldname": "title",
-      "fieldtype": "Data",
-      "label": "Title",
-      "reqd": 1,
-      "unique": 1,
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "subject",
-      "fieldtype": "Data",
-      "label": "Subject Line"
-    },
-    {
-      "fieldname": "preview_text",
-      "fieldtype": "Data",
-      "label": "Preview Text"
-    },
-    {
-      "fieldname": "status",
-      "fieldtype": "Select",
-      "label": "Status",
-      "options": "Draft\nScheduled\nSending\nSent\nPartial\nFailed",
-      "default": "Draft",
-      "in_list_view": 1,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "folder",
-      "fieldtype": "Link",
-      "label": "Folder",
-      "options": "Letter Folder",
-      "in_list_view": 0,
-      "in_standard_filter": 1
-    },
-    {
-      "fieldname": "scheduled_at",
-      "fieldtype": "Datetime",
-      "label": "Scheduled At",
-      "hidden": 1
-    },
-    {
-      "fieldname": "email_width",
-      "fieldtype": "Int",
-      "label": "Email Width (px)",
-      "default": "600",
-      "hidden": 1
-    },
-    {
-      "fieldname": "canvas_background",
-      "fieldtype": "Data",
-      "label": "Canvas Background Color",
-      "default": "#ffffff",
-      "hidden": 1
-    },
-    {
-      "fieldname": "blocks_json",
-      "fieldtype": "Code",
-      "label": "Blocks JSON",
-      "options": "JSON",
-      "description": "Structured design tree for the visual editor",
-      "hidden": 1
-    },
-    {
-      "fieldname": "recipient_config",
-      "fieldtype": "Code",
-      "label": "Recipient Config",
-      "options": "JSON",
-      "description": "Saved audience selection (group / pasted list / doctype query) so scheduled sends and reloads know who to send to",
-      "hidden": 1
-    },
-    {
-      "fieldname": "include_unsubscribe",
-      "fieldtype": "Check",
-      "label": "Include Unsubscribe Link",
-      "default": "0",
-      "hidden": 1
-    }
-  ],
-  "permissions": [
-    {
-      "role": "System Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 1
-    },
-    {
-      "role": "Letters Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 0
-    },
-    {
-      "role": "Marketing Manager",
-      "read": 1,
-      "write": 1,
-      "create": 1,
-      "delete": 0
-    }
-  ],
-  "sort_field": "modified",
-  "sort_order": "DESC"
+ "name": "Letter",
+ "module": "Letters",
+ "doctype": "DocType",
+ "autoname": "hash",
+ "naming_rule": "Random",
+ "title_field": "title",
+ "issingle": 0,
+ "istable": 0,
+ "is_submittable": 0,
+ "allow_rename": 1,
+ "track_changes": 1,
+ "fields": [
+  {
+   "fieldname": "title",
+   "fieldtype": "Data",
+   "label": "Title",
+   "reqd": 1,
+   "unique": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "subject",
+   "fieldtype": "Data",
+   "label": "Subject Line"
+  },
+  {
+   "fieldname": "preview_text",
+   "fieldtype": "Data",
+   "label": "Preview Text"
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nScheduled\nSending\nSent\nPartial\nFailed",
+   "default": "Draft",
+   "in_list_view": 1,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "folder",
+   "fieldtype": "Link",
+   "label": "Category",
+   "options": "Letter Category",
+   "in_list_view": 0,
+   "in_standard_filter": 1
+  },
+  {
+   "fieldname": "scheduled_at",
+   "fieldtype": "Datetime",
+   "label": "Scheduled At",
+   "hidden": 1
+  },
+  {
+   "fieldname": "email_width",
+   "fieldtype": "Int",
+   "label": "Email Width (px)",
+   "default": "600",
+   "hidden": 1
+  },
+  {
+   "fieldname": "canvas_background",
+   "fieldtype": "Data",
+   "label": "Canvas Background Color",
+   "default": "#ffffff",
+   "hidden": 1
+  },
+  {
+   "fieldname": "blocks_json",
+   "fieldtype": "Code",
+   "label": "Blocks JSON",
+   "options": "JSON",
+   "description": "Structured design tree for the visual editor",
+   "hidden": 1
+  },
+  {
+   "fieldname": "recipient_config",
+   "fieldtype": "Code",
+   "label": "Recipient Config",
+   "options": "JSON",
+   "description": "Saved audience selection (group / pasted list / doctype query) so scheduled sends and reloads know who to send to",
+   "hidden": 1
+  },
+  {
+   "fieldname": "include_unsubscribe",
+   "fieldtype": "Check",
+   "label": "Include Unsubscribe Link",
+   "default": "0",
+   "hidden": 1
+  }
+ ],
+ "permissions": [
+  {
+   "role": "System Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 1
+  },
+  {
+   "role": "Letters Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0
+  },
+  {
+   "role": "Marketing Manager",
+   "read": 1,
+   "write": 1,
+   "create": 1,
+   "delete": 0
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC"
 }

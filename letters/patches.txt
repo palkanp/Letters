@@ -2,3 +2,4 @@
 # format: letters.patches.patch_module.execute
 letters.patches.v1_remove_autoname_property_setters
 letters.patches.v1_rename_email_send_campaign_to_letter
+letters.patches.v1_rename_letter_folder_to_letter_category

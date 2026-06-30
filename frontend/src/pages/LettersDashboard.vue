@@ -58,13 +58,13 @@
             class="text-[10px] font-semibold uppercase tracking-wide"
             :class="props.isDark ? '' : 'text-ink-gray-4'"
             :style="props.isDark ? 'color:rgba(255,255,255,0.38)' : ''"
-          >Folders</p>
+          >Category</p>
           <Button
             variant="ghost"
             icon="lucide-plus"
             size="sm"
-            title="New folder"
-            aria-label="New folder"
+            title="New category"
+            aria-label="New category"
             class="!w-5 !h-5"
             @click.stop="startNewFolder"
           />
@@ -77,7 +77,7 @@
             v-model="newFolderName"
             size="sm"
             class="flex-1 min-w-0"
-            placeholder="Folder name"
+            placeholder="Category name"
             @keydown.enter="saveNewFolder"
             @keydown.escape="cancelNewFolder"
             @blur="saveNewFolder"
@@ -103,7 +103,7 @@
           </template>
         </Button>
 
-        <p v-if="!allFolders.length && !creatingFolder" class="px-2 text-xs mt-1" :class="props.isDark ? 'text-ink-gray-3' : 'text-ink-gray-4'">No folders yet</p>
+        <p v-if="!allFolders.length && !creatingFolder" class="px-2 text-xs mt-1" :class="props.isDark ? 'text-ink-gray-3' : 'text-ink-gray-4'">No categories yet</p>
       </div>
     </aside>
 
@@ -282,14 +282,14 @@
           View in Desk
         </Button>
 
-        <!-- Move to folder — inline toggle -->
+        <!-- Move to category — inline toggle -->
         <Button
           variant="ghost"
           class="w-full !justify-start px-3 py-1.5 text-ink-gray-7"
           iconLeft="lucide-folder"
           @click.stop="folderMenuOpen = !folderMenuOpen"
         >
-          Move to folder
+          Move to category
           <template #suffix>
             <span :class="`lucide-${folderMenuOpen ? 'chevron-up' : 'chevron-down'} size-3 ml-auto text-ink-gray-4`" aria-hidden="true" />
           </template>
@@ -474,7 +474,7 @@ async function load() {
   try {
     const [lettersRes, foldersRes] = await Promise.all([
       frappe.call({ method: "letters.letters.api.get_letters" }),
-      frappe.call({ method: "frappe.client.get_list", args: { doctype: "Letter Folder", fields: ["name"], order_by: "name asc", limit: 200 } }),
+      frappe.call({ method: "frappe.client.get_list", args: { doctype: "Letter Category", fields: ["name"], order_by: "name asc", limit: 200 } }),
     ]);
     letters.value = lettersRes.message || [];
     allFolders.value = foldersRes.message || [];
@@ -568,7 +568,7 @@ async function saveNewFolder() {
   try {
     await frappe.call({
       method: "frappe.client.insert",
-      args: { doc: { doctype: "Letter Folder", folder_name: name } },
+      args: { doc: { doctype: "Letter Category", folder_name: name } },
     });
     await load();
     activeFolder.value = name;

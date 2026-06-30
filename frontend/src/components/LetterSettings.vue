@@ -89,7 +89,7 @@
                     />
                     <div>
                       <p class="text-sm font-medium text-ink-gray-8">Include unsubscribe link</p>
-                      <p class="text-xs text-ink-gray-4 mt-0.5">For email group sends, Frappe handles opt-outs per group. For DocType / pasted-address sends, recipients unsubscribe from specific Letter Folders or all emails.</p>
+                      <p class="text-xs text-ink-gray-4 mt-0.5">For email group sends, Frappe handles opt-outs per group. For DocType / pasted-address sends, recipients unsubscribe from specific Letter Categories or all emails.</p>
                     </div>
                   </label>
                 </div>

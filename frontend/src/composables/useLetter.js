@@ -274,6 +274,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
       if (editorStore.letterDoc) editorStore.letterDoc.status = "Sending";
       _startProgressPolling();
     } catch (e) {
+      if (editorStore.letterDoc) editorStore.letterDoc.status = "Draft";
       const raw = e?._server_messages;
       let msg = e?.message || "Send failed. Check your outgoing mail settings.";
       if (raw) {

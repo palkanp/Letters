@@ -346,7 +346,7 @@ def _suppressed_emails(letter_name=None):
         or_filters.append({"reference_doctype": "Letter", "reference_name": letter_name})
         folder = frappe.db.get_value("Letter", letter_name, "folder")
         if folder:
-            or_filters.append({"reference_doctype": "Letter Folder", "reference_name": folder})
+            or_filters.append({"reference_doctype": "Letter Category", "reference_name": folder})
     rows = frappe.get_all(
         "Email Unsubscribe",
         or_filters=or_filters,

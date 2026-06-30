@@ -9,11 +9,11 @@ def unsubscribe_redirect(email: str, name: str, **kwargs):
     """Called by Frappe's unsubscribe link for non-email-group sends.
 
     Redirects to the Letters preferences portal where the recipient can
-    opt out of specific folders or all Frappe emails.
+    opt out of specific categories or all emails.
     """
     frappe.local.response["type"] = "redirect"
     frappe.local.response["location"] = (
-        f"/letters-unsubscribe?email={frappe.utils.cstr(email)}&letter={frappe.utils.cstr(name)}"
+        f"/letters_unsubscribe?email={frappe.utils.cstr(email)}&letter={frappe.utils.cstr(name)}"
     )
 
 
@@ -21,8 +21,8 @@ def unsubscribe_redirect(email: str, name: str, **kwargs):
 def save_preferences(email: str, letter: str = "", unsubscribe_folders: str = "", global_unsubscribe: str = "0"):
     """Save unsubscribe preferences submitted from the portal page.
 
-    unsubscribe_folders: comma-separated list of Letter Folder names to opt out of.
-    Existing folder subscriptions NOT in the list are re-activated (deleted from Email Unsubscribe).
+    unsubscribe_folders: comma-separated list of Letter Category names to opt out of.
+    Existing category subscriptions NOT in the list are re-activated (deleted from Email Unsubscribe).
     """
     email = frappe.utils.cstr(email).strip().lower()
     if not frappe.utils.validate_email_address(email, throw=False):
@@ -40,30 +40,28 @@ def save_preferences(email: str, letter: str = "", unsubscribe_folders: str = ""
     elif not do_global and existing_global:
         frappe.db.delete("Email Unsubscribe", {"email": email, "global_unsubscribe": 1})
 
-    # ── Folder-level opt-outs ─────────────────────────────────────────────────
+    # ── Category-level opt-outs ───────────────────────────────────────────────
     selected_folders = {f.strip() for f in unsubscribe_folders.split(",") if f.strip()}
-    all_folders      = {r.name for r in frappe.get_all("Letter Folder", pluck="name")}
+    all_folders      = set(frappe.get_all("Letter Category", pluck="name", ignore_permissions=True))
 
     for folder in all_folders:
         existing = frappe.db.exists("Email Unsubscribe", {
             "email":             email,
-            "reference_doctype": "Letter Folder",
+            "reference_doctype": "Letter Category",
             "reference_name":    folder,
         })
         if folder in selected_folders and not existing:
             frappe.get_doc({
                 "doctype":           "Email Unsubscribe",
                 "email":             email,
-                "reference_doctype": "Letter Folder",
+                "reference_doctype": "Letter Category",
                 "reference_name":    folder,
             }).insert(ignore_permissions=True)
         elif folder not in selected_folders and existing:
             frappe.db.delete("Email Unsubscribe", {
                 "email":             email,
-                "reference_doctype": "Letter Folder",
+                "reference_doctype": "Letter Category",
                 "reference_name":    folder,
             })
 
     frappe.db.commit()
-    frappe.local.response["type"] = "redirect"
-    frappe.local.response["location"] = "/letters-unsubscribe?saved=1"

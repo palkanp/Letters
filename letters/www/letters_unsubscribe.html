@@ -1,70 +1,157 @@
 {% extends "templates/web.html" %}
 
+{% block title %}Email preferences{% endblock %}
+
 {% block page_content %}
-<div class="container" style="max-width: 520px; padding: 40px 16px;">
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+.lu-page { padding: 64px 20px 80px; display: flex; justify-content: center; font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; }
+.lu-wrap { width: 100%; max-width: 440px; }
 
-  {% if saved %}
-  <div class="alert alert-success mb-4">
-    Your email preferences have been saved.
-  </div>
-  {% endif %}
+.lu-hdr { margin-bottom: 32px; }
+.lu-hdr h1 { font-size: 18px !important; font-weight: 600 !important; color: #1c1c1c !important; margin: 0 0 5px !important; line-height: 1.3 !important; }
+.lu-hdr p { font-size: 13px; color: #8d99a6; margin: 0; }
+.lu-hdr p strong { color: #525f7a; font-weight: 500; }
 
-  <h4 class="mb-1">Email preferences</h4>
+.lu-saved { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; font-size: 13px; color: #166534; margin-bottom: 24px; }
 
-  {% if not email %}
-  <p class="text-muted">No email address provided. Please use the unsubscribe link from a received email.</p>
-  {% else %}
-  <p class="text-muted mb-4" style="font-size: 14px;">Managing preferences for <strong>{{ email }}</strong></p>
+.lu-section { margin-bottom: 24px; }
+.lu-section-label { font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: #c0c9d6; margin-bottom: 8px; }
 
-  <form method="post" action="/api/method/letters.letters.api.unsubscribe.save_preferences">
-    <input type="hidden" name="email" value="{{ email }}">
-    <input type="hidden" name="letter" value="{{ letter }}">
-    <input type="hidden" name="cmd" value="letters.letters.api.unsubscribe.save_preferences">
+/* ── Checkbox rows ───────────────────────────────────────────── */
+.lu-card { }
+.lu-row { display: flex !important; align-items: flex-start; gap: 10px; padding: 8px 2px; cursor: pointer; margin: 0 !important; font-weight: normal !important; transition: background 0.1s; border-radius: 4px; }
+.lu-row:hover { background: #f4f5f7 !important; }
 
-    {% if folders %}
-    <div class="mb-4">
-      <p class="fw-semibold mb-2" style="font-size: 14px;">Unsubscribe from specific categories</p>
-      <div class="border rounded" style="overflow: hidden;">
-        {% for folder in folders %}
-        <label class="d-flex align-items-center gap-2 px-3 py-2 {% if not loop.last %}border-bottom{% endif %}" style="cursor: pointer; margin: 0; font-weight: normal;">
-          <input
-            type="checkbox"
-            name="unsubscribe_folders"
-            value="{{ folder.name }}"
-            {% if folder.is_unsubscribed %}checked{% endif %}
-            style="margin: 0;"
-          >
-          <span style="font-size: 14px;">{{ folder.folder_name }}</span>
-          {% if folder.is_unsubscribed %}
-          <span class="text-muted ms-auto" style="font-size: 12px;">Unsubscribed</span>
-          {% endif %}
-        </label>
-        {% endfor %}
-      </div>
+.lu-cb { appearance: none !important; -webkit-appearance: none !important; width: 14px !important; height: 14px !important; min-width: 14px; border: 1.5px solid #d1d8e0 !important; border-radius: 3px !important; background: #fff !important; margin: 1px 0 0 !important; padding: 0 !important; box-shadow: none !important; cursor: pointer; position: relative; transition: background 0.12s, border-color 0.12s; }
+.lu-cb:checked { background: #2490ef !important; border-color: #2490ef !important; }
+.lu-cb:checked::after { content: ''; position: absolute; top: 1px; left: 3.5px; width: 4px; height: 7px; border: 1.5px solid #fff; border-top: none; border-left: none; transform: rotate(45deg); display: block; }
+.lu-cb:focus { outline: none !important; box-shadow: none !important; }
+
+.lu-row-text { flex: 1; font-size: 13.5px; color: #2d3442; user-select: none; line-height: 1.4; padding-top: 0; }
+.lu-row-badge { font-size: 11px; color: #adb5c2; flex-shrink: 0; user-select: none; margin-top: 1px; }
+
+/* Global row has two lines of text */
+.lu-row-body { flex: 1; }
+.lu-row-title { font-size: 13.5px; color: #2d3442; user-select: none; line-height: 1.4; }
+.lu-row-desc { font-size: 12px; color: #adb5c2; user-select: none; margin-top: 2px; }
+
+/* ── Button ──────────────────────────────────────────────────── */
+.lu-actions { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.lu-btn { font-size: 13px; font-weight: 500; padding: 7px 16px; border-radius: 6px; border: none; cursor: pointer; background: #171717 !important; color: #fff !important; transition: opacity 0.1s; }
+.lu-btn:hover { opacity: 0.85; }
+.lu-btn:disabled { opacity: 0.5; cursor: default; }
+.lu-error { font-size: 12.5px; color: #dc2626; display: none; }
+</style>
+
+<div class="lu-page">
+  <div class="lu-wrap">
+
+    <div class="lu-hdr">
+      <h1>Email preferences</h1>
+      {% if email %}
+      <p>Managing preferences for <strong>{{ email }}</strong></p>
+      {% endif %}
     </div>
-    {% else %}
-    <p class="text-muted mb-4" style="font-size: 13px;">No letter categories are configured.</p>
+
+    {% if saved %}
+    <div class="lu-saved">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true"><circle cx="8" cy="8" r="7" stroke="#16a34a" stroke-width="1.5"/><path d="M5 8l2 2 4-4" stroke="#16a34a" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Preferences saved.
+    </div>
     {% endif %}
 
-    <div class="mb-4">
-      <p class="fw-semibold mb-2" style="font-size: 14px;">Unsubscribe from everything</p>
-      <label class="d-flex align-items-center gap-2 border rounded px-3 py-2" style="cursor: pointer; margin: 0; font-weight: normal;">
-        <input
-          type="checkbox"
-          name="global_unsubscribe"
-          value="1"
-          {% if is_globally_unsubscribed %}checked{% endif %}
-          style="margin: 0;"
-        >
-        <div>
-          <span style="font-size: 14px; display: block;">Opt out of all Frappe emails</span>
-          <span class="text-muted" style="font-size: 12px;">You will not receive any emails from this system.</span>
-        </div>
-      </label>
-    </div>
+    {% if not email %}
+    <p style="font-size:13.5px;color:#8d99a6;">No email address provided. Please use the unsubscribe link from a received email.</p>
+    {% else %}
 
-    <button type="submit" class="btn btn-primary btn-sm">Save preferences</button>
-  </form>
-  {% endif %}
+    <form id="lu-form">
+      {% if folders %}
+      <div class="lu-section">
+        <div class="lu-section-label">Categories <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:#c0c9d6;">— check to unsubscribe</span></div>
+        <div class="lu-card">
+          {% for folder in folders %}
+          <label class="lu-row">
+            <input type="checkbox" class="lu-cb" name="cat" value="{{ folder.name }}" {% if folder.is_unsubscribed %}checked{% endif %}>
+            <span class="lu-row-text">{{ folder.folder_name }}</span>
+            {% if folder.is_unsubscribed %}
+            <span class="lu-row-badge">Unsubscribed</span>
+            {% endif %}
+          </label>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="lu-section">
+        <div class="lu-section-label">Global</div>
+        <div class="lu-card">
+          <label class="lu-row">
+            <input type="checkbox" class="lu-cb" name="global_unsub" value="1" {% if is_globally_unsubscribed %}checked{% endif %}>
+            <div class="lu-row-body">
+              <div class="lu-row-title">Opt out of all emails</div>
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <div class="lu-actions">
+        <button type="submit" class="lu-btn" id="lu-save-btn">Save preferences</button>
+        <span class="lu-error" id="lu-error">Could not save. Please try again.</span>
+      </div>
+    </form>
+
+    <script>
+    (function () {
+      var CSRF = '{{ csrf_token }}';
+      var EMAIL = '{{ email | replace("'", "\\'") }}';
+      var LETTER = '{{ letter | replace("'", "\\'") }}';
+
+      document.getElementById('lu-form').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var btn = document.getElementById('lu-save-btn');
+        var err = document.getElementById('lu-error');
+        btn.disabled = true;
+        err.style.display = 'none';
+
+        var cats = Array.from(document.querySelectorAll('input[name="cat"]:checked'))
+          .map(function (cb) { return cb.value; }).join(',');
+        var globalUnsub = document.querySelector('input[name="global_unsub"]:checked') ? '1' : '0';
+
+        try {
+          var headers = { 'Content-Type': 'application/json' };
+          if (CSRF) headers['X-Frappe-CSRF-Token'] = CSRF;
+
+          var resp = await fetch(
+            '/api/method/letters.letters.api.unsubscribe.save_preferences',
+            {
+              method: 'POST',
+              headers: headers,
+              body: JSON.stringify({
+                email: EMAIL,
+                letter: LETTER,
+                unsubscribe_folders: cats,
+                global_unsubscribe: globalUnsub
+              })
+            }
+          );
+
+          if (resp.ok) {
+            var qs = '?email=' + encodeURIComponent(EMAIL) + (LETTER ? '&letter=' + encodeURIComponent(LETTER) : '') + '&saved=1';
+            window.location.href = '/letters_unsubscribe' + qs;
+          } else {
+            err.style.display = 'inline';
+            btn.disabled = false;
+          }
+        } catch (_) {
+          err.style.display = 'inline';
+          btn.disabled = false;
+        }
+      });
+    }());
+    </script>
+    {% endif %}
+
+  </div>
 </div>
 {% endblock %}

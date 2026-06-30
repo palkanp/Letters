@@ -1755,7 +1755,7 @@ class TestLoadRecipientConfig:
 #
 # Covers:
 #   - global_unsubscribe=True: inserts Email Unsubscribe with global_unsubscribe=1
-#   - Folder unsubscribe: inserts Email Unsubscribe with reference_doctype="Letter Folder"
+#   - Folder unsubscribe: inserts Email Unsubscribe with reference_doctype="Letter Category"
 #   - Removing a folder from the list deletes the existing unsubscribe record
 #   - global_unsubscribe=False with existing record: deletes global record
 # ---------------------------------------------------------------------------
@@ -1779,7 +1779,7 @@ class TestSavePreferences:
         """global_unsubscribe=1 and no existing record → insert."""
         frappe_stub.utils.validate_email_address.return_value = "user@example.com"
         frappe_stub.db.exists.return_value = None
-        GETALL["Letter Folder"] = []  # no folders
+        GETALL["Letter Category"] = []  # no folders
 
         inserted = {}
         def get_doc_se(d):
@@ -1800,7 +1800,7 @@ class TestSavePreferences:
         frappe_stub.db.exists.side_effect = lambda dt, filters: (
             "EU-GLOBAL" if filters.get("global_unsubscribe") else None
         )
-        GETALL["Letter Folder"] = []  # no folders
+        GETALL["Letter Category"] = []  # no folders
 
         self._run(global_unsub="0")
 
@@ -1812,7 +1812,7 @@ class TestSavePreferences:
         """Selecting a folder creates an Email Unsubscribe for that folder."""
         frappe_stub.utils.validate_email_address.return_value = "user@example.com"
         frappe_stub.db.exists.return_value = None  # nothing exists yet
-        GETALL["Letter Folder"] = [_mk_dict(name="FOLDER-A")]
+        GETALL["Letter Category"] = [_mk_dict(name="FOLDER-A")]
 
         inserted = {}
         def get_doc_se(d):
@@ -1823,7 +1823,7 @@ class TestSavePreferences:
 
         self._run(folders="FOLDER-A", global_unsub="0")
 
-        assert inserted.get("reference_doctype") == "Letter Folder"
+        assert inserted.get("reference_doctype") == "Letter Category"
         assert inserted.get("reference_name") == "FOLDER-A"
 
     def test_removing_folder_deletes_existing_record(self):
@@ -1838,7 +1838,7 @@ class TestSavePreferences:
             return None
         frappe_stub.db.exists.side_effect = exists_se
         # Two folders exist; only FOLDER-A submitted — FOLDER-B should be removed
-        GETALL["Letter Folder"] = [_mk_dict(name="FOLDER-A"), _mk_dict(name="FOLDER-B")]
+        GETALL["Letter Category"] = [_mk_dict(name="FOLDER-A"), _mk_dict(name="FOLDER-B")]
 
         self._run(folders="FOLDER-A", global_unsub="0")
 
@@ -1889,7 +1889,7 @@ class TestGetContext:
 
     def test_with_email_loads_all_folders(self):
         self._set_args(email="user@x.com")
-        GETALL["Letter Folder"] = [
+        GETALL["Letter Category"] = [
             _mk_dict(name="F1", folder_name="Newsletter"),
             _mk_dict(name="F2", folder_name="Updates"),
         ]
@@ -1900,12 +1900,12 @@ class TestGetContext:
 
     def test_folder_is_unsubscribed_flag_set_correctly(self):
         self._set_args(email="user@x.com")
-        GETALL["Letter Folder"] = [
+        GETALL["Letter Category"] = [
             _mk_dict(name="F1", folder_name="Newsletter"),
         ]
         # exists returns truthy only for F1 folder unsubscribe check
         def exists_se(dt, filters):
-            if filters.get("reference_name") == "F1" and filters.get("reference_doctype") == "Letter Folder":
+            if filters.get("reference_name") == "F1" and filters.get("reference_doctype") == "Letter Category":
                 return "EU-F1"
             return None
         frappe_stub.db.exists.side_effect = exists_se
@@ -1916,7 +1916,7 @@ class TestGetContext:
 
     def test_folder_not_unsubscribed_flag_false(self):
         self._set_args(email="user@x.com")
-        GETALL["Letter Folder"] = [
+        GETALL["Letter Category"] = [
             _mk_dict(name="F2", folder_name="Promos"),
         ]
         frappe_stub.db.exists.return_value = None
@@ -1926,7 +1926,7 @@ class TestGetContext:
 
     def test_is_globally_unsubscribed_true_when_record_exists(self):
         self._set_args(email="user@x.com")
-        GETALL["Letter Folder"] = []
+        GETALL["Letter Category"] = []
         frappe_stub.db.exists.side_effect = lambda dt, filters: (
             "EU-GLOBAL" if filters.get("global_unsubscribe") else None
         )

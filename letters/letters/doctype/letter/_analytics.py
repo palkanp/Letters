@@ -70,7 +70,7 @@ class AnalyticsMixin:
         or_filters = [{"reference_doctype": "Letter", "reference_name": self.name}]
         folder = frappe.db.get_value("Letter", self.name, "folder")
         if folder:
-            or_filters.append({"reference_doctype": "Letter Folder", "reference_name": folder})
+            or_filters.append({"reference_doctype": "Letter Category", "reference_name": folder})
 
         suppressed_rows = frappe.get_all(
             "Email Unsubscribe",
