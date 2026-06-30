@@ -2,7 +2,7 @@ import { ref, computed, watch, onMounted, onUnmounted } from "vue";
 import { toast } from "frappe-ui";
 import { describeError, stripIds } from "../utils/builderHelpers";
 
-// The campaign document lifecycle: the editable fields that live outside the
+// The letter document lifecycle: the editable fields that live outside the
 // block tree (subject, preview text, recipients), persistence (load/save +
 // debounced autosave), and the send / schedule / duplicate actions plus their
 // progress polling. BuilderPage wires the returned state straight into its
@@ -54,7 +54,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   watch([subject, previewText, () => editorStore.letterName], () => {
     if (_suppressDirty === 0) editorStore.markDirty();
   });
-  // Recipient selection is persisted on the campaign (so scheduled sends and
+  // Recipient selection is persisted on the letter (so scheduled sends and
   // reloads know the audience). Deep-watch and mark dirty so autosave flushes it.
   watch(recipientConfig, () => {
     if (_suppressDirty === 0) editorStore.markDirty();
@@ -77,7 +77,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   });
 
   // ── Load ────────────────────────────────────────────────────────────────────
-  // Read campaign name from the Frappe route: /app/letter-builder/<name>
+  // Read letter name from the Frappe route: /app/letter-builder/<name>
   // Fall back to legacy ?name= query param so old bookmarks still work.
   function getRouteParam() {
     if (window.frappe?.get_route) {
@@ -145,8 +145,8 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   }
 
   // Handles a template/blank choice from the picker. Two modes:
-  //   - Existing campaign already loaded → apply blocks to it and save.
-  //   - No campaign yet → create a new one, then load it.
+  //   - Existing letter already loaded → apply blocks to it and save.
+  //   - No letter yet → create a new one, then load it.
   async function onTemplateSubmit(blocks) {
     if (editorStore.letterDoc?.name) {
       editorStore.loadTemplate(blocks);
@@ -176,9 +176,9 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   // ── Save ──────────────────────────────────────────────────────────────────────
   async function saveLetter() {
     if (editorStore.isReadOnly) return;
-    // Never create a campaign from autosave — initial creation is handled by
+    // Never create a letter from autosave — initial creation is handled by
     // onTemplateSubmit. Without this guard, null name → HTTP '' → backend creates
-    // a phantom campaign and the original is never updated.
+    // a phantom letter and the original is never updated.
     if (!editorStore.letterDoc?.name) return;
     saving.value = true;
     try {
@@ -201,7 +201,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
       editorStore.letterDoc = saved;
       setRouteParam(saved.name);
       editorStore.clearDirty();
-      // Keep browser tab title in sync with the campaign name
+      // Keep browser tab title in sync with the letter name
       document.title = (editorStore.letterName || "Untitled Letter") + " · Letters";
       // Brief "Saved" confirmation in the toolbar
       clearTimeout(_savedFlashTimer);
@@ -299,7 +299,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
         if (["Sent", "Failed", "Partial"].includes(r.message.status)) {
           clearInterval(_progressTimer);
           _progressTimer = null;
-          // Sync final status back to campaignDoc so toolbar badge reflects it
+          // Sync final status back to letterDoc so toolbar badge reflects it
           if (editorStore.letterDoc) editorStore.letterDoc.status = r.message.status;
           const label = r.message.status === "Sent" ? "Letter sent successfully!" : `Send ${r.message.status.toLowerCase()}.`;
           toast[r.message.status === "Sent" ? "success" : "warning"](label);
@@ -336,7 +336,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
     }
     scheduling.value = true;
     try {
-      // The scheduled send reads content + audience from the saved campaign, so
+      // The scheduled send reads content + audience from the saved letter, so
       // flush any pending edits before scheduling — otherwise the fire could run
       // against a stale (or recipient-less) saved state.
       if (editorStore.isDirty) {
@@ -377,7 +377,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
       });
       const newName = res.message.name;
       toast.success(`Duplicated as "${res.message.title}". Opening it now.`);
-      // Navigate to the new campaign in the same tab
+      // Navigate to the new letter in the same tab
       setRouteParam(newName);
     } catch (e) {
       toast.error("Duplicate failed: " + describeError(e));

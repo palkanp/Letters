@@ -2,7 +2,7 @@
   <Dialog
     :model-value="modelValue"
     title="Send Test Email"
-    message="Send a copy of this campaign so you can preview it in a real inbox."
+    message="Send a copy of this letter so you can preview it in a real inbox."
     size="sm"
     @update:model-value="(v) => { if (!v) emit('update:modelValue', false) }"
   >

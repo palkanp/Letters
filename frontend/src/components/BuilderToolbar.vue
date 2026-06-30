@@ -7,7 +7,7 @@
         <Button
           variant="ghost"
           size="sm"
-          aria-label="Campaign menu"
+          aria-label="Letter menu"
           class="flex-shrink-0 gap-1 pl-1.5 pr-1 focus-visible:!ring-0"
         >
           <template #prefix>
@@ -36,13 +36,13 @@
       <Button variant="ghost" size="sm" icon="lucide-image" aria-label="Add image" @click.stop="emit('insert', 'image')" />
     </Tooltip>
 
-    <!-- Centered campaign title — absolute so it's centered to the page -->
+    <!-- Centered letter title — absolute so it's centered to the page -->
     <div class="absolute inset-x-0 flex items-center justify-center gap-2 pointer-events-none" style="height:48px;">
       <Button
         variant="ghost"
         size="sm"
         class="pointer-events-auto min-w-0 max-w-sm px-2 py-1"
-        title="Campaign settings"
+        title="Letter settings"
         @click="emit('open-settings')"
       >
         <span class="truncate text-sm font-medium text-ink-gray-8">
@@ -58,12 +58,12 @@
     <!-- Actions -->
     <div class="flex items-center gap-1.5 flex-shrink-0 ml-auto">
 
-      <Tooltip text="Campaign settings">
+      <Tooltip text="Letter settings">
         <Button
           variant="ghost"
           size="sm"
           icon="lucide-settings"
-          aria-label="Campaign settings"
+          aria-label="Letter settings"
           @click="emit('open-settings')"
         />
       </Tooltip>

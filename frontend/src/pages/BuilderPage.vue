@@ -103,7 +103,7 @@
           :style="{ backgroundColor: editorStore.canvasBg || '#ffffff', maxWidth: editorStore.emailWidth + 'px', minHeight: '200px', transform: `scale(${canvasZoom})`, transformOrigin: 'top center', marginBottom: canvasZoom < 1 ? `calc((${canvasZoom} - 1) * 100%)` : undefined, color: '#374151', colorScheme: 'light' }"
         >
 
-          <!-- Loading skeleton (while fetching a saved campaign) -->
+          <!-- Loading skeleton (while fetching a saved letter) -->
           <div v-if="loadingLetter" class="p-6 space-y-3" aria-busy="true" aria-label="Loading letter">
             <div v-for="n in 4" :key="n" class="h-16 bg-surface-gray-2 animate-pulse rounded-lg" />
           </div>
@@ -120,7 +120,7 @@
 
           <!-- Block list with inline adders -->
           <template v-else-if="!loadingLetter">
-            <!-- Read-only notice for sent/sending campaigns -->
+            <!-- Read-only notice for sent/sending letters -->
             <div
               v-if="editorStore.isReadOnly"
               class="flex items-center gap-2 px-4 py-2.5 bg-surface-gray-2 border-b border-outline-gray-1 text-xs text-ink-gray-5 select-none"
@@ -162,7 +162,7 @@
         </div>
       </main>
 
-      <!-- Drag handle + Inspector (hidden for read-only campaigns) -->
+      <!-- Drag handle + Inspector (hidden for read-only letters) -->
       <template v-if="!editorStore.isReadOnly">
         <div
           class="flex-shrink-0 w-1 bg-transparent hover:bg-blue-400 cursor-col-resize z-[1] transition-colors"
@@ -288,7 +288,7 @@ const menuOptions = computed(() => [
     ],
   },
   {
-    group: "campaign",
+    group: "letter",
     hideLabel: true,
     items: [
       {

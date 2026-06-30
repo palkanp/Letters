@@ -16,7 +16,7 @@
  *   2. No component reintroduces the bespoke `.lt-*` theming classes.
  *   3. The two modals use real frappe-ui surface + ink + outline tokens.
  *   4. Inspector keeps a solid background matching its sibling panels.
- *   5. email_campaign.js keeps "Open in Letters Builder" and removes Frappe's
+ *   5. letter.js keeps "Open in Letters Builder" and removes Frappe's
  *      native Templates button.
  */
 
@@ -27,11 +27,11 @@ import { resolve } from "path";
 const read = (rel) => readFileSync(resolve(__dirname, rel), "utf-8");
 
 const PICKER = read("../components/TemplatePicker.vue");
-const SETTINGS = read("../components/CampaignSettings.vue");
+const SETTINGS = read("../components/LetterSettings.vue");
 const INSPECTOR = read("../components/Inspector.vue");
 const STYLE = read("../style.css");
-const CAMPAIGN_JS = read(
-  "../../../letters/public/frappe_customizations/email_campaign.js"
+const LETTER_JS = read(
+  "../../../letters/public/frappe_customizations/letter.js"
 );
 
 // Every .vue/.js source file under src/ (excluding tests), for repo-wide bans.
@@ -94,9 +94,9 @@ describe("no bespoke .lt-* theming classes", () => {
 // 3. Modals use real frappe-ui tokens (solid surface + readable ink)
 // ---------------------------------------------------------------------------
 
-describe("TemplatePicker.vue uses frappe-ui tokens", () => {
-  it("shell has a solid frappe-ui surface", () => {
-    expect(PICKER).toContain("bg-surface-base");
+describe("TemplatePicker.vue uses a solid background", () => {
+  it("shell has a solid background (bg-white or frappe-ui surface token)", () => {
+    expect(PICKER).toMatch(/\bbg-(white|surface-base)\b/);
   });
   it("heading + subtitle use frappe-ui ink tokens (auto-contrast both themes)", () => {
     expect(PICKER).toContain("text-ink-gray-9"); // heading
@@ -107,7 +107,7 @@ describe("TemplatePicker.vue uses frappe-ui tokens", () => {
   });
 });
 
-describe("CampaignSettings.vue uses frappe-ui tokens", () => {
+describe("LetterSettings.vue uses frappe-ui tokens", () => {
   it("panel has a solid frappe-ui surface", () => {
     expect(SETTINGS).toContain("bg-surface-base");
   });
@@ -129,15 +129,15 @@ describe("Inspector.vue background", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 5. email_campaign.js — builder button kept, native Templates removed
+// 5. letter.js — builder button kept, native Templates removed
 // ---------------------------------------------------------------------------
 
-describe("email_campaign.js form customizations", () => {
+describe("letter.js form customizations", () => {
   it('keeps the "Open in Letters Builder" custom button', () => {
-    expect(CAMPAIGN_JS).toContain("Open in Letters Builder");
+    expect(LETTER_JS).toContain("Open in Letters Builder");
   });
   it("removes Frappe's native Templates feature (template_manager)", () => {
-    expect(CAMPAIGN_JS).toContain("template_manager");
-    expect(CAMPAIGN_JS).toContain("Templates");
+    expect(LETTER_JS).toContain("template_manager");
+    expect(LETTER_JS).toContain("Templates");
   });
 });

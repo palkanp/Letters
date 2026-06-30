@@ -28,7 +28,7 @@
    "fieldtype": "Code",
    "label": "Blocks JSON",
    "options": "JSON",
-   "description": "Block data that seeds the campaign when this template is selected",
+   "description": "Block data that seeds the letter when this template is selected",
    "reqd": 1
   },
   {

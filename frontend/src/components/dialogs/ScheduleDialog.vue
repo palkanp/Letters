@@ -2,7 +2,7 @@
   <Dialog
     :model-value="modelValue"
     title="Schedule Sending"
-    message="The campaign will be sent automatically at the chosen time."
+    message="The letter will be sent automatically at the chosen time."
     size="sm"
     @update:model-value="(v) => { if (!v) emit('update:modelValue', false) }"
   >

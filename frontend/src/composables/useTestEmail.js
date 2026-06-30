@@ -2,7 +2,7 @@ import { ref } from "vue";
 import { toast } from "frappe-ui";
 import { describeError, stripIds } from "../utils/builderHelpers";
 
-// Sends a single [TEST] copy of the campaign to a chosen address. Prefills the
+// Sends a single [TEST] copy of the letter to a chosen address. Prefills the
 // recipient with the logged-in user's email when it looks like one.
 export function useTestEmail(editorStore, { subject, previewText, flushSave }) {
   const showTestModal = ref(false);

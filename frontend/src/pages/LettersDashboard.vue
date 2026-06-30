@@ -472,14 +472,12 @@ function relativeTime(ts) {
 async function load() {
   loading.value = true;
   try {
-    const [lettersRes, foldersRes] = await Promise.all([
+    const [lettersRes, foldersRes] = await Promise.allSettled([
       frappe.call({ method: "letters.letters.api.get_letters" }),
       frappe.call({ method: "frappe.client.get_list", args: { doctype: "Letter Category", fields: ["name"], order_by: "name asc", limit: 200 } }),
     ]);
-    letters.value = lettersRes.message || [];
-    allFolders.value = foldersRes.message || [];
-  } catch {
-    letters.value = [];
+    letters.value = lettersRes.status === "fulfilled" ? (lettersRes.value?.message || []) : [];
+    allFolders.value = foldersRes.status === "fulfilled" ? (foldersRes.value?.message || []) : [];
   } finally {
     loading.value = false;
   }
