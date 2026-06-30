@@ -1,6 +1,6 @@
 <template>
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
-    <div class="bg-white border-outline-gray-2 border rounded-2xl shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden letters-picker-shell" style="color-scheme: light">
+    <div class="bg-surface-base border-outline-gray-2 border rounded-2xl shadow-2xl w-[900px] max-h-[85vh] flex flex-col overflow-hidden">
 
       <!-- Header -->
       <div class="border-outline-gray-2 flex-shrink-0 px-8 pt-7 pb-5 border-b flex items-start justify-between gap-4">

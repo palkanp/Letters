@@ -95,8 +95,8 @@ describe("no bespoke .lt-* theming classes", () => {
 // ---------------------------------------------------------------------------
 
 describe("TemplatePicker.vue uses a solid background", () => {
-  it("shell has a solid background (bg-white or frappe-ui surface token)", () => {
-    expect(PICKER).toMatch(/\bbg-(white|surface-base)\b/);
+  it("shell uses bg-surface-base (adapts to both light and dark themes)", () => {
+    expect(PICKER).toContain("bg-surface-base");
   });
   it("heading + subtitle use frappe-ui ink tokens (auto-contrast both themes)", () => {
     expect(PICKER).toContain("text-ink-gray-9"); // heading

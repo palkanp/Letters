@@ -72,28 +72,6 @@ html, body {
   --ink-gray-8: #171717;
   --ink-gray-9: #0f0f0f;
 }
-/* Template picker modal: always render with light-mode tokens so text/borders
-   are visible against the white background regardless of the builder theme. */
-[data-theme="dark"] .letters-picker-shell {
-  --surface-base: #ffffff;
-  --surface-gray-1: #f8f8f8;
-  --surface-gray-2: #f3f3f3;
-  --surface-gray-3: #ededed;
-  --surface-gray-4: #e2e2e2;
-  --surface-gray-5: #c7c7c7;
-  --outline-gray-1: #ededed;
-  --outline-gray-2: #e2e2e2;
-  --outline-gray-3: #c7c7c7;
-  --ink-gray-1: #ededed;
-  --ink-gray-2: #e2e2e2;
-  --ink-gray-3: #c7c7c7;
-  --ink-gray-4: #999999;
-  --ink-gray-5: #7c7c7c;
-  --ink-gray-6: #525252;
-  --ink-gray-7: #383838;
-  --ink-gray-8: #171717;
-  --ink-gray-9: #0f0f0f;
-}
 /* Remove any image brightness filter Frappe Desk applies in dark mode */
 [data-theme="dark"] .letters-email-canvas img {
   filter: none !important;
