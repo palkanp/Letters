@@ -73,20 +73,15 @@
     </span>
   </div>
 
-  <!-- number — wrapper div catches bubbled keydown so ArrowUp/Down step the value -->
-  <div
+  <!-- number -->
+  <TextInput
     v-else-if="field.type === 'number'"
-    @keydown.up.prevent="emit('change', clampNumber(field, (parseFloat(value) || 0) + (field.step ?? 1)))"
-    @keydown.down.prevent="emit('change', clampNumber(field, (parseFloat(value) || 0) - (field.step ?? 1)))"
-  >
-    <TextInput
-      type="text"
-      size="sm"
-      class="w-full"
-      :model-value="value != null ? `${value}${field.unit || ''}` : ''"
-      @update:model-value="emit('change', parseInt($event) || 0)"
-    />
-  </div>
+    type="text"
+    size="sm"
+    class="w-full"
+    :model-value="value != null ? `${value}${field.unit || ''}` : ''"
+    @update:model-value="emit('change', parseInt($event) || 0)"
+  />
 
   <!-- dimension -->
   <TextInput
@@ -121,12 +116,6 @@ const props = defineProps({
   blockProps: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(["change"]);
-
-function clampNumber(field, n) {
-  if (field.min != null) n = Math.max(field.min, n);
-  if (field.max != null) n = Math.min(field.max, n);
-  return n;
-}
 
 const resolvedOptions = computed(() =>
   typeof props.field.options === "function"
