@@ -39,11 +39,8 @@ def seed_templates():
 
 
 def _add_notification_message_type_field():
-    """Add a letter_message_type Select field to Notification (idempotent)."""
-    if frappe.db.exists("Custom Field", "Notification-letter_message_type"):
-        return
-    frappe.get_doc({
-        "doctype": "Custom Field",
+    """Add/update the letter_message_type Select field on Notification (idempotent)."""
+    desired = {
         "dt": "Notification",
         "fieldname": "letter_message_type",
         "fieldtype": "Select",
@@ -52,7 +49,11 @@ def _add_notification_message_type_field():
         "default": "Custom Message",
         "insert_after": "message_sb",
         "translatable": 0,
-    }).insert(ignore_permissions=True)
+    }
+    if frappe.db.exists("Custom Field", "Notification-letter_message_type"):
+        frappe.db.set_value("Custom Field", "Notification-letter_message_type", "insert_after", "message_sb")
+    else:
+        frappe.get_doc({"doctype": "Custom Field", **desired}).insert(ignore_permissions=True)
     frappe.db.commit()
 
 

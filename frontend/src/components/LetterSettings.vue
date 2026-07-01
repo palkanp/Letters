@@ -28,13 +28,7 @@
             <!-- Header -->
             <div class="flex items-center justify-between px-8 pt-4 pb-0">
               <h3 class="text-2xl font-semibold leading-6 text-ink-gray-9">Settings</h3>
-              <button
-                class="flex items-center justify-center rounded p-1 text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-9 transition-colors"
-                aria-label="Close"
-                @click="isOpen = false"
-              >
-                <span class="lucide-x size-4" aria-hidden="true" />
-              </button>
+              <Button variant="ghost" icon="lucide-x" aria-label="Close" @click="isOpen = false" />
             </div>
 
             <!-- Tab bar -->
@@ -259,7 +253,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { TextInput } from "frappe-ui";
+import { TextInput, Button } from "frappe-ui";
 import RecipientsPicker from "./RecipientsPicker.vue";
 import NotificationsTab from "./NotificationsTab.vue";
 

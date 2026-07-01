@@ -13,7 +13,7 @@
             type="checkbox"
             class="accent-ink-gray-9 cursor-pointer"
             :checked="!!notifDoc.enabled"
-            @change="(e) => { if (e.target.checked && !validateForEnable()) { e.target.checked = false; return; } enableErrors.value = []; setField('enabled', e.target.checked ? 1 : 0); }"
+            @change="onEnabledChange"
           />
         </label>
       </div>
@@ -239,13 +239,15 @@
           </div>
         </div>
 
-        <button
-          class="mt-1.5 text-xs text-ink-gray-5 hover:text-ink-gray-9 flex items-center gap-1"
+        <Button
+          variant="ghost"
+          size="sm"
+          icon-left="lucide-plus"
+          class="mt-1"
           @click="addRecipientRow"
         >
-          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
           Add Row
-        </button>
+        </Button>
       </div>
 
       <!-- Footer: save status + open in desk -->
@@ -503,6 +505,15 @@ function validateForEnable() {
   if (!hasRecipient) errors.push("At least one recipient is required.");
   enableErrors.value = errors;
   return errors.length === 0;
+}
+
+function onEnabledChange(e) {
+  if (e.target.checked && !validateForEnable()) {
+    e.target.checked = false;
+    return;
+  }
+  enableErrors.value = [];
+  setField("enabled", e.target.checked ? 1 : 0);
 }
 
 function setField(field, value) {
