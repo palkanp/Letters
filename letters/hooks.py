@@ -39,3 +39,7 @@ after_migrate = "letters.install.after_migrate"
 override_doctype_class = {
     "Notification": "letters.letters.overrides.notification.LettersNotification",
 }
+
+permission_query_conditions = {
+    "Letter": "letters.letters.doctype.letter.letter.get_permission_query_conditions",
+}

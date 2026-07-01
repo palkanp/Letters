@@ -103,6 +103,8 @@ def schedule_letter(name: str, scheduled_at: str):
     """Mark a letter to be sent at a future datetime (ISO-8601 string, server timezone)."""
     doc = frappe.get_doc("Letter", name)
     frappe.has_permission("Letter", "write", doc=doc, throw=True)
+    if frappe.db.exists("Notification", {"letter": name}):
+        frappe.throw("This letter is linked to a Notification and cannot be sent as a campaign.")
     return doc.schedule(scheduled_at)
 
 
@@ -118,6 +120,8 @@ def send_letter(name: str, recipients: str | None = None, email_group: str | Non
     """
     doc = frappe.get_doc("Letter", name)
     frappe.has_permission("Letter", "write", doc=doc, throw=True)
+    if frappe.db.exists("Notification", {"letter": name}):
+        frappe.throw("This letter is linked to a Notification and cannot be sent as a campaign.")
     if doc.status == "Sent":
         frappe.throw(_("This letter has already been sent."), exc=frappe.ValidationError)
     if doc.status == "Sending":

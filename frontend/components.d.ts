@@ -38,6 +38,7 @@ declare module 'vue' {
     LetterThumbnail: typeof import('./src/components/LetterThumbnail.vue')['default']
     Link_list: typeof import('./src/components/blocks/link_list.vue')['default']
     LinkCheckerDialog: typeof import('./src/components/dialogs/LinkCheckerDialog.vue')['default']
+    NotificationCard: typeof import('./src/components/NotificationCard.vue')['default']
     NotificationsTab: typeof import('./src/components/NotificationsTab.vue')['default']
     Product_card: typeof import('./src/components/blocks/product_card.vue')['default']
     PropRow: typeof import('./src/components/PropRow.vue')['default']

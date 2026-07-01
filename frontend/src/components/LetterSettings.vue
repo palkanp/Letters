@@ -1,56 +1,66 @@
 <template>
   <Teleport to="body">
-    <transition
-      enter-active-class="transition-opacity duration-150"
-      leave-active-class="transition-opacity duration-150"
+    <Transition
+      enter-active-class="transition duration-100 ease-out"
       enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
       <div
-        v-if="modelValue"
-        class="fixed inset-0 z-50 flex items-center justify-center p-4 font-sans"
+        v-if="isOpen"
+        class="fixed inset-0 z-[100] flex items-center justify-center px-4 py-4 bg-black-overlay-200 dark:bg-black-overlay-700"
+        @keydown.esc="isOpen = false"
       >
-        <!-- Overlay -->
-        <div class="absolute inset-0 bg-black/60" @click="close" />
-
-        <!-- Panel: left nav + right content -->
-        <div class="bg-surface-base relative flex w-full max-w-3xl h-[560px] max-h-[90vh] rounded-xl shadow-2xl overflow-hidden border border-outline-gray-2">
-
-          <!-- Left nav -->
-          <aside class="bg-surface-gray-2 border-outline-gray-2 w-52 flex-shrink-0 border-r flex flex-col">
-            <div class="flex items-center h-[60px] px-4 flex-shrink-0">
-              <span class="text-ink-gray-9 text-base font-semibold">Settings</span>
+        <Transition
+          enter-active-class="transition duration-100 ease-out"
+          enter-from-class="opacity-50 scale-[0.98]"
+          enter-to-class="opacity-100 scale-100"
+          leave-active-class="transition duration-150 ease-in"
+          leave-from-class="opacity-100 scale-100"
+          leave-to-class="opacity-50 scale-[0.98]"
+        >
+          <div
+            v-if="isOpen"
+            class="relative w-full max-w-3xl rounded-xl bg-surface-modal shadow-xl overflow-hidden"
+          >
+            <!-- Header -->
+            <div class="flex items-center justify-between px-8 pt-4 pb-0">
+              <h3 class="text-2xl font-semibold leading-6 text-ink-gray-9">Settings</h3>
+              <button
+                class="flex items-center justify-center rounded p-1 text-ink-gray-5 hover:bg-surface-gray-2 hover:text-ink-gray-9 transition-colors"
+                aria-label="Close"
+                @click="isOpen = false"
+              >
+                <span class="lucide-x size-4" aria-hidden="true" />
+              </button>
             </div>
-            <nav class="space-y-0.5 p-3">
-              <Button
+
+            <!-- Tab bar -->
+            <div class="flex gap-5 px-8 mt-3 border-b border-outline-gray-2">
+              <button
                 v-for="s in sections"
                 :key="s.id"
-                variant="ghost"
-                class="w-full !justify-start px-2.5 py-1.5 text-sm"
-                :class="activeTab === s.id
-                  ? 'bg-surface-base text-ink-gray-9 shadow-sm font-medium'
-                  : 'text-ink-gray-5 hover:bg-surface-gray-3'"
-                :iconLeft="`lucide-${s.icon}`"
+                class="relative py-2.5 text-base transition-colors duration-200"
+                :class="activeTab === s.id ? 'text-ink-gray-9' : 'text-ink-gray-5 hover:text-ink-gray-9'"
                 @click="activeTab = s.id"
               >
                 {{ s.label }}
-              </Button>
-            </nav>
-          </aside>
-
-          <!-- Right content -->
-          <div class="bg-surface-base flex-1 flex flex-col min-w-0">
-            <div class="border-outline-gray-2 flex items-center justify-between px-6 py-4 border-b flex-shrink-0">
-              <h2 class="text-ink-gray-9 text-base font-semibold">{{ activeSection.label }}</h2>
-              <Button variant="ghost" icon="lucide-x" size="sm" aria-label="Close settings" @click="close" />
+                <span
+                  v-if="activeTab === s.id"
+                  class="absolute bottom-0 left-0 right-0 h-0.5 rounded-full bg-surface-gray-7 translate-y-px"
+                />
+              </button>
             </div>
 
-            <div class="flex-1 overflow-y-auto px-6 py-5">
+            <!-- Tab content -->
+            <div class="h-[55vh] overflow-y-auto px-8 pt-4 pb-5">
 
               <!-- ── Details ── -->
               <div v-if="activeTab === 'details'" class="space-y-4">
                 <label class="block">
-                  <span class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Letter Name</span>
+                  <span class="block text-xs font-semibold text-ink-gray-6  mb-1.5">Letter Name</span>
                   <TextInput
                     :model-value="letterName"
                     placeholder="e.g. June Newsletter"
@@ -59,7 +69,7 @@
                 </label>
                 <label class="block">
                   <span class="flex items-center justify-between mb-1.5">
-                    <span class="text-xs font-semibold text-ink-gray-6 uppercase tracking-wide">Subject Line <span class="text-red-400 ml-0.5">*</span></span>
+                    <span class="text-xs font-semibold text-ink-gray-6 ">Subject Line <span class="text-red-400 ml-0.5">*</span></span>
                     <span class="text-xs tabular-nums" :class="subject.length > 78 ? 'text-red-500' : subject.length > 60 ? 'text-orange-500' : 'text-ink-gray-4'">{{ subject.length }}</span>
                   </span>
                   <TextInput
@@ -71,7 +81,7 @@
                   <p v-else-if="subject.length > 60" class="mt-1 text-xs text-orange-500">Over 60 characters may be clipped on mobile.</p>
                 </label>
                 <label class="block">
-                  <span class="block text-xs font-semibold text-ink-gray-6 uppercase tracking-wide mb-1.5">Preview Text</span>
+                  <span class="block text-xs font-semibold text-ink-gray-6  mb-1.5">Preview Text</span>
                   <TextInput
                     :model-value="previewText"
                     placeholder="Brief teaser shown after subject line"
@@ -79,7 +89,7 @@
                   />
                 </label>
 
-                <div class="border-t border-outline-gray-1 pt-4">
+                <div v-if="!isNotification" class="border-t border-outline-gray-1 pt-4">
                   <label class="flex items-start gap-3 cursor-pointer">
                     <input
                       type="checkbox"
@@ -241,15 +251,15 @@
 
             </div>
           </div>
-        </div>
+        </Transition>
       </div>
-    </transition>
+    </Transition>
   </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { TextInput, Button } from "frappe-ui";
+import { ref, computed, watch } from "vue";
+import { TextInput } from "frappe-ui";
 import RecipientsPicker from "./RecipientsPicker.vue";
 import NotificationsTab from "./NotificationsTab.vue";
 
@@ -268,15 +278,27 @@ const emit = defineEmits([
   "update:previewText", "update:recipientConfig", "update:includeUnsubscribe",
 ]);
 
-const sections = [
-  { id: "details",       label: "Details",       icon: "settings" },
-  { id: "recipients",    label: "Recipients",    icon: "users" },
-  { id: "notifications", label: "Notifications", icon: "bell" },
-  { id: "analytics",     label: "Analytics",     icon: "chart-bar" },
-];
+const isNotification = computed(() => !!props.letterDoc?.has_notification);
+const sections = computed(() => {
+  const all = [
+    { id: "details",       label: "Details" },
+    { id: "recipients",    label: "Recipients" },
+    { id: "notifications", label: "Notifications" },
+    { id: "analytics",     label: "Analytics" },
+  ];
+  return all.filter(s => {
+    if (s.id === "notifications") return !isSent.value;
+    if (s.id === "recipients" || s.id === "analytics") return !isNotification.value;
+    return true;
+  });
+});
+const isOpen = computed({
+  get: () => props.modelValue,
+  set: (v) => emit("update:modelValue", v),
+});
+
 const activeTab = ref("details");
-const activeSection = computed(() => sections.find(s => s.id === activeTab.value) || sections[0]);
-const isSent = computed(() => ["Sent", "Partial", "Failed", "Sending"].includes(props.letterDoc?.status));
+const isSent = computed(() => ["Sent", "Partial", "Failed", "Sending", "Scheduled"].includes(props.letterDoc?.status));
 
 const OP_LABEL = { "=": "=", "!=": "≠", "like": "contains", "not like": "doesn't contain", ">": ">", "<": "<", ">=": "≥", "<=": "≤", "is": "is", "in": "in", "not in": "not in", "Between": "between", "Timespan": "timespan" };
 
@@ -342,10 +364,6 @@ const audienceSources = computed(() => {
     return null;
   }).filter(Boolean);
 });
-
-function close() {
-  emit("update:modelValue", false);
-}
 
 const analytics         = ref(null);
 const loadingAnalytics  = ref(false);
@@ -434,12 +452,6 @@ watch(
     if (tab === "recipients" && isSent.value) loadRecipients();
   }
 );
-
-function onKeydown(e) {
-  if (e.key === "Escape" && props.modelValue) close();
-}
-onMounted(() => document.addEventListener("keydown", onKeydown));
-onUnmounted(() => document.removeEventListener("keydown", onKeydown));
 
 function formatDate(s) {
   try {

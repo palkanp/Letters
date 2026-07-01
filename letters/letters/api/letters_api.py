@@ -9,6 +9,17 @@ from .recipients import _normalize_recipient_config
 from ..doctype.letter._content import _unique_letter_title
 
 
+def _sync_subject_to_notification(letter_name: str, subject: str):
+    """Update the linked Notification's subject if it differs from the letter's subject."""
+    row = frappe.db.sql(
+        "SELECT name, subject FROM `tabNotification` WHERE letter = %s LIMIT 1",
+        letter_name,
+        as_dict=True,
+    )
+    if row and row[0].get("subject") != subject:
+        frappe.db.set_value("Notification", row[0]["name"], "subject", subject)
+
+
 @frappe.whitelist(methods=["GET", "POST"])
 def get_letter(name: str):
     doc = frappe.get_doc("Letter", name)
@@ -45,6 +56,8 @@ def save_letter(name: str | None = None, title: str | None = None, subject: str 
             doc.include_unsubscribe = 1 if include_unsubscribe else 0
         doc.blocks_json = blocks_json
         doc.save()
+        if subject is not None and doc.subject:
+            _sync_subject_to_notification(doc.name, doc.subject)
     else:
         frappe.has_permission("Letter", "create", throw=True)
         doc = frappe.get_doc({
@@ -125,17 +138,31 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
 
 @frappe.whitelist(methods=["GET", "POST"])
 def get_letters(folder: str | None = None):
-    """Return all Letter records for the dashboard, optionally filtered by folder."""
-    filters: dict = {}
+    """Return Letter records for the dashboard, excluding those used as notification templates."""
+    where_clauses = [
+        "`tabLetter`.`name` NOT IN ("
+        "SELECT `letter` FROM `tabNotification` "
+        "WHERE `letter` IS NOT NULL AND `letter` != ''"
+        ")"
+    ]
+    values = []
+
     if folder:
-        filters["folder"] = folder
-    return frappe.get_all(
-        "Letter",
-        filters=filters,
-        fields=["name", "title", "status", "subject", "modified", "creation", "owner", "folder"],
-        order_by="modified desc",
-        limit=200,
+        where_clauses.append("`tabLetter`.`folder` = %s")
+        values.append(folder)
+
+    rows = frappe.db.sql(
+        """
+        SELECT name, title, status, subject, modified, creation, owner, folder
+        FROM `tabLetter`
+        WHERE {conditions}
+        ORDER BY modified DESC
+        LIMIT 200
+        """.format(conditions=" AND ".join(where_clauses)),
+        values,
+        as_dict=True,
     )
+    return rows
 
 
 @frappe.whitelist(methods=["POST"])

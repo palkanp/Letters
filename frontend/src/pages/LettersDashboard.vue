@@ -36,10 +36,10 @@
         <Button
           variant="ghost"
           class="w-full !justify-start px-2 py-1.5 text-sm"
-          :class="activeFolder === null
+          :class="viewSection === 'letters'
             ? (props.isDark ? '!bg-white/10 !text-white/70 font-medium' : '!bg-surface-base !text-ink-gray-8 font-medium')
             : (props.isDark ? '!text-white/55' : 'text-ink-gray-6')"
-          @click="activeFolder = null"
+          @click="switchSection('letters')"
         >
           <template #prefix>
             <span class="lucide-inbox size-3.5 flex-shrink-0" aria-hidden="true" />
@@ -49,10 +49,26 @@
             <span class="ml-auto text-xs tabular-nums" :class="props.isDark ? 'text-ink-gray-3' : 'text-ink-gray-4'">{{ letters.length }}</span>
           </template>
         </Button>
+        <Button
+          variant="ghost"
+          class="w-full !justify-start px-2 py-1.5 text-sm"
+          :class="viewSection === 'notifications'
+            ? (props.isDark ? '!bg-white/10 !text-white/70 font-medium' : '!bg-surface-base !text-ink-gray-8 font-medium')
+            : (props.isDark ? '!text-white/55' : 'text-ink-gray-6')"
+          @click="switchSection('notifications')"
+        >
+          <template #prefix>
+            <span class="lucide-bell size-3.5 flex-shrink-0" aria-hidden="true" />
+          </template>
+          Notifications
+          <template #suffix>
+            <span class="ml-auto text-xs tabular-nums" :class="props.isDark ? 'text-ink-gray-3' : 'text-ink-gray-4'">{{ notifications.length || "" }}</span>
+          </template>
+        </Button>
       </div>
 
-      <!-- Folders -->
-      <div class="px-3 flex-1 overflow-y-auto">
+      <!-- Folders (letters only) -->
+      <div v-if="viewSection === 'letters'" class="px-3 flex-1 overflow-y-auto">
         <div class="flex items-center justify-between px-2 mb-1">
           <p
             class="text-[10px] font-semibold uppercase tracking-wide"
@@ -115,12 +131,14 @@
         class="flex items-center justify-between px-6 border-b border-outline-gray-1 flex-shrink-0 gap-3 h-[53px]"
         :class="props.isDark ? 'bg-black' : 'bg-surface-base'"
       >
-        <h1 class="text-base font-semibold flex-shrink-0" :class="props.isDark ? 'text-ink-gray-7' : 'text-ink-gray-8'">{{ activeFolder || "All Letters" }}</h1>
+        <h1 class="text-base font-semibold flex-shrink-0" :class="props.isDark ? 'text-ink-gray-7' : 'text-ink-gray-8'">
+          {{ viewSection === 'notifications' ? 'Notifications' : (activeFolder || 'All Letters') }}
+        </h1>
 
         <div class="flex items-center gap-2 flex-1 justify-end">
           <TextInput
             v-model="search"
-            placeholder="Filter by title…"
+            :placeholder="viewSection === 'notifications' ? 'Filter by name…' : 'Filter by title…'"
             size="sm"
             class="w-48"
           >
@@ -129,130 +147,229 @@
             </template>
           </TextInput>
 
-          <Dropdown :options="statusOptions">
-            <Button
-              size="sm"
-              :variant="activeStatus ? 'outline' : 'ghost'"
-              class="gap-1.5"
-              :class="props.isDark ? '!text-ink-gray-6' : '!text-ink-gray-7'"
-            >
-              {{ activeStatus || "Status" }}
-              <template #suffix>
-                <span
-                  v-if="activeStatus"
-                  class="lucide-x size-3 opacity-60"
-                  aria-hidden="true"
-                  @click.stop="activeStatus = null"
-                />
-                <span v-else class="lucide-chevron-down size-3" aria-hidden="true" />
-              </template>
+          <!-- Notifications controls -->
+          <template v-if="viewSection === 'notifications'">
+            <Dropdown :options="notifEnabledOptions">
+              <Button
+                size="sm"
+                :variant="notifEnabledFilter !== null ? 'outline' : 'ghost'"
+                class="gap-1.5"
+                :class="props.isDark ? '!text-ink-gray-6' : '!text-ink-gray-7'"
+              >
+                {{ notifEnabledFilter === 1 ? 'Enabled' : notifEnabledFilter === 0 ? 'Disabled' : 'Status' }}
+                <template #suffix>
+                  <span
+                    v-if="notifEnabledFilter !== null"
+                    class="lucide-x size-3 opacity-60"
+                    aria-hidden="true"
+                    @click.stop="notifEnabledFilter = null"
+                  />
+                  <span v-else class="lucide-chevron-down size-3" aria-hidden="true" />
+                </template>
+              </Button>
+            </Dropdown>
+
+            <Dropdown :options="notifSortOptions">
+              <Button variant="ghost" size="sm" class="gap-1.5" :class="props.isDark ? '!text-ink-gray-6' : '!text-ink-gray-7'">
+                {{ notifSortOptions.find(s => s.value === notifSortBy)?.label || 'Last Modified' }}
+                <template #suffix>
+                  <span class="lucide-chevron-down size-3" aria-hidden="true" />
+                </template>
+              </Button>
+            </Dropdown>
+
+            <div class="flex border border-outline-gray-1 rounded-md overflow-hidden" :class="props.isDark ? '' : 'bg-surface-gray-2'">
+              <Button variant="ghost" icon="lucide-layout-grid" size="sm" class="!rounded-none"
+                :class="viewMode === 'grid' ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8') : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
+                aria-label="Grid view" @click="viewMode = 'grid'" />
+              <Button variant="ghost" icon="lucide-list" size="sm" class="!rounded-none border-l border-outline-gray-1"
+                :class="viewMode === 'list' ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8') : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
+                aria-label="List view" @click="viewMode = 'list'" />
+            </div>
+
+            <Button variant="solid" icon-left="lucide-plus" :loading="creatingNotification" @click="createNewNotification">
+              Add Notification
             </Button>
-          </Dropdown>
+          </template>
 
-          <Dropdown :options="sortOptions">
-            <Button variant="ghost" size="sm" class="gap-1.5" :class="props.isDark ? '!text-ink-gray-6' : '!text-ink-gray-7'">
-              {{ sortOptions.find(s => s.value === sortBy)?.label || 'Last Modified' }}
-              <template #suffix>
-                <span class="lucide-chevron-down size-3" aria-hidden="true" />
-              </template>
+          <!-- Letters controls -->
+          <template v-else>
+            <Dropdown :options="statusOptions">
+              <Button
+                size="sm"
+                :variant="activeStatus ? 'outline' : 'ghost'"
+                class="gap-1.5"
+                :class="props.isDark ? '!text-ink-gray-6' : '!text-ink-gray-7'"
+              >
+                {{ activeStatus || "Status" }}
+                <template #suffix>
+                  <span v-if="activeStatus" class="lucide-x size-3 opacity-60" aria-hidden="true" @click.stop="activeStatus = null" />
+                  <span v-else class="lucide-chevron-down size-3" aria-hidden="true" />
+                </template>
+              </Button>
+            </Dropdown>
+
+            <Dropdown :options="sortOptions">
+              <Button variant="ghost" size="sm" class="gap-1.5" :class="props.isDark ? '!text-ink-gray-6' : '!text-ink-gray-7'">
+                {{ sortOptions.find(s => s.value === sortBy)?.label || 'Last Modified' }}
+                <template #suffix>
+                  <span class="lucide-chevron-down size-3" aria-hidden="true" />
+                </template>
+              </Button>
+            </Dropdown>
+
+            <div class="flex border border-outline-gray-1 rounded-md overflow-hidden" :class="props.isDark ? '' : 'bg-surface-gray-2'">
+              <Button variant="ghost" icon="lucide-layout-grid" size="sm" class="!rounded-none"
+                :class="viewMode === 'grid' ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8') : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
+                aria-label="Grid view" data-testid="view-grid" @click="viewMode = 'grid'" />
+              <Button variant="ghost" icon="lucide-list" size="sm" class="!rounded-none border-l border-outline-gray-1"
+                :class="viewMode === 'list' ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8') : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
+                aria-label="List view" data-testid="view-list" @click="viewMode = 'list'" />
+            </div>
+
+            <Button variant="solid" icon-left="lucide-plus" @click="createNew">
+              New Letter
             </Button>
-          </Dropdown>
-
-          <div class="flex border border-outline-gray-1 rounded-md overflow-hidden" :class="props.isDark ? '' : 'bg-surface-gray-2'">
-            <Button
-              variant="ghost"
-              icon="lucide-layout-grid"
-              size="sm"
-              class="!rounded-none"
-              :class="viewMode === 'grid'
-                ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8')
-                : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
-              aria-label="Grid view"
-              data-testid="view-grid"
-              @click="viewMode = 'grid'"
-            />
-            <Button
-              variant="ghost"
-              icon="lucide-list"
-              size="sm"
-              class="!rounded-none border-l border-outline-gray-1"
-              :class="viewMode === 'list'
-                ? (props.isDark ? '!bg-white/25 !text-white/70' : '!bg-surface-base !text-ink-gray-8')
-                : (props.isDark ? '!text-white/40' : 'text-ink-gray-4')"
-              aria-label="List view"
-              data-testid="view-list"
-              @click="viewMode = 'list'"
-            />
-          </div>
-
-          <Button variant="solid" icon-left="lucide-plus" @click="createNew">
-            New Letter
-          </Button>
+          </template>
         </div>
       </header>
 
       <!-- Content -->
       <div class="flex-1 overflow-y-auto pt-12 pb-6" :class="props.isDark ? 'bg-black' : 'bg-surface-base'">
         <div class="max-w-[1000px] mx-auto px-6">
-        <div v-if="loading" class="flex items-center justify-center h-48 text-ink-gray-4 text-sm gap-2">
-          <span class="lucide-loader size-4 animate-spin" aria-hidden="true" /> Loading…
-        </div>
 
-        <div v-else-if="!visibleLetters.length" class="flex flex-col items-center justify-center h-48 gap-3">
-          <span class="lucide-mail size-10 text-ink-gray-3" aria-hidden="true" />
-          <p class="text-sm text-ink-gray-5">{{ search || activeStatus ? "No letters match your filters." : "No letters yet." }}</p>
-          <Button v-if="!search && !activeStatus" variant="subtle" icon-left="lucide-plus" @click="createNew">
-            Create your first letter
-          </Button>
-        </div>
+        <!-- ── Letters view ── -->
+        <template v-if="viewSection === 'letters'">
+          <div v-if="loading" class="flex items-center justify-center h-48 text-ink-gray-4 text-sm gap-2">
+            <span class="lucide-loader size-4 animate-spin" aria-hidden="true" /> Loading…
+          </div>
 
-        <!-- Grid view -->
-        <div v-else-if="viewMode === 'grid'" class="grid grid-cols-4 gap-x-4 gap-y-2">
-          <LetterCard
-            v-for="l in visibleLetters"
-            :key="l.name"
-            :letter="l"
-            :is-dark="props.isDark"
-            @open="openLetter"
-            @menu="(e) => openContextMenu(e, l)"
-            @contextmenu.prevent="openContextMenu($event, l)"
-          />
-        </div>
+          <div v-else-if="!visibleLetters.length" class="flex flex-col items-center justify-center h-48 gap-3">
+            <span class="lucide-mail size-10 text-ink-gray-3" aria-hidden="true" />
+            <p class="text-sm text-ink-gray-5">{{ search || activeStatus ? "No letters match your filters." : "No letters yet." }}</p>
+            <Button v-if="!search && !activeStatus" variant="subtle" icon-left="lucide-plus" @click="createNew">
+              Create your first letter
+            </Button>
+          </div>
 
-        <!-- List view -->
-        <div v-else class="flex flex-col">
-          <template v-for="(l, idx) in visibleLetters" :key="l.name">
-          <div v-if="idx > 0" class="mx-4 border-t border-outline-gray-1" />
-          <div
-            class="flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-colors"
-            :class="props.isDark ? 'hover:bg-white/10' : 'hover:bg-surface-gray-2'"
-            @click="openLetter(l.name)"
-            @contextmenu.prevent="openContextMenu($event, l)"
-          >
-            <div class="w-36 h-24 rounded-md flex-shrink-0 overflow-hidden" :class="props.isDark ? '' : 'border border-outline-gray-2 shadow-sm'">
-              <LetterThumbnail :name="l.name" icon-class="w-5 h-5" />
-            </div>
-            <div class="flex-1 min-w-0 flex flex-col self-stretch justify-between py-0.5">
-              <div class="min-w-0">
-                <p class="text-sm font-medium truncate" :class="props.isDark ? 'text-ink-gray-7' : 'text-ink-gray-8'">{{ l.title }}</p>
-                <p class="text-xs truncate mt-0.5" :class="props.isDark ? 'text-ink-gray-5' : 'text-ink-gray-5'">{{ l.subject || "No subject" }}</p>
-              </div>
-              <p class="text-xs" :class="props.isDark ? 'text-ink-gray-4' : 'text-ink-gray-4'">{{ relativeTime(l.modified) }}</p>
-            </div>
-            <div class="flex-shrink-0 w-20 flex justify-center">
-              <Badge :theme="badgeTheme(l.status)" :label="l.status" size="sm" variant="subtle" class="!px-2.5 !py-1" />
-            </div>
-            <Button
-              variant="ghost"
-              icon="lucide-ellipsis"
-              size="sm"
-              class="flex-shrink-0"
-              aria-label="More options"
-              @click.stop="openContextMenu($event, l)"
+          <!-- Grid view -->
+          <div v-else-if="viewMode === 'grid'" class="grid grid-cols-4 gap-x-4 gap-y-2">
+            <LetterCard
+              v-for="l in visibleLetters"
+              :key="l.name"
+              :letter="l"
+              :is-dark="props.isDark"
+              @open="openLetter"
+              @menu="(e) => openContextMenu(e, l)"
+              @contextmenu.prevent="openContextMenu($event, l)"
             />
           </div>
-          </template>
-        </div>
+
+          <!-- List view -->
+          <div v-else class="flex flex-col">
+            <template v-for="(l, idx) in visibleLetters" :key="l.name">
+            <div v-if="idx > 0" class="mx-4 border-t border-outline-gray-1" />
+            <div
+              class="flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-colors"
+              :class="props.isDark ? 'hover:bg-white/10' : 'hover:bg-surface-gray-2'"
+              @click="openLetter(l.name)"
+              @contextmenu.prevent="openContextMenu($event, l)"
+            >
+              <div class="w-36 h-24 rounded-md flex-shrink-0 overflow-hidden" :class="props.isDark ? '' : 'border border-outline-gray-2 shadow-sm'">
+                <LetterThumbnail :name="l.name" icon-class="w-5 h-5" />
+              </div>
+              <div class="flex-1 min-w-0 flex flex-col self-stretch justify-between py-0.5">
+                <div class="min-w-0">
+                  <p class="text-sm font-medium truncate" :class="props.isDark ? 'text-ink-gray-7' : 'text-ink-gray-8'">{{ l.title }}</p>
+                  <p class="text-xs truncate mt-0.5" :class="props.isDark ? 'text-ink-gray-5' : 'text-ink-gray-5'">{{ l.subject || "No subject" }}</p>
+                </div>
+                <p class="text-xs" :class="props.isDark ? 'text-ink-gray-4' : 'text-ink-gray-4'">{{ relativeTime(l.modified) }}</p>
+              </div>
+              <div class="flex-shrink-0 w-20 flex justify-center">
+                <Badge :theme="badgeTheme(l.status)" :label="l.status" size="sm" variant="subtle" class="!px-2.5 !py-1" />
+              </div>
+              <Button
+                variant="ghost"
+                icon="lucide-ellipsis"
+                size="sm"
+                class="flex-shrink-0"
+                aria-label="More options"
+                @click.stop="openContextMenu($event, l)"
+              />
+            </div>
+            </template>
+          </div>
+        </template>
+
+        <!-- ── Notifications view ── -->
+        <template v-else>
+          <div v-if="loadingNotifications" class="flex items-center justify-center h-48 text-ink-gray-4 text-sm gap-2">
+            <span class="lucide-loader size-4 animate-spin" aria-hidden="true" /> Loading…
+          </div>
+
+          <div v-else-if="!visibleNotifications.length" class="flex flex-col items-center justify-center h-48 gap-3">
+            <span class="lucide-bell size-10 text-ink-gray-3" aria-hidden="true" />
+            <p class="text-sm text-ink-gray-5">{{ search ? "No notifications match your filter." : "No notifications linked to Letters yet." }}</p>
+            <p v-if="!search" class="text-xs text-ink-gray-4">Open a letter in the builder and link a Frappe Notification from its Settings.</p>
+          </div>
+
+          <!-- Grid view -->
+          <div v-else-if="viewMode === 'grid'" class="grid grid-cols-4 gap-x-4 gap-y-2">
+            <NotificationCard
+              v-for="n in visibleNotifications"
+              :key="n.name"
+              :notification="n"
+              :is-dark="props.isDark"
+              @open="openLetter"
+              @menu="(e) => openNotifContextMenu(e, n)"
+              @contextmenu.prevent="openNotifContextMenu($event, n)"
+            />
+          </div>
+
+          <!-- List view -->
+          <div v-else class="flex flex-col">
+            <template v-for="(n, idx) in visibleNotifications" :key="n.name">
+              <div v-if="idx > 0" class="mx-4 border-t border-outline-gray-1" />
+              <div
+                class="flex items-center gap-4 px-4 py-3 rounded-xl cursor-pointer transition-colors"
+                :class="props.isDark ? 'hover:bg-white/10' : 'hover:bg-surface-gray-2'"
+                @click="openLetter(n.letter)"
+                @contextmenu.prevent="openNotifContextMenu($event, n)"
+              >
+                <div class="w-36 h-24 rounded-md flex-shrink-0 overflow-hidden" :class="props.isDark ? '' : 'border border-outline-gray-2 shadow-sm'">
+                  <LetterThumbnail :name="n.letter" icon-class="w-5 h-5" />
+                </div>
+                <div class="flex-1 min-w-0 flex flex-col self-stretch justify-between py-0.5">
+                  <div class="min-w-0">
+                    <p class="text-sm font-medium truncate" :class="props.isDark ? 'text-ink-gray-7' : 'text-ink-gray-8'">{{ n.name }}</p>
+                    <p class="text-xs truncate mt-0.5" :class="props.isDark ? 'text-ink-gray-5' : 'text-ink-gray-5'">
+                      {{ n.event }} on {{ n.document_type }}
+                      <span v-if="n.subject" class="mx-1 opacity-40">·</span>
+                      <span v-if="n.subject">{{ n.subject }}</span>
+                    </p>
+                  </div>
+                  <p class="text-xs" :class="props.isDark ? 'text-ink-gray-4' : 'text-ink-gray-4'">{{ relativeTime(n.modified) }}</p>
+                </div>
+                <Badge
+                  :theme="n.enabled ? 'green' : 'gray'"
+                  :label="n.enabled ? 'Enabled' : 'Disabled'"
+                  size="sm"
+                  variant="subtle"
+                  class="!px-2.5 !py-1 flex-shrink-0"
+                />
+                <Button
+                  variant="ghost"
+                  icon="lucide-ellipsis"
+                  size="sm"
+                  class="flex-shrink-0"
+                  aria-label="More options"
+                  @click.stop="openNotifContextMenu($event, n)"
+                />
+              </div>
+            </template>
+          </div>
+        </template>
+
         </div>
       </div>
     </div>
@@ -350,6 +467,43 @@
         </Button>
       </div>
     </Teleport>
+
+    <!-- Notification context menu -->
+    <Teleport to="body">
+      <div
+        v-if="notifContextMenu.visible"
+        class="fixed z-50 bg-surface-base border border-outline-gray-2 rounded-lg shadow-xl py-1 w-52 text-sm"
+        :style="notifContextMenuStyle"
+        @click.stop
+      >
+        <Button
+          variant="ghost"
+          class="w-full !justify-start px-3 py-1.5 text-ink-gray-7"
+          iconLeft="lucide-copy"
+          @click="duplicateNotification(notifContextMenu.notif); closeAll()"
+        >
+          Duplicate
+        </Button>
+        <Button
+          variant="ghost"
+          class="w-full !justify-start px-3 py-1.5 text-ink-gray-7"
+          iconLeft="lucide-external-link"
+          @click="viewNotificationInDesk(notifContextMenu.notif)"
+        >
+          View in Desk
+        </Button>
+        <div class="border-t border-outline-gray-1 mx-1 my-1" />
+        <Button
+          variant="ghost"
+          theme="red"
+          class="w-full !justify-start px-3 py-1.5"
+          iconLeft="lucide-trash-2"
+          @click="promptDeleteNotification(notifContextMenu.notif)"
+        >
+          Delete
+        </Button>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -358,6 +512,7 @@ import { ref, computed, onMounted, nextTick } from "vue";
 import { Button, Dropdown, TextInput, Badge, dialog } from "frappe-ui";
 import LetterCard from "../components/LetterCard.vue";
 import LetterThumbnail from "../components/LetterThumbnail.vue";
+import NotificationCard from "../components/NotificationCard.vue";
 
 const props = defineProps({
   isDark: { type: Boolean, default: false },
@@ -374,16 +529,25 @@ const activeStatus = ref(null);
 const sortBy = ref("modified_desc");
 const viewMode = ref("grid");
 
+const viewSection = ref(sessionStorage.getItem("letters_dashboard_section") || "letters");
+const notifications = ref([]);
+const loadingNotifications = ref(false);
+const notifEnabledFilter = ref(null);
+const notifSortBy = ref("modified_desc");
+const creatingNotification = ref(false);
+
 const creatingFolder = ref(false);
 const newFolderName = ref("");
 const folderInput = ref(null);
 
 const contextMenu = ref({ visible: false, x: 0, y: 0, letter: null });
+const notifContextMenu = ref({ visible: false, x: 0, y: 0, notif: null });
 const folderMenuOpen = ref(false);
 const folderSearch = ref("");
 
 const CONTEXT_MENU_W = 208;
 const CONTEXT_MENU_H = 220;
+const NOTIF_CONTEXT_MENU_H = 140;
 
 const contextMenuStyle = computed(() => {
   const x = contextMenu.value.x + CONTEXT_MENU_W > window.innerWidth
@@ -392,6 +556,16 @@ const contextMenuStyle = computed(() => {
   const y = contextMenu.value.y + CONTEXT_MENU_H > window.innerHeight
     ? contextMenu.value.y - CONTEXT_MENU_H
     : contextMenu.value.y;
+  return { top: `${y}px`, left: `${x}px` };
+});
+
+const notifContextMenuStyle = computed(() => {
+  const x = notifContextMenu.value.x + CONTEXT_MENU_W > window.innerWidth
+    ? notifContextMenu.value.x - CONTEXT_MENU_W
+    : notifContextMenu.value.x;
+  const y = notifContextMenu.value.y + NOTIF_CONTEXT_MENU_H > window.innerHeight
+    ? notifContextMenu.value.y - NOTIF_CONTEXT_MENU_H
+    : notifContextMenu.value.y;
   return { top: `${y}px`, left: `${x}px` };
 });
 
@@ -416,6 +590,38 @@ const sortOptions = computed(() => [
   { label: "Alphabetically (A–Z)", value: "title_asc",     onClick: () => { sortBy.value = "title_asc"; } },
   { label: "Alphabetically (Z–A)", value: "title_desc",    onClick: () => { sortBy.value = "title_desc"; } },
 ]);
+
+const notifEnabledOptions = computed(() => [
+  { label: "All",      value: null, onClick: () => { notifEnabledFilter.value = null; } },
+  { label: "Enabled",  value: 1,    onClick: () => { notifEnabledFilter.value = 1; } },
+  { label: "Disabled", value: 0,    onClick: () => { notifEnabledFilter.value = 0; } },
+]);
+
+const notifSortOptions = computed(() => [
+  { label: "Last Modified",        value: "modified_desc", onClick: () => { notifSortBy.value = "modified_desc"; } },
+  { label: "Alphabetically (A–Z)", value: "name_asc",      onClick: () => { notifSortBy.value = "name_asc"; } },
+  { label: "Alphabetically (Z–A)", value: "name_desc",     onClick: () => { notifSortBy.value = "name_desc"; } },
+]);
+
+const visibleNotifications = computed(() => {
+  let list = notifications.value;
+  if (notifEnabledFilter.value !== null) {
+    list = list.filter((n) => !!n.enabled === !!notifEnabledFilter.value);
+  }
+  const q = search.value.toLowerCase();
+  if (q) {
+    list = list.filter(
+      (n) => (n.name || "").toLowerCase().includes(q) || (n.document_type || "").toLowerCase().includes(q),
+    );
+  }
+  return [...list].sort((a, b) => {
+    switch (notifSortBy.value) {
+      case "name_asc":  return (a.name || "").localeCompare(b.name || "");
+      case "name_desc": return (b.name || "").localeCompare(a.name || "");
+      default:          return (b.modified || "").localeCompare(a.modified || "");
+    }
+  });
+});
 
 const visibleLetters = computed(() => {
   let list = activeFolder.value
@@ -481,6 +687,86 @@ async function load() {
   } finally {
     loading.value = false;
   }
+  loadNotifications();
+}
+
+async function switchSection(section) {
+  viewSection.value = section;
+  sessionStorage.setItem("letters_dashboard_section", section);
+  search.value = "";
+  if (section === "notifications" && !notifications.value.length) {
+    await loadNotifications();
+  }
+}
+
+async function loadNotifications() {
+  loadingNotifications.value = true;
+  try {
+    const res = await frappe.call({ method: "letters.letters.api.notifications.get_all_notifications" });
+    notifications.value = res.message || [];
+  } catch {
+    notifications.value = [];
+  } finally {
+    loadingNotifications.value = false;
+  }
+}
+
+async function createNewNotification() {
+  creatingNotification.value = true;
+  try {
+    const res = await frappe.call({ method: "letters.letters.api.notifications.create_notification_pair" });
+    await loadNotifications();
+    emit("open-letter", res.message.letter);
+  } catch (e) {
+    frappe.msgprint(e.message || "Could not create notification.");
+  } finally {
+    creatingNotification.value = false;
+  }
+}
+
+function openNotificationInDesk(name) {
+  frappe.set_route("Form", "Notification", name);
+}
+
+async function duplicateNotification(notif) {
+  try {
+    const res = await frappe.call({
+      method: "letters.letters.api.notifications.duplicate_notification_pair",
+      args: { name: notif.name },
+    });
+    if (res.message?.letter) {
+      await loadNotifications();
+      openLetter(res.message.letter);
+    }
+  } catch (e) {
+    frappe.msgprint(e.message || "Could not duplicate.");
+  }
+}
+
+function viewNotificationInDesk(notif) {
+  closeAll();
+  frappe.set_route("Form", "Notification", notif.name);
+}
+
+function promptDeleteNotification(notif) {
+  closeAll();
+  dialog.confirm({
+    title: "Delete notification?",
+    message: `"${notif.name}" and its linked letter will be permanently deleted. This cannot be undone.`,
+    theme: "red",
+    onConfirm: async ({ close }) => {
+      try {
+        await frappe.call({
+          method: "letters.letters.api.notifications.delete_notification_pair",
+          args: { name: notif.name },
+        });
+        notifications.value = notifications.value.filter((n) => n.name !== notif.name);
+        close();
+      } catch (e) {
+        frappe.msgprint(e.message || "Could not delete.");
+      }
+    },
+  });
 }
 
 function createNew() {
@@ -529,6 +815,7 @@ function openLetter(name) { emit("open-letter", name); }
 
 function closeAll() {
   contextMenu.value.visible = false;
+  notifContextMenu.value.visible = false;
   folderMenuOpen.value = false;
   folderSearch.value = "";
 }
@@ -536,7 +823,13 @@ function closeAll() {
 function openContextMenu(event, letter) {
   folderMenuOpen.value = false;
   folderSearch.value = "";
+  notifContextMenu.value.visible = false;
   contextMenu.value = { visible: true, x: event.clientX, y: event.clientY, letter };
+}
+
+function openNotifContextMenu(event, notif) {
+  contextMenu.value.visible = false;
+  notifContextMenu.value = { visible: true, x: event.clientX, y: event.clientY, notif };
 }
 
 async function moveToFolder(letter, folderName) {

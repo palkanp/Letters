@@ -11,6 +11,7 @@ class ContentMixin:
         frappe.has_permission("Letter", "read", doc=self, throw=True)
         from letters.letters.api.recipients import _load_recipient_config
 
+        has_notification = bool(frappe.db.exists("Notification", {"letter": self.name}))
         return {
             "name": self.name,
             "title": self.title,
@@ -23,6 +24,7 @@ class ContentMixin:
             "blocks": json.loads(self.blocks_json) if self.blocks_json else [],
             "recipient_config": _load_recipient_config(self),
             "include_unsubscribe": bool(getattr(self, "include_unsubscribe", False)),
+            "has_notification": has_notification,
         }
 
     def render_preview_html(self, preview_text=None, email_width=None):

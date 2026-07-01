@@ -5,6 +5,8 @@
  "autoname": "hash",
  "naming_rule": "Random",
  "title_field": "title",
+ "search_fields": "title,subject",
+ "show_title_field_in_link": 1,
  "issingle": 0,
  "istable": 0,
  "is_submittable": 0,

@@ -12,7 +12,7 @@
       :saved-flash="savedFlash"
       :letter-name="editorStore.letterName"
       :scheduled-at="editorStore.letterDoc?.scheduled_at || ''"
-      :can-send="!!editorStore.letterDoc"
+      :can-send="!!editorStore.letterDoc && !editorStore.letterDoc.has_notification"
       @add-block="onAddBlock"
       @add-container="addContainer"
       @insert="insertBlock"

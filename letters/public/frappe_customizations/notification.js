@@ -1,5 +1,7 @@
 frappe.ui.form.on("Notification", {
 	refresh(frm) {
+		_apply_message_type(frm);
+
 		if (frm.doc.letter) {
 			frm.add_custom_button(__("Open Letter"), () => {
 				window.open(`/app/letter-builder/${frm.doc.letter}?tab=notifications`, "_blank");
@@ -18,6 +20,7 @@ frappe.ui.form.on("Notification", {
 					});
 					const letterName = res.message.letter;
 					frm.set_value("letter", letterName);
+					frm.set_value("letter_message_type", "Letter Builder");
 					await frm.save();
 					window.open(`/app/letter-builder/${letterName}?tab=notifications`, "_blank");
 				} finally {
@@ -26,4 +29,16 @@ frappe.ui.form.on("Notification", {
 			}, __("Letters"));
 		}
 	},
+
+	letter_message_type(frm) {
+		_apply_message_type(frm);
+	},
 });
+
+function _apply_message_type(frm) {
+	const isLetterBuilder = frm.doc.letter_message_type === "Letter Builder";
+	frm.set_df_property("message", "read_only", isLetterBuilder ? 1 : 0);
+	frm.set_df_property("letter", "read_only", isLetterBuilder ? 0 : 1);
+	frm.refresh_field("message");
+	frm.refresh_field("letter");
+}

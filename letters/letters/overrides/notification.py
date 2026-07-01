@@ -35,16 +35,15 @@ class LettersNotification(Notification):
             )
 
     def send_an_email(self, doc, context):
-        if not self.get("letter"):
+        if self.get("letter_message_type") == "Letter Builder" and self.get("letter"):
+            original_message = self.message
+            try:
+                self.message = self._compile_letter()
+                super().send_an_email(doc, context)
+            finally:
+                self.message = original_message
+        else:
             super().send_an_email(doc, context)
-            return
-
-        original_message = self.message
-        try:
-            self.message = self._compile_letter()
-            super().send_an_email(doc, context)
-        finally:
-            self.message = original_message
 
     def _compile_letter(self) -> str:
         import json
