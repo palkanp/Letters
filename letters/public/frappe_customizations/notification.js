@@ -1,6 +1,7 @@
 frappe.ui.form.on("Notification", {
 	refresh(frm) {
 		_apply_message_type(frm);
+		_override_letter_link_btn(frm);
 
 		if (frm.doc.letter) {
 			frm.add_custom_button(__("Open Letter"), () => {
@@ -33,6 +34,10 @@ frappe.ui.form.on("Notification", {
 	letter_message_type(frm) {
 		_apply_message_type(frm);
 	},
+
+	letter(frm) {
+		_apply_message_type(frm);
+	},
 });
 
 function _apply_message_type(frm) {
@@ -41,4 +46,18 @@ function _apply_message_type(frm) {
 	frm.set_df_property("letter", "read_only", isLetterBuilder ? 0 : 1);
 	frm.refresh_field("message");
 	frm.refresh_field("letter");
+}
+
+function _override_letter_link_btn(frm) {
+	const field = frm.fields_dict.letter;
+	if (!field) return;
+	// Frappe renders an anchor with class "btn-open" inside the link field wrapper
+	const $btn = $(field.wrapper).find(".btn-open");
+	$btn.off("click.letters_builder").on("click.letters_builder", function (e) {
+		const name = frm.doc.letter;
+		if (!name) return;
+		e.preventDefault();
+		e.stopImmediatePropagation();
+		window.open(`/app/letter-builder/${encodeURIComponent(name)}?tab=notifications`, "_blank");
+	});
 }
