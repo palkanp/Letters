@@ -73,15 +73,17 @@
     </span>
   </div>
 
-  <!-- number -->
-  <TextInput
-    v-else-if="field.type === 'number'"
-    type="text"
-    size="sm"
-    class="w-full"
-    :model-value="value != null ? `${value}${field.unit || ''}` : ''"
-    @update:model-value="emit('change', parseInt($event) || 0)"
-  />
+  <!-- number — local ref defers unit formatting until blur/Enter to prevent cursor jumps -->
+  <div v-else-if="field.type === 'number'" @focusout.stop="commitNumber">
+    <TextInput
+      type="text"
+      size="sm"
+      class="w-full"
+      :model-value="localNumber"
+      @update:model-value="localNumber = $event"
+      @keydown.enter.prevent="commitNumber"
+    />
+  </div>
 
   <!-- dimension -->
   <TextInput
@@ -105,7 +107,7 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { TextInput, Select, Switch, TabButtons, Slider, Button } from "frappe-ui";
 import ColorPicker from "./ColorPicker.vue";
 import FocusPointPicker from "./FocusPointPicker.vue";
@@ -116,6 +118,22 @@ const props = defineProps({
   blockProps: { type: Object, default: () => ({}) },
 });
 const emit = defineEmits(["change"]);
+
+// Local ref for number fields — mirrors the displayed string ("12px") but only
+// commits back to the store on blur or Enter, avoiding cursor-jump on every keystroke.
+const localNumber = ref("");
+watch(
+  () => props.value,
+  (v) => { localNumber.value = v != null ? `${v}${props.field.unit || ""}` : ""; },
+  { immediate: true },
+);
+function commitNumber() {
+  const n = parseInt(localNumber.value) || 0;
+  emit("change", n);
+  nextTick(() => {
+    localNumber.value = props.value != null ? `${props.value}${props.field.unit || ""}` : "";
+  });
+}
 
 const resolvedOptions = computed(() =>
   typeof props.field.options === "function"
