@@ -2,7 +2,7 @@ from html import escape
 from typing import Any
 
 from letters.letters.utils.fonts import font_stack
-from .base import BlockRenderer, _padding, _safe_url, _spacing_wrapper
+from .base import BlockRenderer, _class_attr, _pad_class, _padding, _safe_url, _spacing_wrapper
 
 
 class ButtonRenderer(BlockRenderer):
@@ -30,10 +30,11 @@ class ButtonRenderer(BlockRenderer):
         outer_bg_style = f"background-color:{outer_bg};" if outer_bg and outer_bg not in ("transparent", "") else ""
 
         padding = _padding(p, 20, 16, 20, 16)
+        pad_class = _class_attr(_pad_class(p))
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="{outer_bg_style}">'
-            f'<tr><td align="{align}" style="padding:{padding};">'
+            f'<tr><td align="{align}"{pad_class} style="padding:{padding};">'
             f'<a href="{url}" style="display:inline-block;padding:{btn_padding};'
             f'background-color:{bg};color:{color};font-family:{font};'
             f'font-size:{font_size};line-height:1.5;font-weight:500;text-decoration:none;'
@@ -107,10 +108,11 @@ class LinkListRenderer(BlockRenderer):
                 f'</td></tr>'
             )
 
+        pad_class = _class_attr(_pad_class(p))
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
-            f'<tr><td style="padding:{padding};">'
+            f'<tr><td{pad_class} style="padding:{padding};">'
             f'{heading_html}'
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
             f'{rows}'

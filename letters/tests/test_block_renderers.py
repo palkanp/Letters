@@ -301,7 +301,8 @@ class TestColumnsRenderer:
         html = self.renderer.render(block)
         assert "Left" in html
         assert "Right" in html
-        assert html.count('<td width="50%"') == 2
+        # Cells carry the mobile-stack hook and a 50% desktop width.
+        assert html.count('class="ltr-stack" width="50%"') == 2
 
     def test_three_columns(self):
         block = self._block([
@@ -310,7 +311,7 @@ class TestColumnsRenderer:
             {"blocks": [self._text_child("C")]},
         ])
         html = self.renderer.render(block)
-        assert html.count('<td width="33%"') == 3
+        assert html.count('class="ltr-stack" width="33%"') == 3
 
     def test_empty_column_renders_nbsp(self):
         block = self._block([{"blocks": []}, {"blocks": [self._text_child("X")]}])
@@ -1102,3 +1103,153 @@ class TestImageTextRendererPadding:
     def test_position_right_column_order(self):
         html = ImageTextRenderer().render(_image_text_block(position="right"))
         assert html.index("Hello") < html.index("img.jpg")
+
+
+# ── Mobile responsiveness ─────────────────────────────────────────────────────
+
+from letters.letters.utils.block_renderers import _font_scale_class, _aspect_ref_width
+from letters.letters.utils.email_compiler import EmailCompiler
+
+
+class TestFontScaleClass:
+    def test_large_size_gets_xl(self):
+        assert _font_scale_class("40px") == "ltr-fs-xl"
+        assert _font_scale_class("32px") == "ltr-fs-xl"
+
+    def test_medium_size_gets_lg(self):
+        assert _font_scale_class("28px") == "ltr-fs-lg"
+        assert _font_scale_class("24px") == "ltr-fs-lg"
+
+    def test_body_size_gets_nothing(self):
+        assert _font_scale_class("16px") == ""
+        assert _font_scale_class("23px") == ""
+
+    def test_garbage_size_is_safe(self):
+        assert _font_scale_class("") == ""
+        assert _font_scale_class("auto") == ""
+        assert _font_scale_class(None) == ""
+
+
+class TestAspectRefWidth:
+    def test_pixel_width_used_directly(self):
+        assert _aspect_ref_width("320px") == 320
+
+    def test_percent_resolved_against_body(self):
+        assert _aspect_ref_width("100%") == 600
+        assert _aspect_ref_width("90%") == 540
+
+    def test_auto_falls_back_to_body(self):
+        assert _aspect_ref_width("auto") == 600
+        assert _aspect_ref_width("") == 600
+
+
+class TestImageResponsiveHeight:
+    def _r(self, props):
+        props = {"image_url": "https://x.com/a.png", **props}
+        return ImageRenderer().render({"type": "image", "props": props})
+
+    def test_cover_uses_aspect_ratio_not_frozen_height(self):
+        html = self._r({"image_width": "100%", "image_height": "300px", "image_fit": "cover"})
+        assert "aspect-ratio:600/300" in html
+        assert "height:auto" in html
+        assert "height:300px" not in html  # no frozen height that would crop on mobile
+
+    def test_cover_keeps_focus_point(self):
+        html = self._r({
+            "image_width": "100%", "image_height": "300px",
+            "image_fit": "cover", "object_position": "50% 72%",
+        })
+        assert "object-position:50% 72%" in html
+
+    def test_contain_keeps_fixed_height(self):
+        # Logos use contain and must not be re-shaped by aspect-ratio.
+        html = self._r({"image_width": "auto", "image_height": "32px", "image_fit": "contain"})
+        assert "height:32px" in html
+        assert "aspect-ratio" not in html
+
+
+class TestContainerRowStacks:
+    def _row(self, children):
+        return ContainerRenderer().render(
+            {"type": "container", "props": {"layout": "row"}, "children": children}
+        )
+
+    def test_row_cells_carry_stack_hook(self):
+        html = self._row([
+            {"type": "text", "props": {"html_content": "<p>A</p>"}},
+            {"type": "text", "props": {"html_content": "<p>B</p>"}},
+        ])
+        assert html.count('class="ltr-stack"') == 2
+
+    def test_wide_padding_gets_pad_hook(self):
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "column", "padding_left": 40, "padding_right": 40},
+            "children": [{"type": "text", "props": {"html_content": "<p>Hi</p>"}}],
+        })
+        assert "ltr-pad-x" in html
+
+    def test_narrow_padding_no_pad_hook(self):
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "column", "padding_left": 16, "padding_right": 16},
+            "children": [{"type": "text", "props": {"html_content": "<p>Hi</p>"}}],
+        })
+        assert "ltr-pad-x" not in html
+
+
+class TestWideSidePaddingTrims:
+    """Wide horizontal padding gets the mobile-trim hook on every block, not just
+    containers (a text/button/social block at 40px each side crowds a phone)."""
+
+    def test_text_block_wide_padding(self):
+        html = RichTextRenderer().render({"type": "text", "props": {
+            "html_content": "<p>Hi</p>", "padding_left": 40, "padding_right": 40}})
+        assert "ltr-pad-x" in html
+
+    def test_button_wide_padding(self):
+        html = ButtonRenderer().render({"type": "button", "props": {
+            "label": "Go", "padding_left": 40, "padding_right": 40}})
+        assert "ltr-pad-x" in html
+
+    def test_image_wide_padding(self):
+        html = ImageRenderer().render({"type": "image", "props": {
+            "image_url": "https://x.com/a.png", "padding_left": 40, "padding_right": 40}})
+        assert "ltr-pad-x" in html
+
+    def test_narrow_padding_no_hook(self):
+        html = RichTextRenderer().render({"type": "text", "props": {
+            "html_content": "<p>Hi</p>", "padding_left": 16, "padding_right": 16}})
+        assert "ltr-pad-x" not in html
+
+    def test_font_and_pad_hooks_merge_on_one_cell(self):
+        # A big heading with wide padding must carry both hooks in one class attr.
+        html = RichTextRenderer().render({"type": "text", "props": {
+            "html_content": "<p>Big</p>", "font_size": "34px",
+            "padding_left": 40, "padding_right": 40}})
+        assert 'class="ltr-fs-xl ltr-pad-x"' in html
+
+    def test_wide_horizontal_spacing_trims(self):
+        # _spacing_wrapper (block spacing, not padding) also trims wide L/R spacing.
+        html = ButtonRenderer().render({"type": "button", "props": {
+            "label": "Go", "spacing_left": 40, "spacing_right": 40}})
+        assert "ltr-pad-x" in html
+
+
+class TestCompilerMobileStyle:
+    def test_wrapper_includes_media_query(self):
+        html = EmailCompiler("[]").compile()
+        assert "@media only screen and (max-width:600px)" in html
+        assert ".ltr-stack" in html
+        assert ".ltr-fs-xl" in html
+
+    def test_large_text_block_gets_scale_hook(self):
+        blocks = '[{"type":"text","props":{"html_content":"<p>Big</p>","font_size":"34px"}}]'
+        html = EmailCompiler(blocks).compile()
+        assert "ltr-fs-xl" in html
+
+    def test_body_text_block_gets_no_scale_hook(self):
+        blocks = '[{"type":"text","props":{"html_content":"<p>Body</p>","font_size":"16px"}}]'
+        html = EmailCompiler(blocks).compile()
+        # class attr only, not the media-query rule name in the <style> block
+        assert 'class="ltr-fs' not in html

@@ -1,7 +1,7 @@
 from html import escape
 from typing import Any
 
-from .base import BlockRenderer, _padding, _spacing_wrapper
+from .base import BlockRenderer, _class_attr, _pad_class, _padding, _spacing_wrapper
 
 
 def _render_child(child: dict) -> str:
@@ -53,7 +53,7 @@ class ColumnsRenderer(BlockRenderer):
                 if show_dividers and not is_last else ""
             )
             cells += (
-                f'<td width="{col_width}%" valign="{valign}"'
+                f'<td class="ltr-stack" width="{col_width}%" valign="{valign}"'
                 f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign};{border_style}">'
                 f'{col_html or "&nbsp;"}'
                 f'</td>'
@@ -81,6 +81,9 @@ class ContainerRenderer(BlockRenderer):
         gap           = int(p.get("gap", 12))
         padding       = _padding(p, 16, 16, 16, 16)
         children      = block.get("children", [])
+        # Trim wide side padding on phones so content isn't squeezed into a
+        # narrow strip; the head <style> media query owns the mobile value.
+        pad_class     = _class_attr(_pad_class(p))
 
         if not children:
             return ""  # Don't render empty containers
@@ -121,7 +124,7 @@ class ContainerRenderer(BlockRenderer):
                 w = explicit_widths[idx] or default_width
                 width_attr = f' width="{w}"'
                 cells += (
-                    f'<td{width_attr} valign="{row_valign}"'
+                    f'<td class="ltr-stack"{width_attr} valign="{row_valign}"'
                     f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
                     f'{_render_child(child)}'
                     f'</td>'
@@ -155,7 +158,7 @@ class ContainerRenderer(BlockRenderer):
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="{bg_style}{radius_style}">'
-            f'<tr><td style="padding:{padding};{border_style}{radius_style}">'
+            f'<tr><td{pad_class} style="padding:{padding};{border_style}{radius_style}">'
             f'{inner}'
             f'</td></tr></table>'
         )

@@ -3,7 +3,7 @@ from html.parser import HTMLParser
 from typing import Any, List, Optional, Tuple
 
 from letters.letters.utils.fonts import font_stack
-from .base import BlockRenderer, _padding, _safe_url, _spacing_wrapper
+from .base import BlockRenderer, _class_attr, _font_scale_class, _pad_class, _padding, _safe_url, _spacing_wrapper
 
 
 # ── Rich-text HTML sanitizer ─────────────────────────────────────────────────
@@ -144,10 +144,11 @@ class RichTextRenderer(BlockRenderer):
                     + f'<p style="{p_last_style}">'
                     + html_content[tag_end + 1:]
                 )
+        class_attr = _class_attr(_font_scale_class(size), _pad_class(p))
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="{bg_style}">'
-            f'<tr><td align="{align}" style="padding:{padding};'
+            f'<tr><td align="{align}"{class_attr} style="padding:{padding};'
             f'font-family:{font};font-size:{size};color:{color};'
             f'line-height:{line_height};font-weight:{weight};font-style:{font_style};{ls_style}">'
             f'{html_content}'

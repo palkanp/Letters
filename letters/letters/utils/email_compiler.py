@@ -14,6 +14,16 @@ _HTML_WRAPPER = """\
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />{font_links}
+<style type="text/css">
+@media only screen and (max-width:600px) {{
+  .ltr-stack {{ display:block !important; width:100% !important; max-width:100% !important;
+                padding-left:0 !important; padding-right:0 !important;
+                border-right:0 !important; box-sizing:border-box !important; }}
+  .ltr-pad-x {{ padding-left:20px !important; padding-right:20px !important; }}
+  .ltr-fs-xl {{ font-size:26px !important; line-height:1.25 !important; }}
+  .ltr-fs-lg {{ font-size:21px !important; line-height:1.3 !important; }}
+}}
+</style>
 </head>
 <body style="margin:0;padding:0;background-color:#f3f4f6;">
 {preheader}

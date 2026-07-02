@@ -2,7 +2,7 @@ from html import escape
 from typing import Any
 
 from letters.letters.utils.fonts import font_stack
-from .base import BlockRenderer, _abs_image_src, _padding, _spacing_wrapper
+from .base import BlockRenderer, _abs_image_src, _class_attr, _font_scale_class, _pad_class, _padding, _spacing_wrapper
 
 
 class HeroRenderer(BlockRenderer):
@@ -19,8 +19,10 @@ class HeroRenderer(BlockRenderer):
         subheading_font = font_stack(p, "Arial,sans-serif")
         padding         = _padding(p, 40, 16, 40, 16)
 
+        fs_class = _font_scale_class(heading_size)
+        h1_class = f' class="{fs_class}"' if fs_class else ""
         heading_html = (
-            f'<h1 style="margin:0 0 12px;font-family:{heading_font};'
+            f'<h1{h1_class} style="margin:0 0 12px;font-family:{heading_font};'
             f'font-size:{heading_size};font-weight:bold;color:{heading_color};'
             f'line-height:1.2;text-align:{text_align};">{heading}</h1>'
         ) if heading else ""
@@ -29,10 +31,11 @@ class HeroRenderer(BlockRenderer):
             f'color:{subheading_color};line-height:1.5;text-align:{text_align};">{subheading}</p>'
         ) if subheading else ""
 
+        pad_class = _class_attr(_pad_class(p, 40, 16))
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
-            f'<tr><td align="{text_align}" style="padding:{padding};">'
+            f'<tr><td align="{text_align}"{pad_class} style="padding:{padding};">'
             f'{heading_html}{subheading_html}'
             f'</td></tr></table>'
         )
@@ -60,7 +63,7 @@ class SectionLabelRenderer(BlockRenderer):
         padding = _padding(p, 12, 16, 12, 16)
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr><td style="padding:{padding};" align="{align}">'
+            f'<tr><td{_class_attr(_pad_class(p))} style="padding:{padding};" align="{align}">'
             f'{above_line}'
             f'<span style="font-family:{font};font-size:{font_size};font-weight:{font_weight};'
             f'color:{text_color};text-transform:uppercase;letter-spacing:{letter_spacing};'
@@ -83,7 +86,7 @@ class FooterRenderer(BlockRenderer):
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
-            f'<tr><td align="center" style="padding:{padding};">'
+            f'<tr><td align="center"{_class_attr(_pad_class(p))} style="padding:{padding};">'
             f'<p style="margin:0;font-family:{font};font-size:12px;'
             f'color:{color};line-height:1.5;">{text}</p>'
             f'</td></tr></table>'
@@ -123,11 +126,12 @@ class HeaderRenderer(BlockRenderer):
         ) if tagline else ""
 
         border_style = "border-bottom:1px solid #e5e7eb;" if border_bottom else ""
+        pad_class = _class_attr(_pad_class(p))
 
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};{border_style}">'
-            f'<tr><td align="{align}" style="padding:{padding};">'
+            f'<tr><td align="{align}"{pad_class} style="padding:{padding};">'
             f'{logo_html}'
             f'{tagline_html}'
             f'</td></tr></table>'
@@ -152,7 +156,7 @@ class QuoteRenderer(BlockRenderer):
 
         if style == "centered":
             inner = (
-                f'<p style="margin:0 0 4px;font-family:Georgia,serif;font-size:40px;'
+                f'<p class="ltr-fs-xl" style="margin:0 0 4px;font-family:Georgia,serif;font-size:40px;'
                 f'line-height:1;color:{border_color};">&ldquo;</p>'
                 f'<p style="margin:0 0 16px;font-family:{quote_font};'
                 f'font-size:16px;font-style:italic;color:{quote_color};line-height:1.6;">'
@@ -165,7 +169,7 @@ class QuoteRenderer(BlockRenderer):
             html = (
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
                 f' style="background-color:{bg};">'
-                f'<tr><td align="center" style="padding:{padding};">'
+                f'<tr><td align="center"{_class_attr(_pad_class(p, 24, 16))} style="padding:{padding};">'
                 f'{inner}'
                 f'</td></tr></table>'
             )
@@ -187,7 +191,7 @@ class QuoteRenderer(BlockRenderer):
             html = (
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
                 f' style="background-color:{bg};">'
-                f'<tr><td style="padding:{pt}px {pr}px {pb}px {pl}px;">'
+                f'<tr><td{_class_attr(_pad_class(p, 32, 32))} style="padding:{pt}px {pr}px {pb}px {pl}px;">'
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
                 f'<tr>'
                 f'<td width="4" style="background-color:{border_color};border-radius:2px;">&nbsp;</td>'

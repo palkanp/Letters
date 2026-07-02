@@ -45,8 +45,25 @@ export function usePreview(editorStore, previewText) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;");
 
-      const toolbar = `
+      // Shell page: hosts the email inside an <iframe> plus the device toolbar.
+      // The email must live in an iframe (not written straight into the tab) so
+      // it gets its OWN viewport — that is what lets the compiled email's
+      // @media (max-width:600px) rules actually fire when we shrink to mobile.
+      const shell = `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>${letterTitle} · Preview</title>
 <style>
+  html, body { margin: 0; height: 100%; background: #e5e7eb; }
+  #__preview-stage {
+    height: 100vh; display: flex; justify-content: center; align-items: stretch;
+    overflow: hidden;
+  }
+  #__preview-frame {
+    width: 100%; height: 100%; border: 0; background: #f3f4f6;
+    transition: width .2s ease; box-shadow: 0 0 0 1px rgba(0,0,0,.08);
+  }
   #__preview-toolbar {
     position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
     display: flex; align-items: center; gap: 4px;
@@ -65,6 +82,11 @@ export function usePreview(editorStore, previewText) {
   #__preview-toolbar button:hover { background: #1f2937; }
   #__preview-toolbar button.active { background: #374151; color: #fff; }
 </style>
+</head>
+<body>
+<div id="__preview-stage">
+  <iframe id="__preview-frame" title="Email preview"></iframe>
+</div>
 <div id="__preview-toolbar">
   <span>${letterTitle}</span>
   <button class="active" onclick="setMode('desktop', this)">🖥 Desktop</button>
@@ -72,22 +94,28 @@ export function usePreview(editorStore, previewText) {
 </div>
 <script>
   function setMode(mode, btn) {
-    document.querySelectorAll('#__preview-toolbar button').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('#__preview-toolbar button').forEach(function (b) { b.classList.remove('active'); });
     btn.classList.add('active');
-    document.body.style.maxWidth = mode === 'mobile' ? '390px' : '';
-    document.body.style.margin   = mode === 'mobile' ? '0 auto' : '';
+    // Resizing the IFRAME (not the body) narrows its viewport, so the email's
+    // @media (max-width:600px) rules evaluate as mobile and the responsive
+    // layout (stacked columns, scaled headings, fluid images) kicks in.
+    document.getElementById('__preview-frame').style.width = mode === 'mobile' ? '390px' : '100%';
   }
-<\/script>`;
+<\/script>
+</body>
+</html>`;
 
-      // Inject before </body> when present; otherwise append so the toolbar
-      // never silently vanishes if the compiled HTML lacks a body close tag.
-      const fullHtml = html.includes("</body>")
-        ? html.replace("</body>", toolbar + "\n</body>")
-        : html + toolbar;
       win.document.open();
-      win.document.write(fullHtml);
+      win.document.write(shell);
       win.document.close();
       win.document.title = rawTitle + " · Preview";
+
+      // Write the compiled email into the iframe's own document.
+      const frame = win.document.getElementById("__preview-frame");
+      const fdoc  = frame.contentDocument || frame.contentWindow.document;
+      fdoc.open();
+      fdoc.write(html);
+      fdoc.close();
     } catch (e) {
       win.close();
       toast.error("Preview failed: " + describeError(e));

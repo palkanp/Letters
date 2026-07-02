@@ -3,7 +3,7 @@ from html import escape
 from pathlib import Path
 from typing import Any
 
-from .base import BlockRenderer, _padding, _safe_url, _spacing_wrapper
+from .base import BlockRenderer, _class_attr, _pad_class, _padding, _safe_url, _spacing_wrapper
 
 
 @lru_cache(maxsize=256)
@@ -150,10 +150,11 @@ class SocialRenderer(BlockRenderer):
         if not links:
             return ""
 
+        pad_class = _class_attr(_pad_class(p))
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
-            f'<tr><td align="{align}" style="padding:{padding};">'
+            f'<tr><td align="{align}"{pad_class} style="padding:{padding};">'
             + "".join(links) +
             f'</td></tr></table>'
         )
