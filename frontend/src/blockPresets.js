@@ -262,19 +262,19 @@ export const BLOCK_PRESET_DEFS = {
   // Row container with two equal inner containers
   two_col: {
     type: "container", label: "2 Columns",
-    props: { layout: "row", background_color: "#ffffff", vertical_align: "flex-start", gap: 0,
+    props: { layout: "row", background_color: "#ffffff", vertical_align: "flex-start", gap: 16,
              ...noPad },
     children: [
       {
         type: "container", label: "Column 1",
         props: { layout: "column", background_color: "transparent", gap: 8,
-                 padding_top: 16, padding_right: 12, padding_bottom: 16, padding_left: 16 },
+                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16 },
         children: [],
       },
       {
         type: "container", label: "Column 2",
         props: { layout: "column", background_color: "transparent", gap: 8,
-                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 12 },
+                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16 },
         children: [],
       },
     ],
@@ -283,25 +283,25 @@ export const BLOCK_PRESET_DEFS = {
   // ── 3 Columns ──────────────────────────────────────────────────────────────
   three_col: {
     type: "container", label: "3 Columns",
-    props: { layout: "row", background_color: "#ffffff", vertical_align: "flex-start", gap: 0,
+    props: { layout: "row", background_color: "#ffffff", vertical_align: "flex-start", gap: 16,
              ...noPad },
     children: [
       {
         type: "container", label: "Column 1",
         props: { layout: "column", background_color: "transparent", gap: 8,
-                 padding_top: 16, padding_right: 8, padding_bottom: 16, padding_left: 16 },
+                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16 },
         children: [],
       },
       {
         type: "container", label: "Column 2",
         props: { layout: "column", background_color: "transparent", gap: 8,
-                 padding_top: 16, padding_right: 8, padding_bottom: 16, padding_left: 8 },
+                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16 },
         children: [],
       },
       {
         type: "container", label: "Column 3",
         props: { layout: "column", background_color: "transparent", gap: 8,
-                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 8 },
+                 padding_top: 16, padding_right: 16, padding_bottom: 16, padding_left: 16 },
         children: [],
       },
     ],
