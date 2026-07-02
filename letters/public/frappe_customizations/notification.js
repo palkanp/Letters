@@ -5,7 +5,7 @@ frappe.ui.form.on("Notification", {
 
 		if (frm.doc.letter) {
 			frm.add_custom_button(__("Open Letter"), () => {
-				window.open(`/app/letter-builder/${frm.doc.letter}?tab=notifications`, "_blank");
+				window.open(`/app/letter-builder/${frm.doc.letter}`, "_blank");
 			}, __("Letters"));
 		} else {
 			frm.add_custom_button(__("Design with Letters"), async () => {
@@ -23,7 +23,7 @@ frappe.ui.form.on("Notification", {
 					frm.set_value("letter", letterName);
 					frm.set_value("letter_message_type", "Letter Builder");
 					await frm.save();
-					window.open(`/app/letter-builder/${letterName}?tab=notifications`, "_blank");
+					window.open(`/app/letter-builder/${letterName}`, "_blank");
 				} finally {
 					frm.enable_save();
 				}
@@ -58,6 +58,6 @@ function _override_letter_link_btn(frm) {
 		if (!name) return;
 		e.preventDefault();
 		e.stopImmediatePropagation();
-		window.open(`/app/letter-builder/${encodeURIComponent(name)}?tab=notifications`, "_blank");
+		window.open(`/app/letter-builder/${encodeURIComponent(name)}`, "_blank");
 	});
 }
