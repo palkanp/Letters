@@ -70,16 +70,21 @@
 
       <div class="w-px h-4 bg-outline-gray-2 mx-0.5" />
 
-      <!-- Sending: inline progress bar -->
+      <!-- Sending: inline live-delivery progress bar -->
       <template v-if="letterStatus === 'Sending'">
-        <div class="flex items-center gap-2 min-w-[180px]">
-          <Progress
-            :value="sendProgress.total ? Math.round(sendProgress.sent / sendProgress.total * 100) : 5"
-            size="md"
-            class="flex-1"
-          />
-          <span class="text-xs tabular-nums text-ink-gray-5 flex-shrink-0">{{ sendProgress.sent }}/{{ sendProgress.total }}</span>
-        </div>
+        <Tooltip :text="`${deliveredCount} of ${sendProgress.total || 0} delivered${sendProgress.failed ? ` · ${sendProgress.failed} failed` : ''}`">
+          <div class="flex items-center gap-2 min-w-[180px]">
+            <Progress
+              :value="sendProgress.total ? Math.round(deliveredCount / sendProgress.total * 100) : 5"
+              size="md"
+              class="flex-1"
+            />
+            <span class="text-xs tabular-nums text-ink-gray-5 flex-shrink-0">
+              {{ deliveredCount }}/{{ sendProgress.total }}
+              <span v-if="sendProgress.failed" class="text-ink-red-4">· {{ sendProgress.failed }} failed</span>
+            </span>
+          </div>
+        </Tooltip>
       </template>
 
       <!-- Sent / Failed / Partial: status badge only -->
@@ -129,15 +134,16 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { Button, Dropdown, Tooltip, Progress, Badge } from "frappe-ui";
 import { formatScheduledAt } from "../utils/builderHelpers";
 
-defineProps({
+const props = defineProps({
   menuOptions: { type: Array, default: () => [] },
   previewOptions: { type: Array, default: () => [] },
   sendOptions: { type: Array, default: () => [] },
   letterStatus: { type: String, default: null },
-  sendProgress: { type: Object, default: () => ({ sent: 0, total: 0 }) },
+  sendProgress: { type: Object, default: () => ({ sent: 0, delivered: 0, failed: 0, total: 0 }) },
   saving: Boolean,
   savedFlash: Boolean,
   letterName: { type: String, default: "" },
@@ -145,4 +151,10 @@ defineProps({
   canSend: Boolean,
 });
 const emit = defineEmits(["add-block", "add-container", "insert", "open-settings"]);
+
+// Live count of emails actually handed to SMTP. Falls back to the accepted
+// (queued) count for older progress payloads that predate `delivered`.
+const deliveredCount = computed(
+  () => props.sendProgress.delivered ?? props.sendProgress.sent ?? 0,
+);
 </script>

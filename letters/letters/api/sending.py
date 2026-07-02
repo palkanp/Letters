@@ -13,10 +13,6 @@ MAX_RECIPIENTS = 50000
 # Background send-job timeout in seconds.
 SEND_JOB_TIMEOUT = 600
 
-# Flush per-recipient progress to the DB every N sends so a worker crash
-# mid-batch loses at most this many recipients' tracked status.
-COMMIT_EVERY = 100
-
 
 @frappe.whitelist(methods=["POST"])
 def send_test(blocks: str | None = None, subject: str | None = None, preview_text: str | None = None, name: str | None = None, recipient: str | None = None, email_width: int | None = None):
@@ -232,10 +228,18 @@ def _enqueue_send(send_doc_name, letter_name):
 
 def _execute_send(send_doc_name, letter_name):
     """
-    Background job: compile the letter and send one email per recipient.
+    Background job: compile the letter once and hand the whole recipient list to
+    Frappe's Email Queue in a single bulk call.
 
-    Recipients already marked Sent are skipped so a retry resumes from where
-    a previous run stopped. Must NOT be decorated with @frappe.whitelist().
+    queue_separately=True lets the framework fan the list out into per-recipient
+    Email Queue rows across parallel background jobs (reusing one SMTP connection
+    per 1000-recipient batch), instead of this job looping frappe.sendmail once
+    per recipient. send_priority=0 keeps a large campaign from starving
+    transactional mail. Delivery, retry, and stuck-job recovery are then owned by
+    core's Email Queue.
+
+    Recipients already marked Sent are skipped so a retry only re-queues the
+    remainder. Must NOT be decorated with @frappe.whitelist().
     """
     try:
         send_doc = frappe.get_doc("Email Send", send_doc_name)
@@ -259,66 +263,29 @@ def _execute_send(send_doc_name, letter_name):
         compiler = EmailCompiler(blocks_json, preview_text=preview_text, email_width=email_width)
         html = compiler.compile()
 
-        sent = failed = 0
-        for idx, row in enumerate(send_doc.recipients):
-            if row.status == "Sent":
-                sent += 1
-                continue
+        pending = [row.email for row in send_doc.recipients if row.status != "Sent"]
+        if pending:
+            _queue_recipients(send_doc, letter_name, pending, subject, html)
+            # queue_separately hands each address to the Email Queue. Mark the
+            # rows queued — this "Sent" means "accepted into the Email Queue".
+            # Actual per-recipient delivery is tracked live off the Email Queue
+            # (see _delivery_counts / get_send_progress).
+            frappe.db.sql(
+                "update `tabEmail Send Recipient` set status='Sent' "
+                "where parent=%s and status!='Sent'",
+                send_doc_name,
+            )
 
-            try:
-                frappe.sendmail(
-                    recipients=[row.email],
-                    subject=subject,
-                    message=html,
-                    now=False,
-                    reference_doctype="Letter",
-                    reference_name=letter_name,
-                    # Email-group sends use Frappe's native unsubscribe (sets
-                    # Email Group Member.unsubscribed). All other sends use a
-                    # custom portal page that lets recipients manage folder-level
-                    # or global opt-outs.
-                    unsubscribe_method=(
-                        None if send_doc.send_mode == "email_group"
-                        else "/api/method/letters.letters.api.unsubscribe.unsubscribe_redirect"
-                        if send_doc.include_unsubscribe else None
-                    ),
-                    unsubscribe_message=_("Unsubscribe") if send_doc.include_unsubscribe else None,
-                    add_unsubscribe_link=1 if send_doc.include_unsubscribe else 0,
-                    email_read_tracker_url="/api/method/letters.letters.api.track_open",
-                )
-                row.status = "Sent"
-                frappe.db.set_value(
-                    "Email Send Recipient", row.name, "status", "Sent",
-                    update_modified=False,
-                )
-                sent += 1
-            except Exception as e:
-                row.status = "Failed"
-                frappe.db.set_value(
-                    "Email Send Recipient", row.name,
-                    {"status": "Failed", "error_message": str(e)[:500]},
-                    update_modified=False,
-                )
-                failed += 1
-                frappe.log_error(frappe.get_traceback(), "Letters recipient send error")
-
-            if (idx + 1) % COMMIT_EVERY == 0:
-                frappe.db.commit()
-
-        if failed == 0:
-            send_status = letter_status = "Sent"
-        elif sent == 0:
-            send_status = letter_status = "Failed"
-        else:
-            send_status, letter_status = "Partial", "Partial"
-
+        # Stay in "Sending": the letter is now delivering. get_send_progress and
+        # the reconcile_active_sends scheduled task settle it to a terminal
+        # status once core's Email Queue has drained.
         frappe.db.set_value(
             "Email Send", send_doc_name,
-            {"status": send_status, "sent_count": sent},
+            {"status": "Sending", "sent_count": len(send_doc.recipients)},
             update_modified=False,
         )
         frappe.db.set_value(
-            "Letter", letter_name, "status", letter_status,
+            "Letter", letter_name, "status", "Sending",
             update_modified=False,
         )
         frappe.db.commit()
@@ -332,8 +299,136 @@ def _execute_send(send_doc_name, letter_name):
             (
                 frappe.qb.update(recipient)
                 .set(recipient.status, "Failed")
-                .where((recipient.parent == send_doc_name) & (recipient.status == "Pending"))
+                .where((recipient.parent == send_doc_name) & (recipient.status != "Sent"))
             ).run()
             frappe.db.commit()
         except Exception:
             frappe.log_error(frappe.get_traceback(), "Letters _execute_send cleanup error")
+
+
+def _queue_recipients(send_doc, letter_name, emails, subject, html):
+    """Hand the full recipient list to core's Email Queue in one bulk call.
+
+    The framework builds the message once, then batches the addresses into
+    parallel per-recipient sends (see frappe.email.doctype.email_queue).
+    """
+    include_unsub = bool(send_doc.include_unsubscribe)
+    # Email-group sends use Frappe's native unsubscribe (sets Email Group
+    # Member.unsubscribed). All other sends use a custom portal page that lets
+    # recipients manage folder-level or global opt-outs.
+    if send_doc.send_mode == "email_group":
+        unsubscribe_method = None
+    elif include_unsub:
+        unsubscribe_method = "/api/method/letters.letters.api.unsubscribe.unsubscribe_redirect"
+    else:
+        unsubscribe_method = None
+
+    frappe.sendmail(
+        recipients=emails,
+        subject=subject,
+        message=html,
+        now=False,
+        queue_separately=True,
+        send_priority=0,
+        reference_doctype="Letter",
+        reference_name=letter_name,
+        unsubscribe_method=unsubscribe_method,
+        unsubscribe_message=_("Unsubscribe") if include_unsub else None,
+        add_unsubscribe_link=1 if include_unsub else 0,
+        email_read_tracker_url="/api/method/letters.letters.api.track_open",
+    )
+
+
+def _delivery_counts(letter_name):
+    """Live delivery tally from core's Email Queue for this letter.
+
+    queue_separately creates one Email Queue row per recipient, tagged with
+    reference_doctype=Letter, so grouping by status gives real SMTP progress.
+    Returns None when no rows exist (send just starting, or logs cleared).
+    """
+    # Aggregate via frappe.qb — recent Frappe rejects raw "count(name) as c"
+    # field strings passed to get_all for SQL-injection safety.
+    from frappe.query_builder.functions import Count
+
+    EQ = frappe.qb.DocType("Email Queue")
+    rows = (
+        frappe.qb.from_(EQ)
+        .select(EQ.status, Count(EQ.name).as_("c"))
+        .where((EQ.reference_doctype == "Letter") & (EQ.reference_name == letter_name))
+        .groupby(EQ.status)
+    ).run(as_dict=True)
+    if not rows:
+        return None
+    counts    = {r.status: r.c for r in rows}
+    queued    = sum(counts.values())
+    delivered = counts.get("Sent", 0)
+    failed    = counts.get("Error", 0)
+    return {
+        "delivered": delivered,
+        "failed":    failed,
+        "queued":    queued,
+        "pending":   queued - delivered - failed,
+    }
+
+
+def _reconcile_send_status(letter_name, send_name, total, current_status, queued_count):
+    """Compute live delivery progress from the Email Queue and, once the queue
+    has drained, persist the terminal status. Returns a progress dict shaped for
+    the frontend: {status, sent (accepted), delivered, failed, total}.
+    """
+    counts = _delivery_counts(letter_name)
+
+    # No live Email Queue rows (old send whose logs were cleared): trust the
+    # stored status; treat the queued count as delivered for terminal states.
+    if not counts:
+        delivered = queued_count if current_status in ("Sent", "Partial") else 0
+        return {"status": current_status, "sent": queued_count,
+                "delivered": delivered, "failed": 0, "total": total}
+
+    delivered, failed, pending = counts["delivered"], counts["failed"], counts["pending"]
+
+    # Still draining (rows pending, or the framework hasn't queued them all yet).
+    if pending > 0 or (total and counts["queued"] < total):
+        return {"status": "Sending", "sent": queued_count,
+                "delivered": delivered, "failed": failed, "total": total}
+
+    # Drained — settle the terminal status once.
+    terminal = "Sent" if failed == 0 else ("Failed" if delivered == 0 else "Partial")
+    if current_status != terminal:
+        frappe.db.set_value("Email Send", send_name,
+                            {"status": terminal, "sent_count": delivered}, update_modified=False)
+        frappe.db.set_value("Letter", letter_name, "status", terminal, update_modified=False)
+        frappe.db.commit()
+    return {"status": terminal, "sent": queued_count,
+            "delivered": delivered, "failed": failed, "total": total}
+
+
+def reconcile_active_sends():
+    """Scheduled fallback: settle Letters stuck in 'Sending' once their Email
+    Queue has drained, for sends nobody is actively polling in the builder."""
+    from frappe.utils import add_to_date, now_datetime
+
+    for letter_name in frappe.get_all("Letter", filters={"status": "Sending"}, pluck="name"):
+        try:
+            sends = frappe.get_all(
+                "Email Send",
+                filters={"letter": letter_name, "status": ["in", ["Sending", "Sent", "Failed", "Partial"]]},
+                fields=["name", "status", "sent_count", "total_recipients", "creation"],
+                order_by="creation desc", limit=1,
+            )
+            if not sends:
+                continue
+            send = sends[0]
+            res = _reconcile_send_status(
+                letter_name, send.name, send.total_recipients or 0, send.status, send.sent_count or 0,
+            )
+            # Staleness guard: a send with no live queue rows that has been
+            # "Sending" for over 30 minutes has almost certainly delivered and
+            # had its Email Queue logs cleared — settle it as Sent.
+            if res["status"] == "Sending" and _delivery_counts(letter_name) is None:
+                if send.creation and send.creation < add_to_date(now_datetime(), minutes=-30):
+                    frappe.db.set_value("Email Send", send.name, "status", "Sent", update_modified=False)
+                    frappe.db.set_value("Letter", letter_name, "status", "Sent", update_modified=False)
+                    frappe.db.commit()
+        except Exception:
+            frappe.log_error(frappe.get_traceback(), f"Letters reconcile_active_sends error: {letter_name}")

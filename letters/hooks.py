@@ -14,7 +14,10 @@ required_apps = ["frappe"]
 # Background job queues used
 scheduler_events = {
     "cron": {
-        "*/5 * * * *": ["letters.letters.api.process_scheduled_sends"],
+        "*/5 * * * *": [
+            "letters.letters.api.process_scheduled_sends",
+            "letters.letters.api.reconcile_active_sends",
+        ],
     }
 }
 

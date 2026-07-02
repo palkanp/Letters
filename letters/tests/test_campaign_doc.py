@@ -352,6 +352,179 @@ class TestSendSnapshot(LettersTestCase):
         self.assertEqual(snap_subject, "Original Subject")
 
 
+class TestExecuteSendBulkQueue(LettersTestCase):
+    """_execute_send hands the whole recipient list to core's Email Queue in a
+    single queue_separately call, rather than looping sendmail per recipient."""
+
+    def _seed_sending(self, statuses, send_mode="direct", include_unsubscribe=0):
+        doc = self.new_letter()
+        recipients = [
+            {"email": f"r{i}@example.com", "status": s} for i, s in enumerate(statuses)
+        ]
+        send = self.new_email_send(doc.name, status="Sending", recipients=recipients)
+        frappe.db.set_value(
+            "Email Send", send.name,
+            {
+                "snapshot_blocks":      doc.blocks_json,
+                "snapshot_subject":     "Bulk Subject",
+                "snapshot_email_width": 600,
+                "send_mode":            send_mode,
+                "include_unsubscribe":  include_unsubscribe,
+            },
+            update_modified=False,
+        )
+        frappe.db.commit()
+        return doc, send
+
+    def test_makes_one_bulk_call_with_queue_flags(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Pending", "Pending", "Pending"])
+        with patch("frappe.sendmail") as mock_sendmail:
+            _execute_send(send.name, doc.name)
+        mock_sendmail.assert_called_once()
+        kw = mock_sendmail.call_args.kwargs
+        self.assertTrue(kw["queue_separately"])
+        self.assertEqual(kw["send_priority"], 0)
+        self.assertEqual(kw["reference_doctype"], "Letter")
+        self.assertEqual(kw["reference_name"], doc.name)
+        self.assertEqual(
+            sorted(kw["recipients"]),
+            ["r0@example.com", "r1@example.com", "r2@example.com"],
+        )
+
+    def test_queues_recipients_and_stays_sending(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Pending", "Pending"])
+        with patch("frappe.sendmail"):
+            _execute_send(send.name, doc.name)
+        statuses = frappe.get_all(
+            "Email Send Recipient", filters={"parent": send.name}, pluck="status"
+        )
+        self.assertEqual(set(statuses), {"Sent"})  # accepted into the Email Queue
+        # Stays Sending until the Email Queue drains (settled by get_send_progress).
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "status"), "Sending")
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "sent_count"), 2)
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Sending")
+
+    def test_resume_only_requeues_pending_recipients(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Sent", "Pending"])
+        with patch("frappe.sendmail") as mock_sendmail:
+            _execute_send(send.name, doc.name)
+        self.assertEqual(mock_sendmail.call_args.kwargs["recipients"], ["r1@example.com"])
+
+    def test_all_sent_skips_sendmail(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Sent", "Sent"])
+        with patch("frappe.sendmail") as mock_sendmail:
+            _execute_send(send.name, doc.name)
+        mock_sendmail.assert_not_called()
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "status"), "Sending")
+
+    def test_failure_marks_pending_failed(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Pending", "Pending"])
+        with patch("frappe.sendmail", side_effect=Exception("smtp down")):
+            _execute_send(send.name, doc.name)
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "status"), "Failed")
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Failed")
+        statuses = frappe.get_all(
+            "Email Send Recipient", filters={"parent": send.name}, pluck="status"
+        )
+        self.assertEqual(set(statuses), {"Failed"})
+
+    def test_email_group_mode_uses_native_unsubscribe(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Pending"], send_mode="email_group", include_unsubscribe=1)
+        with patch("frappe.sendmail") as mock_sendmail:
+            _execute_send(send.name, doc.name)
+        kw = mock_sendmail.call_args.kwargs
+        self.assertIsNone(kw["unsubscribe_method"])
+        self.assertEqual(kw["add_unsubscribe_link"], 1)
+
+    def test_direct_mode_with_unsubscribe_uses_portal(self):
+        from letters.letters.api.sending import _execute_send
+        doc, send = self._seed_sending(["Pending"], send_mode="direct", include_unsubscribe=1)
+        with patch("frappe.sendmail") as mock_sendmail:
+            _execute_send(send.name, doc.name)
+        self.assertIn("unsubscribe_redirect", mock_sendmail.call_args.kwargs["unsubscribe_method"])
+
+
+class TestSendProgressLiveDelivery(LettersTestCase):
+    """get_send_progress reports live delivered/failed counts off the Email Queue
+    and settles the letter's terminal status once delivery drains."""
+
+    def _sending_letter(self, total=3):
+        doc = self.new_letter()
+        frappe.db.set_value("Letter", doc.name, "status", "Sending")
+        send = self.new_email_send(
+            doc.name, status="Sending",
+            recipients=[{"email": f"r{i}@example.com", "status": "Sent"} for i in range(total)],
+        )
+        frappe.db.set_value(
+            "Email Send", send.name,
+            {"total_recipients": total, "sent_count": total},
+            update_modified=False,
+        )
+        frappe.db.commit()
+        doc.reload()
+        return doc, send
+
+    def _progress_with_counts(self, doc, counts):
+        with patch("letters.letters.api.sending._delivery_counts", return_value=counts):
+            return doc.get_send_progress()
+
+    def test_reports_delivered_while_draining(self):
+        doc, send = self._sending_letter(total=3)
+        prog = self._progress_with_counts(
+            doc, {"delivered": 2, "failed": 0, "queued": 3, "pending": 1}
+        )
+        self.assertEqual(prog["status"], "Sending")
+        self.assertEqual(prog["delivered"], 2)
+        self.assertEqual(prog["total"], 3)
+
+    def test_stays_sending_until_all_rows_queued(self):
+        # Framework still fanning out: fewer queue rows than total, none pending.
+        doc, send = self._sending_letter(total=3)
+        prog = self._progress_with_counts(
+            doc, {"delivered": 1, "failed": 0, "queued": 1, "pending": 0}
+        )
+        self.assertEqual(prog["status"], "Sending")
+
+    def test_settles_sent_when_all_delivered(self):
+        doc, send = self._sending_letter(total=3)
+        prog = self._progress_with_counts(
+            doc, {"delivered": 3, "failed": 0, "queued": 3, "pending": 0}
+        )
+        self.assertEqual(prog["status"], "Sent")
+        self.assertEqual(prog["delivered"], 3)
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Sent")
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "status"), "Sent")
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "sent_count"), 3)
+
+    def test_settles_partial_when_some_failed(self):
+        doc, send = self._sending_letter(total=3)
+        prog = self._progress_with_counts(
+            doc, {"delivered": 2, "failed": 1, "queued": 3, "pending": 0}
+        )
+        self.assertEqual(prog["status"], "Partial")
+        self.assertEqual(prog["failed"], 1)
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Partial")
+
+    def test_settles_failed_when_none_delivered(self):
+        doc, send = self._sending_letter(total=2)
+        prog = self._progress_with_counts(
+            doc, {"delivered": 0, "failed": 2, "queued": 2, "pending": 0}
+        )
+        self.assertEqual(prog["status"], "Failed")
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Failed")
+
+    def test_no_queue_data_preserves_stored_status(self):
+        doc, send = self._sending_letter(total=2)
+        prog = self._progress_with_counts(doc, None)
+        self.assertEqual(prog["status"], "Sending")
+
+
 class TestAtomicSendClaim(LettersTestCase):
     """send() must atomically transition Draft → Sending to prevent double-sends."""
 

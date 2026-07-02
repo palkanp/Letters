@@ -88,20 +88,25 @@ class AnalyticsMixin:
 
     def get_send_progress(self):
         frappe.has_permission("Letter", "read", doc=self, throw=True)
+        from letters.letters.api.sending import _reconcile_send_status
+
         name = self.name
         statuses = ["Sending", "Sent", "Failed", "Partial"]
-        if not frappe.db.exists("Email Send", {"letter": name, "status": ["in", statuses]}):
-            return {"status": "Queued", "sent": 0, "total": 0}
-        send = frappe.get_last_doc(
+        send = frappe.get_all(
             "Email Send",
             filters={"letter": name, "status": ["in", statuses]},
+            fields=["name", "status", "sent_count", "total_recipients"],
             order_by="creation desc",
+            limit=1,
         )
-        return {
-            "status": send.status,
-            "sent":   send.sent_count or 0,
-            "total":  send.total_recipients or 0,
-        }
+        if not send:
+            return {"status": "Queued", "sent": 0, "delivered": 0, "failed": 0, "total": 0}
+        send = send[0]
+        # Live delivered/failed counts come off core's Email Queue; this also
+        # settles the letter's terminal status once delivery has drained.
+        return _reconcile_send_status(
+            name, send.name, send.total_recipients or 0, send.status, send.sent_count or 0,
+        )
 
     def record_open(self, email):
         from letters.letters.api.sending import _record_open

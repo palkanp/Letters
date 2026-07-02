@@ -30,7 +30,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   const scheduleDate = ref("");
   const scheduleTime = ref("");
 
-  const sendProgress = ref({ status: "Queued", sent: 0, total: 0 });
+  const sendProgress = ref({ status: "Queued", sent: 0, delivered: 0, failed: 0, total: 0 });
   let _progressTimer = null;
 
   const letterStatus = computed(() => {
@@ -293,7 +293,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
         msg += ` (${skipped_invalid} invalid address${skipped_invalid === 1 ? "" : "es"} skipped)`;
       }
       toast.success(msg);
-      sendProgress.value = { status: "Queued", sent: 0, total: count };
+      sendProgress.value = { status: "Queued", sent: 0, delivered: 0, failed: 0, total: count };
       if (editorStore.letterDoc) editorStore.letterDoc.status = "Sending";
       _startProgressPolling();
     } catch (e) {

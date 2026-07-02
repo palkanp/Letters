@@ -33,7 +33,6 @@ from .letters_api import (
 from .sending import (
     MAX_RECIPIENTS,
     SEND_JOB_TIMEOUT,
-    COMMIT_EVERY,
     send_test,
     track_open,
     get_letter_analytics,
@@ -42,6 +41,7 @@ from .sending import (
     schedule_letter,
     send_letter,
     process_scheduled_sends,
+    reconcile_active_sends,
     _record_open,
     _resume_send,
     _bulk_insert_recipients,
