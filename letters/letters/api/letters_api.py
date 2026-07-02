@@ -139,30 +139,33 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
 @frappe.whitelist(methods=["GET", "POST"])
 def get_letters(folder: str | None = None):
     """Return Letter records for the dashboard, excluding those used as notification templates."""
-    where_clauses = [
-        "`tabLetter`.`name` NOT IN ("
-        "SELECT `letter` FROM `tabNotification` "
-        "WHERE `letter` IS NOT NULL AND `letter` != ''"
-        ")"
-    ]
-    values = []
+    from frappe.query_builder import DocType
+
+    Letter = DocType("Letter")
+    Notification = DocType("Notification")
+
+    linked = (
+        frappe.qb.from_(Notification)
+        .select(Notification.letter)
+        .where(Notification.letter.isnotnull())
+        .where(Notification.letter != "")
+    )
+
+    q = (
+        frappe.qb.from_(Letter)
+        .select(
+            Letter.name, Letter.title, Letter.status, Letter.subject,
+            Letter.modified, Letter.creation, Letter.owner, Letter.folder,
+        )
+        .where(Letter.name.notin(linked))
+        .orderby(Letter.modified, order=frappe.qb.desc)
+        .limit(200)
+    )
 
     if folder:
-        where_clauses.append("`tabLetter`.`folder` = %s")
-        values.append(folder)
+        q = q.where(Letter.folder == folder)
 
-    rows = frappe.db.sql(
-        """
-        SELECT name, title, status, subject, modified, creation, owner, folder
-        FROM `tabLetter`
-        WHERE {conditions}
-        ORDER BY modified DESC
-        LIMIT 200
-        """.format(conditions=" AND ".join(where_clauses)),
-        values,
-        as_dict=True,
-    )
-    return rows
+    return q.run(as_dict=True)
 
 
 @frappe.whitelist(methods=["POST"])
