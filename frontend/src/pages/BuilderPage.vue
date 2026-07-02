@@ -198,6 +198,7 @@
     v-model="showTestModal"
     :recipient="testRecipient"
     :sending="testSending"
+    @update:recipient="testRecipient = $event"
     @send="sendTest"
   />
 
