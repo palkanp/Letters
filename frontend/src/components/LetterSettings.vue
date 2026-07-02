@@ -243,6 +243,19 @@
                 </div>
               </div>
 
+              <!-- ── HTML ── -->
+              <div v-else-if="activeTab === 'html'">
+                <div v-if="loadingHtml" class="text-xs text-ink-gray-5 py-6 text-center">Compiling…</div>
+                <div v-else-if="compiledHtml">
+                  <div class="flex items-center justify-between mb-2">
+                    <span class="text-xs text-ink-gray-5">Compiled email HTML</span>
+                    <Button variant="ghost" size="sm" icon-left="lucide-copy" @click="copyHtml">Copy</Button>
+                  </div>
+                  <pre class="text-2xs font-mono leading-relaxed text-ink-gray-7 bg-surface-gray-1 border border-outline-gray-2 rounded-lg p-3 overflow-x-auto whitespace-pre-wrap break-all">{{ compiledHtml }}</pre>
+                </div>
+                <div v-else class="text-xs text-ink-gray-5 py-6 text-center">Could not compile HTML.</div>
+              </div>
+
             </div>
           </div>
         </Transition>
@@ -253,7 +266,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { TextInput, Button } from "frappe-ui";
+import { TextInput, Button, toast } from "frappe-ui";
 import RecipientsPicker from "./RecipientsPicker.vue";
 import NotificationsTab from "./NotificationsTab.vue";
 
@@ -279,6 +292,7 @@ const sections = computed(() => {
     { id: "recipients",    label: "Recipients" },
     { id: "notifications", label: "Notifications" },
     { id: "analytics",     label: "Analytics" },
+    { id: "html",          label: "HTML" },
   ];
   return all.filter(s => {
     if (s.id === "notifications") return !isSent.value;
@@ -361,6 +375,8 @@ const audienceSources = computed(() => {
 
 const analytics         = ref(null);
 const loadingAnalytics  = ref(false);
+const compiledHtml      = ref(null);
+const loadingHtml       = ref(false);
 const recipients        = ref([]);
 const loadingRecipients = ref(false);
 const expandedSources   = ref(new Set());
@@ -444,8 +460,31 @@ watch(
     }
     if (tab === "analytics") loadAnalytics();
     if (tab === "recipients" && isSent.value) loadRecipients();
+    if (tab === "html") loadHtml();
   }
 );
+
+async function loadHtml() {
+  if (!props.letterDoc?.name) return;
+  loadingHtml.value = true;
+  try {
+    const res = await frappe.call({
+      method: "letters.letters.api.render_preview",
+      args: { name: props.letterDoc.name },
+    });
+    compiledHtml.value = res.message?.html || null;
+  } catch {
+    compiledHtml.value = null;
+  } finally {
+    loadingHtml.value = false;
+  }
+}
+
+function copyHtml() {
+  if (!compiledHtml.value) return;
+  navigator.clipboard.writeText(compiledHtml.value);
+  toast.success("HTML copied to clipboard.");
+}
 
 function formatDate(s) {
   try {

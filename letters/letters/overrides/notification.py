@@ -16,7 +16,7 @@ class LettersNotification(Notification):
 
     def validate(self):
         super().validate()
-        if self.get("letter"):
+        if getattr(self, "letter", None):
             self._validate_letter_unique()
 
     def _validate_letter_unique(self):
@@ -35,7 +35,7 @@ class LettersNotification(Notification):
             )
 
     def send_an_email(self, doc, context):
-        if self.get("letter_message_type") == "Letter Builder" and self.get("letter"):
+        if getattr(self, "letter_message_type", None) == "Letter Builder" and getattr(self, "letter", None):
             original_message = self.message
             try:
                 self.message = self._compile_letter()
