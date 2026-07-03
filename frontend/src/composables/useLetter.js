@@ -32,6 +32,14 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
 
   const sendProgress = ref({ status: "Queued", sent: 0, delivered: 0, failed: 0, total: 0 });
   let _progressTimer = null;
+  const resuming = ref(false);
+  // Stall detection: if delivery count stops moving for a while during a
+  // "Sending" send, the background jobs may have been dropped (e.g. a queue
+  // restart) with no exception raised, so the status never flips to Failed.
+  let _lastDeliveredKey = null;
+  let _lastProgressAt = 0;
+  let _stallToastId = null;
+  const STALL_THRESHOLD_MS = 45000;
 
   const letterStatus = computed(() => {
     // While actively polling use live sendProgress status, otherwise letterDoc
@@ -317,6 +325,8 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
 
   function _startProgressPolling() {
     clearInterval(_progressTimer);
+    _lastDeliveredKey = null;
+    _lastProgressAt = Date.now();
     const tick = async () => {
       if (!editorStore.letterDoc?.name) { clearInterval(_progressTimer); return; }
       try {
@@ -325,6 +335,23 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
           args: { name: editorStore.letterDoc.name },
         });
         sendProgress.value = r.message;
+
+        if (r.message.status === "Failed" && r.message.delivered === 0) {
+          // A send that failed outright (no partial delivery) is resumable.
+          _offerResume("This send failed. Resume where it left off?");
+        }
+
+        if (r.message.status === "Sending") {
+          const key = `${r.message.delivered}:${r.message.failed}`;
+          if (key !== _lastDeliveredKey) {
+            _lastDeliveredKey = key;
+            _lastProgressAt = Date.now();
+            if (_stallToastId) { toast.dismiss(_stallToastId); _stallToastId = null; }
+          } else if (Date.now() - _lastProgressAt > STALL_THRESHOLD_MS && !_stallToastId) {
+            _offerResume("This send hasn't made progress in a while. Resume it?");
+          }
+        }
+
         if (["Sent", "Failed", "Partial"].includes(r.message.status)) {
           clearInterval(_progressTimer);
           _progressTimer = null;
@@ -337,6 +364,35 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
     };
     tick();
     _progressTimer = setInterval(tick, 2000);
+  }
+
+  function _offerResume(message) {
+    _stallToastId = toast.warning(message, {
+      duration: Infinity,
+      action: { label: "Resume", onClick: resumeSend },
+    });
+  }
+
+  async function resumeSend() {
+    if (!editorStore.letterDoc?.name || resuming.value) return;
+    resuming.value = true;
+    if (_stallToastId) { toast.dismiss(_stallToastId); _stallToastId = null; }
+    try {
+      const r = await frappe.call({
+        method: "letters.letters.api.resume_send",
+        args: { name: editorStore.letterDoc.name },
+      });
+      toast.success(
+        r.message?.requeued ? `Resumed — requeuing ${r.message.requeued} recipients.` : "Send resumed."
+      );
+      sendProgress.value = { ...sendProgress.value, status: "Sending" };
+      if (editorStore.letterDoc) editorStore.letterDoc.status = "Sending";
+      _startProgressPolling();
+    } catch (e) {
+      toast.error("Couldn't resume: " + describeError(e));
+    } finally {
+      resuming.value = false;
+    }
   }
 
   // ── Schedule send ─────────────────────────────────────────────────────────────
@@ -426,9 +482,9 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
     // schedule modal
     scheduleDate, scheduleTime, minScheduleDate, openScheduleModal,
     // progress
-    sendProgress, letterStatus,
+    sendProgress, letterStatus, resuming,
     // actions
     loadLetter, onTemplateSubmit, onTemplateClose, saveLetter, saveNow,
-    sendLetter, scheduleLetter, duplicateLetter,
+    sendLetter, scheduleLetter, duplicateLetter, resumeSend,
   };
 }

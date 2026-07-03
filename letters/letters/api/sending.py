@@ -125,6 +125,67 @@ def send_letter(name: str, recipients: str | None = None, email_group: str | Non
     return doc.send(email_group=email_group, recipients=recipients, doctype_config=doctype_config)
 
 
+@frappe.whitelist(methods=["POST"])
+def resume_send(name: str):
+    """
+    Recover a send that has stopped making progress.
+
+    Covers two cases:
+      - status is Failed/Partial: re-enqueue the whole delivery loop as usual.
+      - status is Sending but stalled (e.g. a worker/queue restart dropped the
+        background jobs that fan recipients out to Email Queue): find whichever
+        recipients never got an Email Queue row and re-queue just those, without
+        starting the send over or double-sending anyone.
+    """
+    doc = frappe.get_doc("Letter", name)
+    frappe.has_permission("Letter", "write", doc=doc, throw=True)
+
+    send = frappe.get_all(
+        "Email Send",
+        filters={"letter": name},
+        fields=["name", "status", "snapshot_subject", "snapshot_preview_text",
+                 "snapshot_email_width", "snapshot_blocks", "include_unsubscribe", "send_mode"],
+        order_by="creation desc",
+        limit=1,
+    )
+    if not send:
+        frappe.throw(_("No send found for this letter."))
+    send = send[0]
+
+    if send.status in ("Failed", "Partial"):
+        return _resume_send(send.name, name, doc)
+
+    if send.status != "Sending":
+        frappe.throw(_("This letter isn't in a resumable state."))
+
+    all_emails = frappe.get_all("Email Send Recipient", filters={"parent": send.name}, pluck="email")
+    queued_emails = {
+        r[0] for r in frappe.db.sql(
+            """
+            select qr.recipient from `tabEmail Queue Recipient` qr
+            join `tabEmail Queue` q on q.name = qr.parent
+            where q.reference_doctype = 'Letter' and q.reference_name = %s
+            """,
+            (name,),
+        )
+    }
+    missing = [e for e in all_emails if e not in queued_emails]
+    if not missing:
+        frappe.throw(_("This send has no missing recipients — it may just be slow. Check back shortly."))
+
+    from letters.letters.utils.email_compiler import EmailCompiler
+    compiler = EmailCompiler(
+        send.snapshot_blocks or "",
+        preview_text=send.snapshot_preview_text or "",
+        email_width=send.snapshot_email_width or 600,
+    )
+    html = compiler.compile()
+    send_doc = frappe.get_doc("Email Send", send.name)
+    _queue_recipients(send_doc, name, missing, send.snapshot_subject or "", html)
+    frappe.db.commit()
+    return {"resumed": True, "requeued": len(missing)}
+
+
 def process_scheduled_sends():
     """Scheduled task: fire any letters whose scheduled_at has passed."""
     from frappe.utils import now_datetime
