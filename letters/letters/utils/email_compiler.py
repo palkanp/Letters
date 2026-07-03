@@ -13,7 +13,9 @@ _HTML_WRAPPER = """\
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />{font_links}
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />{font_links}
 <style type="text/css">
 @media only screen and (max-width:600px) {{
   .ltr-stack {{ display:block !important; width:100% !important; max-width:100% !important;
