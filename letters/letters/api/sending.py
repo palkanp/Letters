@@ -412,7 +412,7 @@ def _queue_recipients(send_doc, letter_name, emails, subject, html):
     else:
         unsubscribe_method = None
 
-    letter = frappe.get_cached_doc("Letter", letter_name)
+    letter = frappe.get_doc("Letter", letter_name)
     sender_email = (letter.sender_email or "").strip()
     sender_name  = (letter.sender_name or "").strip()
     sender = None
