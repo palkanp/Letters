@@ -14,9 +14,12 @@ _HTML_WRAPPER = """\
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="color-scheme" content="light" />
-<meta name="supported-color-schemes" content="light" />{font_links}
+<meta name="color-scheme" content="light dark" />
+<meta name="supported-color-schemes" content="light dark" />{font_links}
 <style type="text/css">
+@media (prefers-color-scheme: dark) {{
+  body, .body-wrap {{ background-color:#1f2124 !important; }}
+}}
 @media only screen and (max-width:600px) {{
   .ltr-stack {{ display:block !important; width:100% !important; max-width:100% !important;
                 padding-left:0 !important; padding-right:0 !important;
