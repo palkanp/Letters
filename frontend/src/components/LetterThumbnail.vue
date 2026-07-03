@@ -22,7 +22,12 @@ const props = defineProps({
   iconClass: { type: String, default: "w-5 h-5" },
 });
 
-const IFRAME_WIDTH = 600;
+// Must stay ABOVE the email's mobile breakpoint (@media max-width:600px, which
+// is inclusive of 600). At exactly 600 the thumbnail would render in mobile
+// mode and stack multi-column rows; a wider viewport keeps it as desktop. The
+// 600px-max email card stays centred, and the reset CSS paints the surrounding
+// margin with the email's own background so it blends in.
+const IFRAME_WIDTH = 640;
 const el = ref(null);
 const previewHtml = ref(null);
 const loading = ref(false);

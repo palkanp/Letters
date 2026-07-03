@@ -144,7 +144,10 @@ const props = defineProps({
 });
 defineEmits(["close"]);
 
-const IFRAME_WIDTH = 600;
+// Above the email's mobile breakpoint (@media max-width:600px is inclusive),
+// so template thumbnails render as desktop, not stacked mobile. See
+// LetterThumbnail.vue for the full rationale.
+const IFRAME_WIDTH = 640;
 const tileRef = ref(null);
 const previewTemplate = ref(null);
 
