@@ -2,7 +2,7 @@
 
 Visual email design and campaign/letter sending system for [Frappe](https://frappeframework.com/). Build emails with a drag-and-drop block editor, preview them on desktop and mobile, and send to manual recipients or anyone pulled from any DocType in your site — all from within Frappe Desk.
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](LICENSE)
 
 ## Features
 
@@ -86,4 +86,4 @@ Issues and pull requests are welcome. Before opening a PR:
 
 ## License
 
-[MIT](LICENSE) © Palkan Parsana
+[AGPL-3.0](LICENSE) © Palkan Parsana

@@ -3,7 +3,7 @@ app_title = "Letters"
 app_publisher = "Palkan Parsana"
 app_description = "Visual email design and letter sending system for Frappe"
 app_email = "palkan@frappe.io"
-app_license = "MIT"
+app_license = "AGPL-3.0"
 
 # Frappe version compatibility
 required_apps = ["frappe"]

@@ -7,7 +7,7 @@ name = "letters"
 version = "0.1.0"
 description = "Visual email design and campaign system for Frappe"
 readme = "README.md"
-license = { text = "MIT" }
+license = { text = "AGPL-3.0" }
 requires-python = ">=3.10"
 dependencies = []
 
