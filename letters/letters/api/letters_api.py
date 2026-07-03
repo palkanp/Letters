@@ -139,6 +139,7 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
 @frappe.whitelist(methods=["GET", "POST"])
 def get_letters(folder: str | None = None):
     """Return Letter records for the dashboard, excluding those used as notification templates."""
+    frappe.has_permission("Letter", "read", throw=True)
     from frappe.query_builder import DocType
 
     Letter = DocType("Letter")

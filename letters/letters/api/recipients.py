@@ -305,6 +305,7 @@ def count_doctype_recipients(doctype: str, email_field: str, filters: str | None
 @frappe.whitelist(methods=["GET", "POST"])
 def get_email_groups():
     """Return all Email Groups with active member counts (single GROUP BY query)."""
+    frappe.has_permission("Email Group", "read", throw=True)
     groups = frappe.get_all(
         "Email Group",
         fields=["name", "title"],

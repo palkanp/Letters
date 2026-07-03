@@ -6,6 +6,7 @@ import frappe
 @frappe.whitelist()
 def get_all_notifications():
     """Return all Notifications that have a Letter linked."""
+    frappe.has_permission("Notification", "read", throw=True)
     return frappe.get_all(
         "Notification",
         filters={"letter": ("is", "set")},
@@ -18,6 +19,7 @@ def get_all_notifications():
 @frappe.whitelist()
 def get_notification_for_letter(letter: str):
     """Return the single Notification linked to this Letter, or None."""
+    frappe.has_permission("Notification", "read", throw=True)
     name = frappe.db.get_value("Notification", {"letter": letter}, "name")
     if not name:
         return None
@@ -33,6 +35,7 @@ def get_notification_for_letter(letter: str):
 def create_notification_for_letter(letter: str):
     """Create a new disabled Notification linked to this Letter and return its name."""
     frappe.has_permission("Letter", "read", throw=True)
+    frappe.has_permission("Notification", "create", throw=True)
 
     existing = frappe.db.get_value("Notification", {"letter": letter}, "name")
     if existing:
@@ -110,6 +113,7 @@ def create_notification_pair():
 def duplicate_notification_pair(name: str):
     """Duplicate a Notification and its linked Letter together."""
     notif = frappe.get_doc("Notification", name)
+    frappe.has_permission("Notification", "create", doc=notif, throw=True)
     if not notif.get("letter"):
         frappe.throw("This notification has no linked letter.")
 
@@ -132,6 +136,7 @@ def duplicate_notification_pair(name: str):
 def delete_notification_pair(name: str):
     """Delete a Notification and its linked Letter together."""
     notif = frappe.get_doc("Notification", name)
+    frappe.has_permission("Notification", "delete", doc=notif, throw=True)
     letter_name = notif.get("letter")
     frappe.delete_doc("Notification", name, ignore_permissions=True)
     if letter_name:

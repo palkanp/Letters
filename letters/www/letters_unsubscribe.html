@@ -106,6 +106,7 @@
       var CSRF = '{{ csrf_token }}';
       var EMAIL = '{{ email | replace("'", "\\'") }}';
       var LETTER = '{{ letter | replace("'", "\\'") }}';
+      var TOKEN = '{{ token | replace("'", "\\'") }}';
 
       document.getElementById('lu-form').addEventListener('submit', async function (e) {
         e.preventDefault();
@@ -131,13 +132,14 @@
                 email: EMAIL,
                 letter: LETTER,
                 unsubscribe_folders: cats,
-                global_unsubscribe: globalUnsub
+                global_unsubscribe: globalUnsub,
+                token: TOKEN
               })
             }
           );
 
           if (resp.ok) {
-            var qs = '?email=' + encodeURIComponent(EMAIL) + (LETTER ? '&letter=' + encodeURIComponent(LETTER) : '') + '&saved=1';
+            var qs = '?email=' + encodeURIComponent(EMAIL) + (LETTER ? '&letter=' + encodeURIComponent(LETTER) : '') + '&token=' + encodeURIComponent(TOKEN) + '&saved=1';
             window.location.href = '/letters_unsubscribe' + qs;
           } else {
             err.style.display = 'inline';

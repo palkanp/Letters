@@ -1768,11 +1768,14 @@ class TestSavePreferences:
         frappe_stub.local = MagicMock()
         frappe_stub.local.response = {}
 
-    def _run(self, email="user@example.com", letter="", folders="", global_unsub="0"):
+    def _run(self, email="user@example.com", letter="", folders="", global_unsub="0", token=None):
+        if token is None:
+            token = unsubscribe_module._sign_email(email.strip().lower())
         unsubscribe_module.save_preferences(
             email=email, letter=letter,
             unsubscribe_folders=folders,
             global_unsubscribe=global_unsub,
+            token=token,
         )
 
     def test_global_unsubscribe_inserts_record(self):
@@ -1854,6 +1857,84 @@ class TestSavePreferences:
         frappe_stub.utils.validate_email_address.return_value = None
         with pytest.raises(FrappeValidationError, match="Invalid email"):
             self._run(email="notanemail")
+
+    # ── Token verification (spoofed-unsubscribe regression coverage) ────────
+    #
+    # save_preferences must reject any request that doesn't carry the exact
+    # HMAC token unsubscribe_redirect mints for that email. Without this, a
+    # guest could unsubscribe (or resubscribe) an arbitrary address just by
+    # POSTing it — no proof they ever received a real unsubscribe link.
+
+    def test_missing_token_is_rejected(self):
+        frappe_stub.utils.validate_email_address.return_value = "user@example.com"
+        with pytest.raises(FrappeValidationError, match="invalid or has expired"):
+            self._run(token="")
+
+    def test_wrong_token_is_rejected(self):
+        frappe_stub.utils.validate_email_address.return_value = "user@example.com"
+        with pytest.raises(FrappeValidationError, match="invalid or has expired"):
+            self._run(token="not-the-real-token")
+
+    def test_token_for_a_different_email_is_rejected(self):
+        """A token minted for attacker@evil.com must not unlock victim@example.com."""
+        frappe_stub.utils.validate_email_address.return_value = "victim@example.com"
+        forged_token = unsubscribe_module._sign_email("attacker@evil.com")
+        with pytest.raises(FrappeValidationError, match="invalid or has expired"):
+            self._run(email="victim@example.com", token=forged_token)
+
+    def test_correct_token_is_accepted(self):
+        """Sanity check: the legitimate token for this exact email passes."""
+        frappe_stub.utils.validate_email_address.return_value = "user@example.com"
+        frappe_stub.db.exists.return_value = None
+        GETALL["Letter Category"] = []
+        # Should not raise
+        self._run(global_unsub="1")
+
+
+# ===========================================================================
+# 10. unsubscribe.py — unsubscribe_redirect
+# ===========================================================================
+#
+# Covers:
+#   - A request without a valid Frappe signature never mints a token or
+#     redirects (closes the "anyone can spoof any email" hole).
+#   - A validly signed request mints a token that matches _sign_email(email)
+#     and redirects to the preferences page carrying it.
+# ---------------------------------------------------------------------------
+
+def _verify_request_stub(result):
+    """Fake the `frappe.utils.verified_command` submodule for the duration of a
+    `with` block, so `unsubscribe_redirect`'s lazy `from frappe.utils.verified_command
+    import verify_request` resolves without needing a real frappe install."""
+    vc_mod = MagicMock()
+    vc_mod.verify_request = MagicMock(return_value=result)
+    return patch.dict(_sys.modules, {
+        "frappe.utils": frappe_stub.utils,
+        "frappe.utils.verified_command": vc_mod,
+    })
+
+
+class TestUnsubscribeRedirect:
+    def setup_method(self):
+        _reset()
+        frappe_stub.utils.cstr = lambda s: str(s) if s is not None else ""
+        frappe_stub.local = MagicMock()
+        frappe_stub.local.response = {}
+        frappe_stub.in_test = False
+
+    def test_unsigned_request_never_redirects_or_mints_token(self):
+        """Without a valid framework signature, no redirect (and no token) is issued."""
+        with _verify_request_stub(False):
+            unsubscribe_module.unsubscribe_redirect(email="victim@example.com", name="LETTER-1")
+        assert "location" not in frappe_stub.local.response
+
+    def test_signed_request_redirects_with_matching_token(self):
+        with _verify_request_stub(True):
+            unsubscribe_module.unsubscribe_redirect(email="User@Example.com", name="LETTER-1")
+        location = frappe_stub.local.response["location"]
+        assert "email=user@example.com" in location
+        expected_token = unsubscribe_module._sign_email("user@example.com")
+        assert f"token={expected_token}" in location
 
 
 # ===========================================================================

@@ -8,10 +8,12 @@ def get_context(context):
     email  = frappe.utils.cstr(frappe.request.args.get("email", "")).strip().lower()
     letter = frappe.utils.cstr(frappe.request.args.get("letter", "")).strip()
     saved  = frappe.utils.cint(frappe.request.args.get("saved", 0))
+    token  = frappe.utils.cstr(frappe.request.args.get("token", "")).strip()
 
     context.email  = email
     context.letter = letter
     context.saved  = saved
+    context.token  = token
     context.title  = _("Email Preferences")
     context.no_sidebar = 1
 
