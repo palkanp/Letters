@@ -1181,6 +1181,31 @@ class TestContainerRowStacks:
         ])
         assert html.count('class="ltr-stack"') == 2
 
+    def test_four_or_more_equal_columns_get_2up_grid(self):
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "row", "gap": 0},
+            "children": [{"type": "text", "props": {"html_content": f"<p>{i}</p>"}} for i in range(5)],
+        })
+        assert html.count('class="ltr-stack-2"') == 5
+        assert 'class="ltr-stack"' not in html
+
+    def test_mobile_stack_false_opts_out_of_stacking(self):
+        stacks_html = self._row([
+            {"type": "text", "props": {"html_content": "<p>$54</p>"}},
+            {"type": "button", "props": {"label": "Shop Now"}},
+        ])
+        no_stack_html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "row", "mobile_stack": False},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>$54</p>"}},
+                {"type": "button", "props": {"label": "Shop Now"}},
+            ],
+        })
+        assert "ltr-stack" in stacks_html
+        assert "ltr-stack" not in no_stack_html
+
     def test_wide_padding_gets_pad_hook(self):
         html = ContainerRenderer().render({
             "type": "container",

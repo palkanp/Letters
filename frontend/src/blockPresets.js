@@ -125,7 +125,7 @@ export const BLOCK_PRESET_DEFS = {
           {
             type: "container", label: "Price + CTA",
             props: { layout: "row", background_color: "transparent", vertical_align: "center",
-                     gap: 0, ...noPad },
+                     gap: 0, mobile_stack: false, ...noPad },
             children: [
               { type: "text", label: "Price",
                 props: { html_content: "<p><strong>$450</strong></p>", align: "left",

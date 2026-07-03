@@ -122,7 +122,17 @@ class ContainerRenderer(BlockRenderer):
             # single number+label ends up alone on a 400px-wide line. Give those
             # a 2-up grid instead; wider/fewer-column rows (image+text) still
             # need the full line once stacked, so they keep ltr-stack.
-            stack_cls = "ltr-stack-2" if count >= 4 and all(w is None for w in explicit_widths) else "ltr-stack"
+            #
+            # A row can also opt out of stacking entirely via mobile_stack=False
+            # — e.g. a price + button pair is meant to always sit on one line,
+            # even cramped, rather than break onto two rows on mobile.
+            if p.get("mobile_stack", True) is False:
+                stack_cls = ""
+            elif count >= 4 and all(w is None for w in explicit_widths):
+                stack_cls = "ltr-stack-2"
+            else:
+                stack_cls = "ltr-stack"
+            stack_attr = _class_attr(stack_cls)
 
             cells = ""
             for idx, child in enumerate(children):
@@ -131,7 +141,7 @@ class ContainerRenderer(BlockRenderer):
                 w = explicit_widths[idx] or default_width
                 width_attr = f' width="{w}"'
                 cells += (
-                    f'<td class="{stack_cls}"{width_attr} valign="{row_valign}"'
+                    f'<td{stack_attr}{width_attr} valign="{row_valign}"'
                     f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
                     f'{_render_child(child)}'
                     f'</td>'
