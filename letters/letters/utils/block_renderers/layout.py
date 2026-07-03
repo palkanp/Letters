@@ -278,11 +278,22 @@ class DividerRenderer(BlockRenderer):
             width      = _safe_css_value(p.get("width", "100%"))
             align      = p.get("align", "center")
             text_align = "left" if align == "left" else "right" if align == "right" else "center"
+            if style == "solid":
+                line_cell = (
+                    f'<td style="font-size:0;line-height:0;height:{thickness}px;'
+                    f'background-color:{color};" height="{thickness}">&nbsp;</td>'
+                )
+            else:
+                line_cell = (
+                    f'<td style="font-size:0;line-height:0;height:0;'
+                    f'border-top:{thickness}px {style} {color};'
+                    f'border-right:0;border-bottom:0;border-left:0;">&nbsp;</td>'
+                )
             html = (
                 f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
                 f'<tr><td style="padding:{padding};" align="{text_align}">'
-                f'<hr style="border:0;border-top:{thickness}px {style} {color};'
-                f'width:{width};margin:0 auto;" />'
+                f'<table width="{width}" cellpadding="0" cellspacing="0" border="0"'
+                f' style="border-collapse:collapse;"><tr>{line_cell}</tr></table>'
                 f'</td></tr></table>'
             )
         return _spacing_wrapper(html, p)
