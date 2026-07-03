@@ -74,14 +74,6 @@ bench --site your-site.local run-tests --app letters
 - **Rendering** — the design tree is compiled to inline-styled, table-based HTML server-side before sending, so output is consistent regardless of the recipient's email client.
 - **Scheduling** — `letters.letters.api.process_scheduled_sends` and `letters.letters.api.reconcile_active_sends` run every 5 minutes via Frappe's cron scheduler to handle scheduled and in-flight bulk sends.
 
-## Contributing
-
-Issues and pull requests are welcome. Before opening a PR:
-
-1. Run `npm run lint` and `npm run test` in `frontend/`.
-2. Run the Python test suite via `bench --site your-site.local run-tests --app letters`.
-3. Keep changes scoped — smaller, focused PRs are easier to review.
-
 ## License
 
 [AGPL-3.0](LICENSE) © Palkan Parsana
