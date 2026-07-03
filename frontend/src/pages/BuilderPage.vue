@@ -8,6 +8,8 @@
       :send-options="sendOptions"
       :letter-status="letterStatus"
       :send-progress="sendProgress"
+      :send-stalled="sendStalled"
+      :resuming="resuming"
       :saving="saving"
       :saved-flash="savedFlash"
       :letter-name="editorStore.letterName"
@@ -17,6 +19,7 @@
       @add-container="addContainer"
       @insert="insertBlock"
       @open-settings="showSettings = true"
+      @resume-send="resumeSend"
     />
 
     <!-- ── Body ──────────────────────────────────────────────────────────────── -->
@@ -262,9 +265,9 @@ const {
   showSettings, showTemplatePicker, showScheduleModal, settingsInitialTab,
   saving, savedFlash, loadingLetter, duplicating, scheduling,
   scheduleDate, scheduleTime, minScheduleDate, openScheduleModal,
-  sendProgress, letterStatus,
+  sendProgress, letterStatus, sendStalled, resuming,
   onTemplateSubmit, onTemplateClose, saveNow, saveLetter,
-  sendLetter, scheduleLetter, duplicateLetter,
+  sendLetter, scheduleLetter, duplicateLetter, resumeSend,
 } = useLetter(editorStore, { initialName: props.initialName, onClose: () => emit("close") });
 
 const { openPreview } = usePreview(editorStore, previewText);

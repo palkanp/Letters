@@ -36,6 +36,9 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   // Stall detection: if delivery count stops moving for a while during a
   // "Sending" send, the background jobs may have been dropped (e.g. a queue
   // restart) with no exception raised, so the status never flips to Failed.
+  // sendStalled drives a persistent Resume button in the toolbar — the toast
+  // alone is easy to miss or dismiss, especially after a page reload.
+  const sendStalled = ref(false);
   let _lastDeliveredKey = null;
   let _lastProgressAt = 0;
   let _stallToastId = null;
@@ -338,6 +341,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
 
         if (r.message.status === "Failed" && r.message.delivered === 0) {
           // A send that failed outright (no partial delivery) is resumable.
+          sendStalled.value = true;
           _offerResume("This send failed. Resume where it left off?");
         }
 
@@ -346,9 +350,11 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
           if (key !== _lastDeliveredKey) {
             _lastDeliveredKey = key;
             _lastProgressAt = Date.now();
+            sendStalled.value = false;
             if (_stallToastId) { toast.dismiss(_stallToastId); _stallToastId = null; }
-          } else if (Date.now() - _lastProgressAt > STALL_THRESHOLD_MS && !_stallToastId) {
-            _offerResume("This send hasn't made progress in a while. Resume it?");
+          } else if (Date.now() - _lastProgressAt > STALL_THRESHOLD_MS) {
+            sendStalled.value = true;
+            if (!_stallToastId) _offerResume("This send hasn't made progress in a while. Resume it?");
           }
         }
 
@@ -376,6 +382,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
   async function resumeSend() {
     if (!editorStore.letterDoc?.name || resuming.value) return;
     resuming.value = true;
+    sendStalled.value = false;
     if (_stallToastId) { toast.dismiss(_stallToastId); _stallToastId = null; }
     try {
       const r = await frappe.call({
@@ -482,7 +489,7 @@ export function useLetter(editorStore, { initialName = null, onClose = null } = 
     // schedule modal
     scheduleDate, scheduleTime, minScheduleDate, openScheduleModal,
     // progress
-    sendProgress, letterStatus, resuming,
+    sendProgress, letterStatus, resuming, sendStalled,
     // actions
     loadLetter, onTemplateSubmit, onTemplateClose, saveLetter, saveNow,
     sendLetter, scheduleLetter, duplicateLetter, resumeSend,

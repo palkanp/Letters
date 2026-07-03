@@ -85,6 +85,17 @@
             </span>
           </div>
         </Tooltip>
+        <Tooltip v-if="sendStalled" text="No progress for a while — re-queue the recipients that got stuck.">
+          <Button
+            label="Resume"
+            variant="outline"
+            theme="orange"
+            size="sm"
+            icon="lucide-play"
+            :loading="resuming"
+            @click="emit('resume-send')"
+          />
+        </Tooltip>
       </template>
 
       <!-- Sent / Failed / Partial: status badge only -->
@@ -97,6 +108,16 @@
         >
           {{ letterStatus === 'Sent' ? 'Sent' : letterStatus === 'Partial' ? 'Partially sent' : 'Failed' }}
         </Badge>
+        <Button
+          v-if="letterStatus === 'Failed' || letterStatus === 'Partial'"
+          label="Resume"
+          variant="outline"
+          theme="orange"
+          size="sm"
+          icon="lucide-play"
+          :loading="resuming"
+          @click="emit('resume-send')"
+        />
       </template>
 
       <!-- Scheduled: status badge with time -->
@@ -144,13 +165,15 @@ const props = defineProps({
   sendOptions: { type: Array, default: () => [] },
   letterStatus: { type: String, default: null },
   sendProgress: { type: Object, default: () => ({ sent: 0, delivered: 0, failed: 0, total: 0 }) },
+  sendStalled: Boolean,
+  resuming: Boolean,
   saving: Boolean,
   savedFlash: Boolean,
   letterName: { type: String, default: "" },
   scheduledAt: { type: String, default: "" },
   canSend: Boolean,
 });
-const emit = defineEmits(["add-block", "add-container", "insert", "open-settings"]);
+const emit = defineEmits(["add-block", "add-container", "insert", "open-settings", "resume-send"]);
 
 // Live count of emails actually handed to SMTP. Falls back to the accepted
 // (queued) count for older progress payloads that predate `delivered`.
