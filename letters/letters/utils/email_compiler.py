@@ -21,6 +21,10 @@ _HTML_WRAPPER = """\
                 border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-stack-2 {{ display:inline-block !important; width:50% !important; max-width:50% !important;
                   border-right:0 !important; box-sizing:border-box !important; }}
+  .ltr-vdivider {{ display:block !important; width:100% !important; max-width:100% !important;
+                    box-sizing:border-box !important; }}
+  .ltr-vdivider table {{ width:100% !important; }}
+  .ltr-vdivider div {{ display:block !important; width:100% !important; height:1px !important; }}
   .ltr-pad-x {{ padding-left:20px !important; padding-right:20px !important; }}
   .ltr-fs-xl {{ font-size:26px !important; line-height:1.25 !important; }}
   .ltr-fs-lg {{ font-size:21px !important; line-height:1.3 !important; }}

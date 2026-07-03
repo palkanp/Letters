@@ -100,16 +100,28 @@ class ContainerRenderer(BlockRenderer):
             # collapses an image column next to a text-heavy one. Browsers
             # balance them, which is why the preview looked fine but the inbox
             # did not.
+            #
+            # A vertical divider is a hairline, not a content column — giving
+            # it an equal 1/N share (e.g. 20% in a 3-column-plus-2-dividers
+            # row) steals width from the real columns and squeezes their text
+            # into a much narrower box than intended. Give dividers a small
+            # fixed width instead, and share the rest among actual content.
+            def _is_vdivider(child: dict) -> bool:
+                return child.get("type") == "divider" and child.get("props", {}).get("orientation") == "vertical"
+
             def _child_width(child: dict):
                 props = child.get("props", {})
                 # block_width is set by image/text blocks; width is set by sub-containers
                 w = props.get("block_width", "") or props.get("width", "")
                 if w and w not in ("auto", "100%", "0px", ""):
                     return w
+                if _is_vdivider(child):
+                    return "24px"
                 return None
 
-            explicit_widths = [_child_width(c) for c in children]
-            default_width   = f"{round(100 / count)}%"  # equal share for implicit cells
+            explicit_widths  = [_child_width(c) for c in children]
+            content_count    = sum(1 for c in children if not _is_vdivider(c)) or 1
+            default_width    = f"{round(100 / content_count)}%"  # equal share among real content cells
 
             # Map the parent container's vertical_align to HTML valign for all cells
             _va_map = {"center": "middle", "flex-start": "top", "top": "top",
@@ -126,18 +138,22 @@ class ContainerRenderer(BlockRenderer):
             has_button   = any(c.get("type") == "button" for c in children)
             auto_no_stack = count == 2 and has_button
 
-            # Narrow, uniform-width rows (4+ short items, e.g. a stat strip) waste
-            # most of the screen if each stacks to full width on mobile — a
-            # single number+label ends up alone on a 400px-wide line. Give those
-            # a 2-up grid instead; wider/fewer-column rows (image+text) still
-            # need the full line once stacked, so they keep ltr-stack.
+            # Narrow, uniform-width rows (4+ short content items, e.g. a stat
+            # strip) waste most of the screen if each stacks to full width on
+            # mobile — a single number+label ends up alone on a 400px-wide
+            # line. Give those a 2-up grid instead; wider/fewer-column rows
+            # (image+text) still need the full line once stacked, so they
+            # keep ltr-stack. Dividers don't count toward "how many columns"
+            # here — they're hairlines, not stat items.
+            content_implicit = [
+                w for c, w in zip(children, explicit_widths) if not _is_vdivider(c)
+            ]
             if p.get("mobile_stack", not auto_no_stack) is False:
                 stack_cls = ""
-            elif count >= 4 and all(w is None for w in explicit_widths):
+            elif content_count >= 4 and all(w is None for w in content_implicit):
                 stack_cls = "ltr-stack-2"
             else:
                 stack_cls = "ltr-stack"
-            stack_attr = _class_attr(stack_cls)
 
             cells = ""
             for idx, child in enumerate(children):
@@ -145,8 +161,13 @@ class ContainerRenderer(BlockRenderer):
                 right_pad = 0 if idx == len(children) - 1 else half_gap
                 w = explicit_widths[idx] or default_width
                 width_attr = f' width="{w}"'
+                # A vertical divider between stacked columns should read as a
+                # horizontal rule once those columns stack full-width on
+                # mobile, not a 1px-wide sliver floating in the middle of a
+                # full-width row.
+                cell_cls = "ltr-vdivider" if (stack_cls and _is_vdivider(child)) else stack_cls
                 cells += (
-                    f'<td{stack_attr}{width_attr} valign="{row_valign}"'
+                    f'<td{_class_attr(cell_cls)}{width_attr} valign="{row_valign}"'
                     f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
                     f'{_render_child(child)}'
                     f'</td>'

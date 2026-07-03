@@ -1224,6 +1224,50 @@ class TestContainerRowStacks:
         })
         assert "ltr-stack" in html
 
+    def test_vertical_dividers_dont_steal_column_width(self):
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "row"},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>A</p>"}},
+                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "text", "props": {"html_content": "<p>B</p>"}},
+                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "text", "props": {"html_content": "<p>C</p>"}},
+            ],
+        })
+        assert html.count('width="33%"') == 3
+        assert html.count('width="24px"') == 2
+
+    def test_vertical_dividers_get_flatten_hook_when_stacking(self):
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "row"},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>A</p>"}},
+                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "text", "props": {"html_content": "<p>B</p>"}},
+            ],
+        })
+        assert 'class="ltr-vdivider"' in html
+        assert "ltr-stack" in html  # content cells still stack normally
+
+    def test_vertical_dividers_excluded_from_2up_grid_threshold(self):
+        # 3 real content cells + 2 dividers shouldn't trip the >=4 stat-row
+        # heuristic (that's for 4+ actual content items, not divider count).
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "row"},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>A</p>"}},
+                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "text", "props": {"html_content": "<p>B</p>"}},
+                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "text", "props": {"html_content": "<p>C</p>"}},
+            ],
+        })
+        assert "ltr-stack-2" not in html
+
     def test_wide_padding_gets_pad_hook(self):
         html = ContainerRenderer().render({
             "type": "container",
