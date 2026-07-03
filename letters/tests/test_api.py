@@ -125,7 +125,11 @@ GETALL: dict[str, list] = {}
 
 
 def _route_get_all(doctype, *a, **k):
-    return GETALL.get(doctype, [])
+    rows = GETALL.get(doctype, [])
+    pluck = k.get("pluck")
+    if pluck:
+        return [row.get(pluck) if isinstance(row, dict) else row for row in rows]
+    return rows
 
 
 def _reset():
@@ -539,16 +543,23 @@ class TestExecuteSend:
             C.return_value.compile.return_value = "<html></html>"
             api_module._execute_send("SD-001", "CAMP-001")
 
-    def test_sends_one_email_per_recipient(self):
+    def test_bulk_sends_via_single_sendmail_call(self):
+        """The whole recipient list goes to core's Email Queue in one call
+        (queue_separately=True fans it out), not a per-recipient sendmail loop."""
         self._docs(recipients=[_recipient("a@b.com"), _recipient("c@d.com")])
         self._run()
-        assert frappe_stub.sendmail.call_count == 2
+        assert frappe_stub.sendmail.call_count == 1
+        assert sorted(frappe_stub.sendmail.call_args.kwargs["recipients"]) == ["a@b.com", "c@d.com"]
 
-    def test_marks_each_recipient_sent(self):
+    def test_marks_pending_recipients_queued_via_sql(self):
+        """Rows are flipped to "Sent" (== accepted into the Email Queue) via a
+        bulk UPDATE, not by mutating each child row in Python."""
         rows = [_recipient("a@b.com"), _recipient("c@d.com")]
         self._docs(recipients=rows)
         self._run()
-        assert all(r.status == "Sent" for r in rows)
+        call = frappe_stub.db.sql.call_args
+        assert "tabEmail Send Recipient" in call.args[0]
+        assert call.args[1] == "SD-001"
 
     def test_skips_already_sent_recipients(self):
         """Resume: a recipient already Sent is not re-delivered."""
@@ -558,64 +569,36 @@ class TestExecuteSend:
         assert frappe_stub.sendmail.call_count == 1
         assert frappe_stub.sendmail.call_args.kwargs["recipients"] == ["new@b.com"]
 
-    def test_marks_send_doc_sent_on_full_success(self):
+    def test_marks_send_doc_sending_on_full_success(self):
         self._docs(recipients=[_recipient("a@b.com")])
         self._run()
-        # Finalised via a targeted parent-only set_value (no full child rewrite).
+        # Stays "Sending": actual per-recipient delivery is tracked live off
+        # core's Email Queue and settled to a terminal status elsewhere
+        # (get_send_progress / reconcile_active_sends).
         frappe_stub.db.set_value.assert_any_call(
             "Email Send", "SD-001",
-            {"status": "Sent", "sent_count": 1},
+            {"status": "Sending", "sent_count": 1},
             update_modified=False,
         )
 
-    def test_marks_letter_sent_on_full_success(self):
+    def test_marks_letter_sending_on_full_success(self):
         self._docs(recipients=[_recipient("a@b.com")])
         self._run()
         frappe_stub.db.set_value.assert_any_call(
-            "Letter", "CAMP-001", "status", "Sent",
+            "Letter", "CAMP-001", "status", "Sending",
             update_modified=False,
         )
 
-    def test_partial_failure_marks_send_partial_and_letter_partial(self):
-        # When some recipients succeed and some fail the send is Partial and the
-        # campaign is also marked Partial (not Failed). Do NOT change this — the
-        # product intentionally treats a partial send as Partial, not Failed.
-        rows = [_recipient("good@b.com"), _recipient("bad@b.com")]
-        self._docs(recipients=rows)
-
-        def sendmail_se(**kw):
-            if kw["recipients"] == ["bad@b.com"]:
-                raise Exception("bad address")
-
-        frappe_stub.sendmail.side_effect = sendmail_se
-        self._run()
-
-        frappe_stub.db.set_value.assert_any_call(
-            "Email Send", "SD-001",
-            {"status": "Partial", "sent_count": 1},
-            update_modified=False,
-        )
-        frappe_stub.db.set_value.assert_any_call(
-            "Letter", "CAMP-001", "status", "Partial",
-            update_modified=False,
-        )
-        assert rows[0].status == "Sent"
-        assert rows[1].status == "Failed"
-
-    def test_all_fail_marks_send_and_letter_failed(self):
+    def test_sendmail_failure_marks_send_and_letter_failed(self):
+        # There is no per-recipient partial path inside _execute_send anymore:
+        # one bulk sendmail() call either succeeds for the whole batch or raises,
+        # in which case every not-yet-sent recipient is marked Failed.
         rows = [_recipient("a@b.com"), _recipient("c@d.com")]
         self._docs(recipients=rows)
         frappe_stub.sendmail.side_effect = Exception("SMTP down")
         self._run()
-        frappe_stub.db.set_value.assert_any_call(
-            "Email Send", "SD-001",
-            {"status": "Failed", "sent_count": 0},
-            update_modified=False,
-        )
-        frappe_stub.db.set_value.assert_any_call(
-            "Letter", "CAMP-001", "status", "Failed",
-            update_modified=False,
-        )
+        frappe_stub.db.set_value.assert_any_call("Email Send", "SD-001", "status", "Failed")
+        frappe_stub.db.set_value.assert_any_call("Letter", "CAMP-001", "status", "Failed")
 
     def test_recipient_failure_is_logged(self):
         self._docs(recipients=[_recipient("a@b.com")])
