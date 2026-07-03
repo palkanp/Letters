@@ -125,11 +125,18 @@ class RichTextRenderer(BlockRenderer):
         if align and align != "left":
             p_style += f"text-align:{align};"
             p_last_style += f"text-align:{align};"
+        # List items always wrap their text in a block-level <p> (TipTap default).
+        # A block element inside <li> makes many clients (esp. mobile Gmail) push
+        # the bullet/number marker onto its own line before the paragraph starts.
+        # Unwrap the <p> entirely so <li> contains inline content directly.
+        html_content = html_content.replace("<li><p>", "<li>").replace("</p></li>", "</li>")
         html_content = html_content.replace("<p>", f"<p style=\"{p_style}\">")
         # Lists: use inside positioning so markers stay next to text even when the
         # block is center-aligned. Email clients default to outside + browser padding,
         # which pushes numbers/bullets far from the text on non-left-aligned blocks.
         list_style = "list-style-position:inside;padding-left:0;margin:0.5em 0;"
+        if align and align != "left":
+            list_style += f"text-align:{align};"
         html_content = html_content.replace("<ul>", f'<ul style="{list_style}">')
         html_content = html_content.replace("<ol>", f'<ol style="{list_style}">')
         # Replace only the final </p> to apply the last-paragraph zero margin.
