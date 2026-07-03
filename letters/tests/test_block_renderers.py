@@ -1356,6 +1356,16 @@ class TestCompilerMobileStyle:
         assert ".ltr-stack" in html
         assert ".ltr-fs-xl" in html
 
+    def test_media_breakpoint_tracks_email_width(self):
+        # The mobile breakpoint must follow the email's own width, not a fixed
+        # 600, so a wider email stacks on screens narrower than it (no tablet
+        # dead-zone) and thumbnails/previews stay consistent at any width.
+        wide = EmailCompiler("[]", email_width=800).compile()
+        assert "@media only screen and (max-width:800px)" in wide
+        assert "max-width:800px" in wide  # the email card itself, too
+        narrow = EmailCompiler("[]", email_width=400).compile()
+        assert "@media only screen and (max-width:400px)" in narrow
+
     def test_large_text_block_gets_scale_hook(self):
         blocks = '[{"type":"text","props":{"html_content":"<p>Big</p>","font_size":"34px"}}]'
         html = EmailCompiler(blocks).compile()

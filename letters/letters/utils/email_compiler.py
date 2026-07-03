@@ -20,7 +20,7 @@ _HTML_WRAPPER = """\
 @media (prefers-color-scheme: dark) {{
   body, .body-wrap {{ background-color:#1f2124 !important; }}
 }}
-@media only screen and (max-width:600px) {{
+@media only screen and (max-width:{email_width}px) {{
   .ltr-stack {{ display:block !important; width:100% !important; max-width:100% !important;
                 padding-left:0 !important; padding-right:0 !important;
                 border-right:0 !important; box-sizing:border-box !important; }}

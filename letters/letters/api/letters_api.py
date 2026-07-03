@@ -122,7 +122,8 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
         try:
             html = doc.render_preview_html(preview_text=preview_text, email_width=email_width)
             blocks_data = json.loads(doc.blocks_json or "[]")
-            return {"html": html, "first_bg": _first_bg(blocks_data)}
+            ew = int(email_width) if email_width else (getattr(doc, "email_width", None) or 600)
+            return {"html": html, "first_bg": _first_bg(blocks_data), "email_width": ew}
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), "Letters render_preview error")
             frappe.throw(str(e))
@@ -130,7 +131,7 @@ def render_preview(name: str | None = None, blocks: str | None = None, preview_t
         blocks_data = blocks if isinstance(blocks, list) else json.loads(blocks or "[]")
         try:
             compiler = EmailCompiler(blocks_data, preview_text=preview_text or "", email_width=email_width or 600)
-            return {"html": compiler.compile(), "first_bg": _first_bg(blocks_data)}
+            return {"html": compiler.compile(), "first_bg": _first_bg(blocks_data), "email_width": int(email_width) if email_width else 600}
         except Exception as e:
             frappe.log_error(frappe.get_traceback(), "Letters render_preview error")
             frappe.throw(str(e))

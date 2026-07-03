@@ -22,19 +22,22 @@ const props = defineProps({
   iconClass: { type: String, default: "w-5 h-5" },
 });
 
-// Must stay ABOVE the email's mobile breakpoint (@media max-width:600px, which
-// is inclusive of 600). At exactly 600 the thumbnail would render in mobile
-// mode and stack multi-column rows; a wider viewport keeps it as desktop. The
-// 600px-max email card stays centred, and the reset CSS paints the surrounding
-// margin with the email's own background so it blends in.
-const IFRAME_WIDTH = 640;
+// The email's mobile breakpoint is @media (max-width:{email_width}px) — it
+// stacks whenever the viewport is at or below the letter's own width. To render
+// the thumbnail as DESKTOP we must give the iframe a viewport a bit WIDER than
+// that letter's width, so the breakpoint doesn't fire. The width comes back
+// from render_preview; until then we default to 600 + buffer. The email card
+// stays centred and the reset CSS paints the margin with the email's own
+// background, so the extra width blends in.
+const BREAKPOINT_BUFFER = 40;
 const el = ref(null);
 const previewHtml = ref(null);
 const loading = ref(false);
 const scale = ref(0.35);
+const iframeWidth = ref(600 + BREAKPOINT_BUFFER);
 
 const iframeStyle = computed(() => ({
-  width: `${IFRAME_WIDTH}px`,
+  width: `${iframeWidth.value}px`,
   height: "800px",
   transform: `scale(${scale.value})`,
   transformOrigin: "top left",
@@ -45,7 +48,6 @@ let observer = null;
 async function fetchPreview() {
   if (previewHtml.value || loading.value) return;
   loading.value = true;
-  if (el.value) scale.value = el.value.offsetWidth / IFRAME_WIDTH;
   try {
     const res = await frappe.call({
       method: "letters.letters.api.render_preview",
@@ -53,6 +55,10 @@ async function fetchPreview() {
     });
     let html = res.message?.html || null;
     if (html) {
+      // Size the iframe viewport just above this letter's own width so the
+      // mobile breakpoint (max-width:{email_width}) doesn't fire in the thumbnail.
+      iframeWidth.value = (res.message?.email_width || 600) + BREAKPOINT_BUFFER;
+      if (el.value) scale.value = el.value.offsetWidth / iframeWidth.value;
       const bg = res.message?.first_bg || "#ffffff";
       const reset = `<style>
 html,body{margin:0!important;padding:0!important;background:${bg}!important;}
