@@ -99,8 +99,13 @@ class ContainerRenderer(BlockRenderer):
         # This container's own actual rendered width, propagated down from
         # its parent (see _render_child). Defaults to the full email body —
         # correct for a top-level block, and for any container that isn't
-        # itself nested inside a narrower row column.
+        # itself nested inside a narrower row column. Children render inside
+        # this container's own padding, so their available width is smaller
+        # still — subtract it before passing anything further down.
         own_ref       = int(p.get("_ctx_ref_width", 600))
+        own_pl        = int(p.get("padding_left",  16))
+        own_pr        = int(p.get("padding_right", 16))
+        content_ref   = max(own_ref - own_pl - own_pr, 1)
 
         if not children:
             return ""  # Don't render empty containers
@@ -174,7 +179,8 @@ class ContainerRenderer(BlockRenderer):
 
             def _cell_ref_width(w: str) -> int:
                 # Resolve this cell's own width (percent or px) against the
-                # container's actual rendered width, not a fixed 600px
+                # row's actual available content width (this container's own
+                # width minus its own padding) — not a fixed 600px
                 # assumption — otherwise a narrow column's images compute
                 # their cover-fit aspect-ratio against too much width and
                 # end up over-cropped/zoomed.
@@ -182,13 +188,13 @@ class ContainerRenderer(BlockRenderer):
                     try:
                         return max(int(w[:-2]), 1)
                     except ValueError:
-                        return own_ref
+                        return content_ref
                 if w.endswith("%"):
                     try:
-                        return max(round(own_ref * int(w[:-1]) / 100), 1)
+                        return max(round(content_ref * int(w[:-1]) / 100), 1)
                     except ValueError:
-                        return own_ref
-                return own_ref
+                        return content_ref
+                return content_ref
 
             cells = ""
             for idx, child in enumerate(children):
@@ -196,6 +202,9 @@ class ContainerRenderer(BlockRenderer):
                 right_pad = 0 if idx == len(children) - 1 else half_gap
                 w = explicit_widths[idx] or default_width
                 width_attr = f' width="{w}"'
+                # The cell's own gap padding also eats into the child's real
+                # rendered width.
+                cell_ref = max(_cell_ref_width(w) - left_pad - right_pad, 1)
                 # A vertical divider between stacked columns should read as a
                 # horizontal rule once those columns stack full-width on
                 # mobile, not a 1px-wide sliver floating in the middle of a
@@ -204,7 +213,7 @@ class ContainerRenderer(BlockRenderer):
                 cells += (
                     f'<td{_class_attr(cell_cls)}{width_attr} valign="{row_valign}"'
                     f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
-                    f'{_render_child(child, _cell_ref_width(w))}'
+                    f'{_render_child(child, cell_ref)}'
                     f'</td>'
                 )
             inner = (
@@ -215,7 +224,7 @@ class ContainerRenderer(BlockRenderer):
             # Column (stacked) — each child is a full-width row in a single table.
             # We use table rows with a spacer row between children instead of
             # margin/div, because Outlook ignores margin on <div>.
-            rendered = [(_render_child(c, own_ref), c) for c in children]
+            rendered = [(_render_child(c, content_ref), c) for c in children]
             rendered = [(html, c) for html, c in rendered if html]
             rows = ""
             for idx, (child_html, _) in enumerate(rendered):

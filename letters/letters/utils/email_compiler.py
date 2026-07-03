@@ -24,6 +24,8 @@ _HTML_WRAPPER = """\
   .ltr-vdivider {{ display:block !important; width:100% !important; max-width:100% !important;
                     box-sizing:border-box !important; }}
   .ltr-vdivider table {{ width:100% !important; }}
+  .ltr-vdivider td {{ width:100% !important; padding:12px 0 !important; text-align:left !important;
+                       box-sizing:border-box !important; }}
   .ltr-vdivider div {{ display:block !important; width:100% !important; height:1px !important; }}
   .ltr-pad-x {{ padding-left:20px !important; padding-right:20px !important; }}
   .ltr-fs-xl {{ font-size:26px !important; line-height:1.25 !important; }}

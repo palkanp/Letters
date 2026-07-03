@@ -55,9 +55,9 @@ export function usePreview(editorStore, previewText) {
 <meta charset="utf-8" />
 <title>${letterTitle} · Preview</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #e5e7eb; }
+  html, body { margin: 0; width: 100%; height: 100%; background: #e5e7eb; overflow-x: hidden; }
   #__preview-stage {
-    height: 100vh; display: flex; justify-content: center; align-items: stretch;
+    width: 100%; height: 100vh; display: flex; justify-content: center; align-items: stretch;
     overflow: hidden;
   }
   #__preview-frame {

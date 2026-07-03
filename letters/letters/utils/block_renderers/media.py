@@ -63,9 +63,13 @@ class ImageRenderer(BlockRenderer):
                 # rendered width (propagated down via _ctx_ref_width by its
                 # parent container), not a blanket 600px email body — an image
                 # nested in a 300px column needs a 300px-based ratio, or the
-                # browser computes too short a box and over-crops.
+                # browser computes too short a box and over-crops. The image
+                # block's own left/right padding also eats into that width,
+                # same as any container's padding would.
                 ctx_ref = int(p.get("_ctx_ref_width", 600))
-                ref_w   = _aspect_ref_width(image_width, ref=ctx_ref)
+                ctx_pl  = int(p.get("padding_left",  16))
+                ctx_pr  = int(p.get("padding_right", 16))
+                ref_w   = _aspect_ref_width(image_width, ref=max(ctx_ref - ctx_pl - ctx_pr, 1))
                 h_style = (
                     f"height:auto;aspect-ratio:{ref_w}/{h_num};"
                     f"object-fit:cover;object-position:{obj_pos};"

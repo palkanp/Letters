@@ -1149,7 +1149,10 @@ class TestImageResponsiveHeight:
         return ImageRenderer().render({"type": "image", "props": props})
 
     def test_cover_uses_aspect_ratio_not_frozen_height(self):
-        html = self._r({"image_width": "100%", "image_height": "300px", "image_fit": "cover"})
+        html = self._r({
+            "image_width": "100%", "image_height": "300px", "image_fit": "cover",
+            "padding_left": 0, "padding_right": 0,
+        })
         assert "aspect-ratio:600/300" in html
         assert "height:auto" in html
         assert "height:300px" not in html  # no frozen height that would crop on mobile
@@ -1173,15 +1176,17 @@ class TestImageResponsiveHeight:
         # actual rendered width or object-fit:cover over-crops it.
         html = ContainerRenderer().render({
             "type": "container",
-            "props": {"layout": "row"},
+            "props": {"layout": "row", "gap": 0, "padding_left": 0, "padding_right": 0},
             "children": [
                 {"type": "image", "props": {
                     "image_url": "https://x.com/a.png",
                     "image_width": "100%", "image_height": "130px", "image_fit": "cover",
+                    "padding_left": 0, "padding_right": 0,
                 }},
                 {"type": "image", "props": {
                     "image_url": "https://x.com/b.png",
                     "image_width": "100%", "image_height": "130px", "image_fit": "cover",
+                    "padding_left": 0, "padding_right": 0,
                 }},
             ],
         })
