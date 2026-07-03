@@ -14,13 +14,14 @@ _HTML_WRAPPER = """\
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-<meta name="color-scheme" content="light dark" />
-<meta name="supported-color-schemes" content="light dark" />{font_links}
+<meta name="color-scheme" content="light only" />
+<meta name="supported-color-schemes" content="light only" />{font_links}
 <style type="text/css">
-@media (prefers-color-scheme: dark) {{
-  body, .body-wrap {{ background-color:#1f2124 !important; }}
-}}
+:root {{ color-scheme: light only; supported-color-schemes: light only; }}
 @media only screen and (max-width:{email_width}px) {{
+  .ltr-col {{ display:block !important; width:100% !important; max-width:100% !important;
+              padding-left:0 !important; padding-right:0 !important;
+              border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-stack {{ display:block !important; width:100% !important; max-width:100% !important;
                 padding-left:0 !important; padding-right:0 !important;
                 border-right:0 !important; box-sizing:border-box !important; }}
@@ -42,7 +43,7 @@ _HTML_WRAPPER = """\
 {preheader}
 <table class="body-wrap" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="background-color:#f3f4f6;">
-<tr><td align="center" style="padding:24px 0;">
+<tr><td align="center" style="padding:24px 16px;">
 <table class="email-card" width="100%" cellpadding="0" cellspacing="0" border="0"
        style="background-color:#ffffff;border-radius:4px;overflow:hidden;max-width:{email_width}px;width:100%;">
 <tr><td style="font-size:0;line-height:0;">{blocks}</td></tr>

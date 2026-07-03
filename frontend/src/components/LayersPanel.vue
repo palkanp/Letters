@@ -191,21 +191,24 @@ let dragStart = null; // { id, x, y } — pending drag before threshold is cross
 // rejected after the fact — otherwise a geometrically-nearest-but-invalid
 // candidate would null out the drop state and fall through to "append to
 // root" on release.
+//
+// Ties (or near-ties, e.g. from sub-pixel rounding) are broken in favor of
+// the deepest match: DOM order is pre-order, so a container's own row is
+// always encountered before its children, and using <= (not <) means later
+// — i.e. more deeply nested — rows overwrite the current best on a tie.
 function closestRow(y) {
   if (!listWrapper.value) return null;
-  let containing = null; // last (deepest) row whose rect contains y — DOM order is pre-order, so ancestors precede descendants; keep overwriting to prefer the more specific match on boundary ties
-  let closest = null;
-  let closestDist = Infinity;
+  let best = null;
+  let bestDist = Infinity;
   for (const el of listWrapper.value.querySelectorAll("[data-block-layer-id]")) {
     const id = Number(el.dataset.blockLayerId);
     if (id === dragId.value || isDescendant(dragId.value, id)) continue;
 
     const rect = el.getBoundingClientRect();
-    if (y >= rect.top && y <= rect.bottom) { containing = el; continue; }
-    const dist = y < rect.top ? rect.top - y : y - rect.bottom;
-    if (dist < closestDist) { closestDist = dist; closest = el; }
+    const dist = y < rect.top ? rect.top - y : y > rect.bottom ? y - rect.bottom : 0;
+    if (dist <= bestDist) { bestDist = dist; best = el; }
   }
-  return containing || closest;
+  return best;
 }
 
 function updateDropState(x, y) {

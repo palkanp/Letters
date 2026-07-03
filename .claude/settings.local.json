@@ -36,7 +36,14 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Read(//Users/palkanparsana/.claude/**)",
       "Bash(mkdir -p /Users/palkanparsana/Desktop/Letters/.claude/skills/frappe-ui)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(bench --site letters.localhost console)",
+      "Bash(bench --site letters.localhost execute letters.letters.api.sending.resume_send --kwargs '{\"name\":\"2ljuvesgb7\"}')",
+      "Bash(rm -f /Users/palkanparsana/Desktop/Letters/letters/letters/api/_guard_test_helper.py /tmp/guard_test*.py /tmp/guard_debug*.py /tmp/guard_result*.txt)",
+      "Bash(bench --site letters.localhost execute letters.letters.api.sending._has_pending_jobs --kwargs '{\"letter_name\":\"2ljuvesgb7\"}')",
+      "Bash(grep -A 5 -B 5 \"email_css\\\\|color-scheme\\\\|dark\" /Users/palkanparsana/frappe-bench/apps/frappe/frappe/hooks.py | head -40)",
+      "Bash(grep -r \"prefers-color-scheme\\\\|dark-mode\\\\|color-scheme\\\\|@media.*dark\" /Users/palkanparsana/frappe-bench/apps/frappe/frappe --include=\"*.scss\" --include=\"*.css\" --include=\"*.html\" 2>/dev/null)",
+      "Bash(python3 -c ' *)"
     ]
   }
 }

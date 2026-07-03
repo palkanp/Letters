@@ -338,8 +338,10 @@ class TestColumnsRenderer:
         html = self.renderer.render(block)
         assert "Left" in html
         assert "Right" in html
-        # Cells carry the mobile-stack hook and a 50% desktop width.
-        assert html.count('class="ltr-stack" width="50%"') == 2
+        # Columns are fluid inline-block divs that stack without a media query.
+        assert html.count('class="ltr-col"') == 2
+        assert "display:inline-block" in html
+        assert "max-width:280px" in html  # (600 - 20 - 20) / 2
 
     def test_three_columns(self):
         block = self._block([
@@ -348,7 +350,7 @@ class TestColumnsRenderer:
             {"blocks": [self._text_child("C")]},
         ])
         html = self.renderer.render(block)
-        assert html.count('class="ltr-stack" width="33%"') == 3
+        assert html.count('class="ltr-col"') == 3
 
     def test_empty_column_renders_nbsp(self):
         block = self._block([{"blocks": []}, {"blocks": [self._text_child("X")]}])
@@ -1244,12 +1246,16 @@ class TestContainerRowStacks:
             {"type": "container", "props": {"layout": "row"}, "children": children}
         )
 
-    def test_row_cells_carry_stack_hook(self):
+    def test_row_cells_are_fluid_columns(self):
+        # A normal content row renders fluid inline-block columns that stack on
+        # phones without a media query (works even where <head> styles are
+        # dropped, e.g. the Gmail app).
         html = self._row([
             {"type": "text", "props": {"html_content": "<p>A</p>"}},
             {"type": "text", "props": {"html_content": "<p>B</p>"}},
         ])
-        assert html.count('class="ltr-stack"') == 2
+        assert html.count('class="ltr-col"') == 2
+        assert "display:inline-block" in html
 
     def test_four_or_more_equal_columns_get_2up_grid(self):
         html = ContainerRenderer().render({
@@ -1260,11 +1266,29 @@ class TestContainerRowStacks:
         assert html.count('class="ltr-stack-2"') == 5
         assert 'class="ltr-stack"' not in html
 
-    def test_price_and_button_row_auto_opts_out_of_stacking(self):
+    def test_content_and_button_row_stacks_on_mobile(self):
+        # Regression: a two-column section with a CTA button in one column used
+        # to be auto-flagged "don't stack" purely because it contained a button,
+        # so it stayed cramped side-by-side in the phone inbox. A normal
+        # content + button row must stack like any other two-column row.
         html = self._row([
-            {"type": "text", "props": {"html_content": "<p>$54</p>"}},
+            {"type": "text", "props": {"html_content": "<p>Big headline here</p>"}},
             {"type": "button", "props": {"label": "Shop Now"}},
         ])
+        assert html.count('class="ltr-col"') == 2
+
+    def test_price_button_pair_with_explicit_opt_out_stays_side_by_side(self):
+        # A genuinely tight price/label + button pair opts out explicitly via
+        # mobile_stack=False (as the product-card presets do) and keeps its two
+        # columns on one line on mobile.
+        html = ContainerRenderer().render({
+            "type": "container",
+            "props": {"layout": "row", "mobile_stack": False},
+            "children": [
+                {"type": "text", "props": {"html_content": "<p>$54</p>"}},
+                {"type": "button", "props": {"label": "Shop Now"}},
+            ],
+        })
         assert "ltr-stack" not in html
 
     def test_mobile_stack_false_opts_out_of_stacking(self):
@@ -1280,7 +1304,10 @@ class TestContainerRowStacks:
                 {"type": "text", "props": {"html_content": "<p>B</p>"}},
             ],
         })
-        assert "ltr-stack" in stacks_html
+        # Stacking rows use fluid columns; the opted-out row uses neither hook
+        # (a plain table that stays side-by-side).
+        assert "ltr-col" in stacks_html
+        assert "ltr-col" not in no_stack_html
         assert "ltr-stack" not in no_stack_html
 
     def test_mobile_stack_true_forces_stacking_for_price_button_row(self):
@@ -1292,7 +1319,7 @@ class TestContainerRowStacks:
                 {"type": "button", "props": {"label": "Shop Now"}},
             ],
         })
-        assert "ltr-stack" in html
+        assert "ltr-col" in html
 
     def test_vertical_dividers_dont_steal_column_width(self):
         html = ContainerRenderer().render({
@@ -1397,6 +1424,7 @@ class TestCompilerMobileStyle:
     def test_wrapper_includes_media_query(self):
         html = EmailCompiler("[]").compile()
         assert "@media only screen and (max-width:600px)" in html
+        assert ".ltr-col" in html
         assert ".ltr-stack" in html
         assert ".ltr-fs-xl" in html
 

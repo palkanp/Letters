@@ -27,6 +27,44 @@ def _render_child(child: dict, ctx_ref_width: int | None = None) -> str:
     return renderer.render(child)
 
 
+def _fluid_columns(
+    cols: list[tuple[str, int, str]], half_gap: int, valign_css: str, col_class: str = "ltr-col"
+) -> str:
+    """Lay out columns side-by-side on desktop but stack on phones WITHOUT a media query.
+
+    Each column is an inline-block <div> capped at its desktop width via
+    max-width; the wrapper's font-size:0 collapses the whitespace between the
+    inline-blocks. When the screen is narrower than the columns' combined
+    widths the trailing columns wrap underneath — so the row stacks even in
+    clients that drop the <head> <style> (e.g. the Gmail app), where the
+    responsive media query never runs. A conditional Outlook ghost table
+    restores real table columns there, since Word-rendered Outlook ignores
+    inline-block. The .ltr-col hook lets the head media query flatten each
+    column to full width where it *is* honoured (Apple Mail, most webmail).
+
+    cols: (inner_html, max_width_px, extra_css) tuples in visual order.
+    """
+    n = len(cols)
+    parts = [
+        '<div style="font-size:0;">'
+        '<!--[if mso]><table role="presentation" width="100%" cellpadding="0"'
+        ' cellspacing="0" border="0"><tr><![endif]-->'
+    ]
+    for idx, (inner, max_w, extra) in enumerate(cols):
+        left  = 0 if idx == 0     else half_gap
+        right = 0 if idx == n - 1 else half_gap
+        parts.append(
+            f'<!--[if mso]><td width="{max_w}" valign="{valign_css}"'
+            f' style="padding:0 {right}px 0 {left}px;"><![endif]-->'
+            f'<div{_class_attr(col_class)} style="display:inline-block;width:100%;'
+            f'max-width:{max_w}px;vertical-align:{valign_css};box-sizing:border-box;'
+            f'padding:0 {right}px 0 {left}px;font-size:14px;{extra}">{inner}</div>'
+            '<!--[if mso]></td><![endif]-->'
+        )
+    parts.append('<!--[if mso]></tr></table><![endif]--></div>')
+    return "".join(parts)
+
+
 class ColumnsRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
@@ -40,8 +78,7 @@ class ColumnsRenderer(BlockRenderer):
             return ""
 
         count     = len(columns)
-        col_width = round(100 / count)
-        half_gap  = round(col_gap / 2)
+        half_gap  = max(round(col_gap / 2), 0)
         outer_pad = _padding(p, 20, 20, 20, 20)
 
         _valign_map = {
@@ -50,35 +87,31 @@ class ColumnsRenderer(BlockRenderer):
         }
         valign = _valign_map.get(p.get("vertical_align", "top"), "top")
 
-        cells = ""
-        for idx, col in enumerate(columns):
-            col_blocks = col.get("blocks", [])
-            col_html = ""
-            for child in col_blocks:
-                col_html += _render_child(child)
+        # This block's own rendered width (full email body unless nested inside a
+        # narrower column), minus its outer padding, is the room the columns
+        # share. Each column is capped at an equal slice of it via max-width so
+        # the fluid layout wraps to a stack on phones (see _fluid_columns).
+        ref         = int(p.get("_ctx_ref_width", 600))
+        content_ref = max(ref - int(p.get("padding_left", 20)) - int(p.get("padding_right", 20)), 1)
+        col_max     = max(content_ref // count, 1)
+        child_ref   = max(col_max - col_gap, 1)
 
-            is_last      = idx == count - 1
-            left_pad     = 0 if idx == 0 else half_gap
-            right_pad    = 0 if is_last  else half_gap
-            border_style = (
+        cols = []
+        for idx, col in enumerate(columns):
+            col_html = "".join(_render_child(c, child_ref) for c in col.get("blocks", []))
+            is_last  = idx == count - 1
+            border   = (
                 f"border-right:1px solid {divider_color};"
                 if show_dividers and not is_last else ""
             )
-            cells += (
-                f'<td class="ltr-stack" width="{col_width}%" valign="{valign}"'
-                f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign};{border_style}">'
-                f'{col_html or "&nbsp;"}'
-                f'</td>'
-            )
+            cols.append((col_html or "&nbsp;", col_max, border))
 
+        inner    = _fluid_columns(cols, half_gap, valign)
         bg_style = f"background-color:{bg};" if bg and bg != "transparent" else ""
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="{bg_style}">'
-            f'<tr><td style="padding:{outer_pad};">'
-            f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-            f'<tr>{cells}</tr>'
-            f'</table></td></tr></table>'
+            f'<tr><td style="padding:{outer_pad};">{inner}</td></tr></table>'
         )
         return _spacing_wrapper(html, p)
 
@@ -87,8 +120,13 @@ class ContainerRenderer(BlockRenderer):
     def render(self, block: dict[str, Any]) -> str:
         p             = block.get("props", {})
         bg            = _safe_css_value(p.get("background_color", "transparent"))
-        border_color  = _safe_css_value(p.get("block_border_color") or p.get("border_color", ""))
-        border_radius = _safe_css_value(p.get("block_border_radius") or p.get("border_radius", "0"))
+        # Honour only the `block_border_*` props the builder's style panel
+        # writes today. The legacy `border_color`/`border_radius` keys are no
+        # longer editable in the canvas, so a container carrying them shows no
+        # border while designing — falling back to them here painted boxes that
+        # only appeared in the inbox, breaking WYSIWYG parity.
+        border_color  = _safe_css_value(p.get("block_border_color", ""))
+        border_radius = _safe_css_value(p.get("block_border_radius", "0"))
         layout        = p.get("layout", "column")
         gap           = int(p.get("gap", 12))
         padding       = _padding(p, 16, 16, 16, 16)
@@ -151,14 +189,13 @@ class ContainerRenderer(BlockRenderer):
             row_valign   = _va_map.get(p.get("vertical_align", ""), "top")
             valign_css   = {"top": "top", "middle": "middle", "bottom": "bottom"}.get(row_valign, "top")
 
-            # A price/button (or similar short label + button) pair is meant to
-            # always sit on one line, even cramped, rather than break onto two
-            # rows on mobile. Detect that shape automatically — via an explicit
-            # mobile_stack=False, or a 2-cell row where one cell is a button —
-            # so existing saved letters get the fix without needing their
-            # stored block JSON re-saved from an updated preset.
-            has_button   = any(c.get("type") == "button" for c in children)
-            auto_no_stack = count == 2 and has_button
+            # A row keeps its columns side-by-side on mobile only when the
+            # letter explicitly opts out with mobile_stack=False (e.g. a tight
+            # price/label + button pair that should stay on one line). Every
+            # other row stacks. We deliberately do NOT infer "don't stack" from
+            # the mere presence of a button: a normal two-column section with a
+            # CTA in one column (content + button) is the common case and must
+            # stack on phones, or it stays cramped side-by-side in the inbox.
 
             # Narrow, uniform-width rows (4+ short content items, e.g. a stat
             # strip) waste most of the screen if each stacks to full width on
@@ -170,7 +207,7 @@ class ContainerRenderer(BlockRenderer):
             content_implicit = [
                 w for c, w in zip(children, explicit_widths) if not _is_vdivider(c)
             ]
-            if p.get("mobile_stack", not auto_no_stack) is False:
+            if p.get("mobile_stack", True) is False:
                 stack_cls = ""
             elif content_count >= 4 and all(w is None for w in content_implicit):
                 stack_cls = "ltr-stack-2"
@@ -196,30 +233,47 @@ class ContainerRenderer(BlockRenderer):
                         return content_ref
                 return content_ref
 
-            cells = ""
-            for idx, child in enumerate(children):
-                left_pad  = 0 if idx == 0 else half_gap
-                right_pad = 0 if idx == len(children) - 1 else half_gap
-                w = explicit_widths[idx] or default_width
-                width_attr = f' width="{w}"'
-                # The cell's own gap padding also eats into the child's real
-                # rendered width.
-                cell_ref = max(_cell_ref_width(w) - left_pad - right_pad, 1)
-                # A vertical divider between stacked columns should read as a
-                # horizontal rule once those columns stack full-width on
-                # mobile, not a 1px-wide sliver floating in the middle of a
-                # full-width row.
-                cell_cls = "ltr-vdivider" if (stack_cls and _is_vdivider(child)) else stack_cls
-                cells += (
-                    f'<td{_class_attr(cell_cls)}{width_attr} valign="{row_valign}"'
-                    f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
-                    f'{_render_child(child, cell_ref)}'
-                    f'</td>'
+            has_vdivider = any(_is_vdivider(c) for c in children)
+            if stack_cls == "ltr-stack" and not has_vdivider:
+                # Fluid-hybrid: the common content-column row (no vertical
+                # dividers, not a stat grid, stacking allowed). Columns wrap to
+                # a stack on phones without relying on a media query, so they
+                # stack even in clients that strip <head> styles. Dividers and
+                # stat grids keep the table + media-query path below.
+                cols = []
+                for idx, child in enumerate(children):
+                    left_pad  = 0 if idx == 0 else half_gap
+                    right_pad = 0 if idx == len(children) - 1 else half_gap
+                    w         = explicit_widths[idx] or default_width
+                    max_w     = _cell_ref_width(w)
+                    child_ref = max(max_w - left_pad - right_pad, 1)
+                    cols.append((_render_child(child, child_ref), max_w, ""))
+                inner = _fluid_columns(cols, half_gap, valign_css)
+            else:
+                cells = ""
+                for idx, child in enumerate(children):
+                    left_pad  = 0 if idx == 0 else half_gap
+                    right_pad = 0 if idx == len(children) - 1 else half_gap
+                    w = explicit_widths[idx] or default_width
+                    width_attr = f' width="{w}"'
+                    # The cell's own gap padding also eats into the child's real
+                    # rendered width.
+                    cell_ref = max(_cell_ref_width(w) - left_pad - right_pad, 1)
+                    # A vertical divider between stacked columns should read as a
+                    # horizontal rule once those columns stack full-width on
+                    # mobile, not a 1px-wide sliver floating in the middle of a
+                    # full-width row.
+                    cell_cls = "ltr-vdivider" if (stack_cls and _is_vdivider(child)) else stack_cls
+                    cells += (
+                        f'<td{_class_attr(cell_cls)}{width_attr} valign="{row_valign}"'
+                        f' style="padding:0 {right_pad}px 0 {left_pad}px;vertical-align:{valign_css};">'
+                        f'{_render_child(child, cell_ref)}'
+                        f'</td>'
+                    )
+                inner = (
+                    f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
+                    f'<tr>{cells}</tr></table>'
                 )
-            inner = (
-                f'<table width="100%" cellpadding="0" cellspacing="0" border="0">'
-                f'<tr>{cells}</tr></table>'
-            )
         else:
             # Column (stacked) — each child is a full-width row in a single table.
             # We use table rows with a spacer row between children instead of
