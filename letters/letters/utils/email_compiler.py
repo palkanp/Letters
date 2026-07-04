@@ -37,6 +37,7 @@ _HTML_WRAPPER = """\
                 padding-left:0 !important; padding-right:0 !important;
                 border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-stack-2 {{ display:inline-block !important; width:50% !important; max-width:50% !important;
+                  vertical-align:top !important;
                   border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-vdivider {{ display:block !important; width:100% !important; max-width:100% !important;
                     box-sizing:border-box !important; }}

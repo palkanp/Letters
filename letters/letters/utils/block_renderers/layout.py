@@ -279,8 +279,23 @@ class ContainerRenderer(BlockRenderer):
             else:
                 cells = ""
                 for idx, child in enumerate(children):
-                    left_pad  = 0 if idx == 0 else half_gap
-                    right_pad = 0 if idx == len(children) - 1 else half_gap
+                    # "First/last of the whole row gets no outer padding" only
+                    # makes sense for a single continuous line. ltr-stack-2 wraps
+                    # every 2 cells into their own independent pair on mobile
+                    # (and is still one full row on desktop), so an interior cell
+                    # like idx=1 can end up as the last cell of its own visual
+                    # pair — zeroing padding only at the true row edges (idx 0 and
+                    # len-1) then leaves that pair's two cells with mismatched
+                    # padding versus the next pair, which is what actually made
+                    # the 2nd-column-of-each-pair drift out of alignment. Every
+                    # 2-up cell gets the same symmetric half-gap on both sides
+                    # instead, so every pair — and every same-position cell
+                    # across pairs — looks identical.
+                    if stack_cls == "ltr-stack-2":
+                        left_pad = right_pad = half_gap
+                    else:
+                        left_pad  = 0 if idx == 0 else half_gap
+                        right_pad = 0 if idx == len(children) - 1 else half_gap
                     w = explicit_widths[idx] or default_width
                     width_attr = f' width="{w}"'
                     # The cell's own gap padding also eats into the child's real

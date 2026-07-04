@@ -64,15 +64,16 @@ const innerWrapStyle = computed(() => ({
 }));
 
 // Apply fixed height + object-fit directly on the img so no % chain needed.
-// When a fixed height is set, width must be "auto" (not "100%"): a percentage
-// width on a flex item whose own width is also "auto" is an indeterminate
-// chain some browsers resolve by stretching the <img>'s layout box to the
-// full available width, so a small object-fit:contain logo ends up visually
-// centered inside that oversized box regardless of the block's own
-// image_align — the box was left-aligned, it was just much wider than the
-// logo. "auto" lets the browser size the box from the fixed height + the
-// image's intrinsic aspect ratio instead, so the box actually matches the
-// logo and left/right/center alignment works as expected.
+// "contain" (icons/logos) shrink-wraps the img to its own aspect ratio at the
+// fixed height ("auto" width) — the box was already left/right-aligned
+// correctly, but width:"100%" stretched the <img> itself to fill the box
+// regardless of the logo's real size, so a small square icon ended up
+// visually centered inside an oversized box. "cover" is the opposite case:
+// the whole point is to crop the image to fill a box the author explicitly
+// sized via image_width (imageBoxStyle below), so the img must stay
+// width:"100%" of that box — forcing "auto" there let the img render at its
+// natural aspect ratio instead of the configured width, overflowing the
+// clipped wrapper and showing only a cropped slice of the photo.
 const imgStyle = computed(() => {
   const fit = props.block.props.image_fit || "cover";
   const h = props.block.props.image_height;
@@ -80,8 +81,10 @@ const imgStyle = computed(() => {
   const objPos = props.block.props.object_position || "center";
   return {
     display: "block",
-    ...(hasHeight
+    ...(hasHeight && fit === "contain"
       ? { width: "auto", height: h, objectFit: fit, objectPosition: objPos }
+      : hasHeight
+      ? { width: "100%", height: h, objectFit: fit, objectPosition: objPos }
       : { width: "100%" }),
   };
 });
