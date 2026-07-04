@@ -51,6 +51,21 @@ def _is_svg_src(url: str) -> bool:
     return bool(_SVG_EXT_RE.search((url or "").strip()))
 
 
+_PRIVATE_FILE_RE = re.compile(r"/private/files/", re.IGNORECASE)
+
+
+def _is_private_file_src(url: str) -> bool:
+    """True if the URL points at a Frappe private file (/private/files/...).
+
+    Private files require an authenticated site session to view, so an <img>
+    pointed at one is guaranteed broken for every recipient who isn't logged
+    into this site — the same failure class as an SVG source, just from access
+    control rather than client format support. Path-shape check only (Frappe's
+    own public/private URL convention), no DB lookup or fetch involved.
+    """
+    return bool(_PRIVATE_FILE_RE.search((url or "").strip()))
+
+
 def _abs_image_src(url: str) -> str:
     """Make an image src absolute and HTML-escape it.
 
@@ -60,17 +75,18 @@ def _abs_image_src(url: str) -> str:
     image loads. Already-absolute (http/https/protocol-relative/data) URLs and
     empty values are left untouched.
 
-    SVG sources are dropped entirely (returns "") regardless of how the URL got
-    into the block — upload, pasted link, or fixture — because Gmail, Outlook,
-    and Yahoo all fail to render SVG <img> sources (only Apple Mail does), so an
-    SVG here would always ship as a broken image to most recipients. This is the
-    single choke point every renderer routes image/thumbnail/logo URLs through,
-    so this guard covers all of them.
+    SVG sources and private-file sources are dropped entirely (returns "")
+    regardless of how the URL got into the block — upload, pasted link, or
+    fixture — because both are guaranteed broken for real recipients: Gmail,
+    Outlook, and Yahoo all fail to render SVG <img> sources (only Apple Mail
+    does), and a private file 403s for anyone not logged into this site. This
+    is the single choke point every renderer routes image/thumbnail/logo URLs
+    through, so this guard covers all of them.
     """
     url = (url or "").strip()
     if not url:
         return ""
-    if _is_svg_src(url):
+    if _is_svg_src(url) or _is_private_file_src(url):
         return ""
     if url.startswith(("http://", "https://", "//", "data:")):
         return escape(url)

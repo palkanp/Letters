@@ -98,18 +98,15 @@
   <!-- image URL: a plain link, not an upload, so file-picker/MIME checks don't
        apply — validate by extension instead (best-effort; we can't safely fetch
        an arbitrary remote URL server-side to sniff its real content-type). -->
-  <div v-else-if="field.type === 'image_url'">
-    <TextInput
-      type="text"
-      :placeholder="field.placeholder || ''"
-      size="sm"
-      class="w-full"
-      :model-value="value"
-      @update:model-value="onImageUrlChange"
-    />
-    <p v-if="imageUrlError" class="mt-1 text-xs text-red-500">{{ imageUrlError }}</p>
-    <p v-else-if="imageUrlWarning" class="mt-1 text-xs text-amber-600">{{ imageUrlWarning }}</p>
-  </div>
+  <TextInput
+    v-else-if="field.type === 'image_url'"
+    type="text"
+    :placeholder="field.placeholder || ''"
+    size="sm"
+    class="w-full"
+    :model-value="value"
+    @update:model-value="onImageUrlChange"
+  />
 
   <!-- default: text -->
   <TextInput
@@ -124,7 +121,7 @@
 
 <script setup>
 import { computed, nextTick, ref, watch } from "vue";
-import { TextInput, Select, Switch, TabButtons, Slider, Button } from "frappe-ui";
+import { TextInput, Select, Switch, TabButtons, Slider, Button, toast } from "frappe-ui";
 import ColorPicker from "./ColorPicker.vue";
 import FocusPointPicker from "./FocusPointPicker.vue";
 
@@ -152,24 +149,46 @@ function commitNumber() {
 }
 
 // SVG links are rejected outright (same rule as file uploads — Gmail, Outlook,
-// and Yahoo all fail to render SVG <img> sources), WebP links are allowed with
-// a warning (everything renders it except Outlook desktop). Extension match
-// only: a URL with no extension, or one that lies about it, slips through —
-// the real backstop is the server-side check in _abs_image_src.
-const imageUrlError   = ref("");
-const imageUrlWarning = ref("");
-watch(() => props.field, () => { imageUrlError.value = ""; imageUrlWarning.value = ""; });
+// and Yahoo all fail to render SVG <img> sources), as are links to Frappe
+// private files (/private/files/... requires a login the email recipient
+// doesn't have, so it's just as guaranteed-broken as an SVG). WebP links are
+// allowed with a warning (everything renders it except Outlook desktop).
+// Extension/path match only: a URL with no extension, or one that lies about
+// it, slips through — the real backstop is the server-side check in
+// _abs_image_src.
+//
+// This runs on every keystroke, so `lastBlocked`/`lastWarnedWebp` track what
+// we've already surfaced a toast for and re-fire only when the violation
+// changes — otherwise pasting a bad URL would toast once per character.
+const lastBlocked    = ref(null); // "svg" | "private" | null
+const lastWarnedWebp = ref(false);
+watch(() => props.field, () => { lastBlocked.value = null; lastWarnedWebp.value = false; });
 
 function onImageUrlChange(url) {
-  if (/\.svg(?:[?#]|$)/i.test(url || "")) {
-    imageUrlError.value = "SVG images don't display in Gmail, Outlook, or Yahoo Mail. Please use a PNG, JPG, or GIF link instead.";
-    imageUrlWarning.value = "";
+  const value = url || "";
+
+  if (/\/private\/files\//i.test(value)) {
+    if (lastBlocked.value !== "private") {
+      toast.error("This image is private and won't load for email recipients. Please use a public image link instead.");
+      lastBlocked.value = "private";
+    }
     return; // don't save a value we know will render broken
   }
-  imageUrlError.value = "";
-  imageUrlWarning.value = /\.webp(?:[?#]|$)/i.test(url || "")
-    ? "WebP images won't display in Outlook desktop — a PNG or JPG link is safer if that audience matters."
-    : "";
+  if (/\.svg(?:[?#]|$)/i.test(value)) {
+    if (lastBlocked.value !== "svg") {
+      toast.error("SVG images don't display in Gmail, Outlook, or Yahoo Mail. Please use a PNG, JPG, or GIF link instead.");
+      lastBlocked.value = "svg";
+    }
+    return;
+  }
+  lastBlocked.value = null;
+
+  const isWebp = /\.webp(?:[?#]|$)/i.test(value);
+  if (isWebp && !lastWarnedWebp.value) {
+    toast.warning("WebP images won't display in Outlook desktop — a PNG or JPG link is safer if that audience matters.");
+  }
+  lastWarnedWebp.value = isWebp;
+
   emit("change", url);
 }
 
