@@ -4,7 +4,7 @@ from typing import Any
 from .base import BlockRenderer, _class_attr, _pad_class, _padding, _safe_css_value, _spacing_wrapper
 
 
-def _render_child(child: dict, ctx_ref_width: int | None = None) -> str:
+def _render_child(child: dict, ctx_ref_width: int | None = None, mark_stack_col: bool = False) -> str:
     """Render a nested block via the global registry.
 
     Imported lazily so layout renderers (which recurse into the registry that
@@ -17,13 +17,27 @@ def _render_child(child: dict, ctx_ref_width: int | None = None) -> str:
     for its cover-fit aspect-ratio — read it instead of assuming the full
     600px email body, which produces the wrong crop once nested narrower
     than that.
+
+    mark_stack_col flags this child as a top-level row/column-list child that
+    stacks to full width on mobile (via .ltr-col-Nup or ltr-stack-2). A
+    container child's own padding_top/padding_bottom is baked in for the
+    side-by-side desktop layout, so once a row stacks, two adjacent columns'
+    padding stacks on top of each other (e.g. 44px + 20px). ContainerRenderer
+    reads the resulting `_ltr_stack_col` prop to zero that vertical padding
+    on mobile, letting the shared CSS gap rule (see email_compiler.py) supply
+    one consistent gap between stacked columns instead.
     """
     from .registry import RENDERER_MAP
     renderer = RENDERER_MAP.get(child.get("type", ""))
     if not renderer:
         return ""
+    extra = {}
     if ctx_ref_width is not None:
-        child = {**child, "props": {**child.get("props", {}), "_ctx_ref_width": ctx_ref_width}}
+        extra["_ctx_ref_width"] = ctx_ref_width
+    if mark_stack_col:
+        extra["_ltr_stack_col"] = True
+    if extra:
+        child = {**child, "props": {**child.get("props", {}), **extra}}
     return renderer.render(child)
 
 
@@ -118,7 +132,9 @@ class ColumnsRenderer(BlockRenderer):
 
         cols = []
         for idx, col in enumerate(columns):
-            col_html   = "".join(_render_child(c, ghost_px) for c in col.get("blocks", []))
+            col_html   = "".join(
+                _render_child(c, ghost_px, mark_stack_col=True) for c in col.get("blocks", [])
+            )
             div_before = bool(show_dividers and idx > 0)
             cols.append((col_html or "&nbsp;", ghost_px, div_before, divider_color if div_before else ""))
 
@@ -149,7 +165,13 @@ class ContainerRenderer(BlockRenderer):
         children      = block.get("children", [])
         # Trim wide side padding on phones so content isn't squeezed into a
         # narrow strip; the head <style> media query owns the mobile value.
-        pad_class     = _class_attr(_pad_class(p))
+        # A container rendered as a row/stat-strip column (see
+        # `_ltr_stack_col` in _render_child) gets an extra class so the
+        # mobile media query can zero its own baked-in vertical padding once
+        # it stacks full-width — otherwise two adjacent columns' padding
+        # (e.g. 44px bottom + 20px top) stacks into one oversized gap. The
+        # media query supplies a single consistent gap instead.
+        pad_class     = _class_attr(_pad_class(p), "ltr-stackcol" if p.get("_ltr_stack_col") else "")
         # This container's own actual rendered width, propagated down from
         # its parent (see _render_child). Defaults to the full email body —
         # correct for a top-level block, and for any container that isn't
@@ -271,7 +293,7 @@ class ContainerRenderer(BlockRenderer):
                     w        = _child_width(child) or fluid_default
                     ghost_px = _cell_ref_width(w)     # Outlook fixed column width
                     cols.append((
-                        _render_child(child, ghost_px), ghost_px,
+                        _render_child(child, ghost_px, mark_stack_col=True), ghost_px,
                         pending_divider is not None, pending_divider or "",
                     ))
                     pending_divider = None

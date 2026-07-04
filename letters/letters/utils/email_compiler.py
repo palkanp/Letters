@@ -28,7 +28,16 @@ _HTML_WRAPPER = """\
   .ltr-row {{ display:block !important; width:100% !important; }}
   .ltr-col-2up, .ltr-col-3up, .ltr-col-4up {{ display:block !important;
                  width:100% !important; padding-left:0 !important;
-                 padding-right:0 !important; box-sizing:border-box !important; }}
+                 padding-right:0 !important; box-sizing:border-box !important;
+                 margin-bottom:20px !important; }}
+  .ltr-col-2up:last-child, .ltr-col-3up:last-child, .ltr-col-4up:last-child {{
+                 margin-bottom:0 !important; }}
+  /* A stacked column's own baked-in vertical padding (sized for the
+     side-by-side desktop layout) is zeroed here so it doesn't stack with the
+     next column's padding into an oversized gap — the margin-bottom above
+     supplies one consistent gap between columns instead. See _ltr_stack_col
+     in block_renderers/layout.py. */
+  .ltr-stackcol {{ padding-top:0 !important; padding-bottom:0 !important; }}
   .ltr-coldiv {{ border-left-width:0 !important; border-top-width:1px !important;
                  margin-top:20px !important; padding-top:20px !important; }}
 }}
@@ -37,7 +46,7 @@ _HTML_WRAPPER = """\
                 padding-left:0 !important; padding-right:0 !important;
                 border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-stack-2 {{ display:inline-block !important; width:50% !important; max-width:50% !important;
-                  vertical-align:top !important;
+                  vertical-align:top !important; margin-bottom:16px !important;
                   border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-vdivider {{ display:block !important; width:100% !important; max-width:100% !important;
                     box-sizing:border-box !important; }}
