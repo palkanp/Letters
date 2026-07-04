@@ -67,12 +67,49 @@
                     <span class="text-xs tabular-nums" :class="subject.length > 78 ? 'text-red-500' : subject.length > 60 ? 'text-orange-500' : 'text-ink-gray-4'">{{ subject.length }}</span>
                   </span>
                   <TextInput
+                    ref="subjectInputRef"
                     :model-value="subject"
                     placeholder="e.g. Your June update is here"
                     @update:model-value="(v) => emit('update:subject', v)"
+                    @click="trackSubjectCursor"
+                    @keyup="trackSubjectCursor"
                   />
                   <p v-if="subject.length > 78" class="mt-1 text-xs text-red-500">Most email clients truncate subjects over 78 characters.</p>
                   <p v-else-if="subject.length > 60" class="mt-1 text-xs text-orange-500">Over 60 characters may be clipped on mobile.</p>
+
+                  <div v-if="isNotification" class="mt-1.5 flex items-center gap-2 flex-wrap">
+                    <p class="text-xs text-ink-gray-4">
+                      Supports Jinja tags, e.g. {{ jinjaTagExample }}.
+                    </p>
+                    <div class="relative">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        icon-left="lucide-braces"
+                        @click="toggleFieldPicker"
+                      >
+                        Insert field
+                      </Button>
+                      <div
+                        v-if="showFieldPicker"
+                        class="absolute z-10 mt-1 w-56 max-h-56 overflow-y-auto rounded-lg border border-outline-gray-2 bg-surface-base shadow-lg py-1"
+                      >
+                        <p v-if="loadingMergeFields" class="px-3 py-2 text-xs text-ink-gray-4">Loading fields…</p>
+                        <p v-else-if="!mergeFields.length" class="px-3 py-2 text-xs text-ink-gray-4">
+                          Set a Document Type on the Notification to see available fields.
+                        </p>
+                        <button
+                          v-for="f in mergeFields"
+                          :key="f.fieldname"
+                          class="w-full text-left px-3 py-1.5 text-xs text-ink-gray-7 hover:bg-surface-gray-2"
+                          @click="insertMergeField(f.fieldname)"
+                        >
+                          {{ f.label }}
+                          <span class="text-ink-gray-4 font-mono ml-1">doc.{{ f.fieldname }}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
                 </label>
                 <label class="block">
                   <span class="block text-xs font-semibold text-ink-gray-6  mb-1.5">Preview Text</span>
@@ -313,6 +350,9 @@ const emit = defineEmits([
 ]);
 
 const isNotification = computed(() => !!props.letterDoc?.has_notification);
+// Written as a computed string, not inline in the template — Vue's mustache
+// parser can't have a literal "{{ doc.name }}" inside another interpolation.
+const jinjaTagExample = computed(() => "{{ doc.name }}");
 const sections = computed(() => {
   const all = [
     { id: "details",       label: "Details" },
@@ -411,6 +451,49 @@ const analytics         = ref(null);
 const loadingAnalytics  = ref(false);
 const compiledHtml      = ref(null);
 const loadingHtml       = ref(false);
+
+// ── Merge fields (Jinja "Insert field") ────────────────────────────────────
+const subjectInputRef      = ref(null);
+const showFieldPicker      = ref(false);
+const mergeFields          = ref([]);
+const loadingMergeFields   = ref(false);
+const subjectCursorPos     = ref(null);
+
+function trackSubjectCursor() {
+  const el = subjectInputRef.value?.el;
+  if (el) subjectCursorPos.value = el.selectionStart;
+}
+
+async function loadMergeFields() {
+  if (!props.letterDoc?.name) return;
+  loadingMergeFields.value = true;
+  try {
+    const res = await frappe.call({
+      method: "letters.letters.api.notifications.get_merge_fields",
+      args: { letter: props.letterDoc.name },
+    });
+    mergeFields.value = res.message?.fields || [];
+  } catch {
+    mergeFields.value = [];
+  } finally {
+    loadingMergeFields.value = false;
+  }
+}
+
+async function toggleFieldPicker() {
+  showFieldPicker.value = !showFieldPicker.value;
+  if (showFieldPicker.value && !mergeFields.value.length) await loadMergeFields();
+}
+
+function insertMergeField(fieldname) {
+  const tag = `{{ doc.${fieldname} }}`;
+  const pos = subjectCursorPos.value ?? props.subject.length;
+  const next = props.subject.slice(0, pos) + tag + props.subject.slice(pos);
+  emit("update:subject", next);
+  subjectCursorPos.value = pos + tag.length;
+  showFieldPicker.value = false;
+}
+
 const recipients        = ref([]);
 const loadingRecipients = ref(false);
 const expandedSources   = ref(new Set());

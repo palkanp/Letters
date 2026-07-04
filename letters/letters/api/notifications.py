@@ -204,6 +204,68 @@ def save_notification_fields(notification: str, fields: str):
 
 
 @frappe.whitelist()
+def get_merge_fields(letter: str):
+    """Return the Jinja merge fields available for this Letter's linked Notification.
+
+    Sourced from the Notification's `document_type` — the same doctype whose
+    fields resolve at send time via `{{ doc.<fieldname> }}` (see
+    LettersNotification.send_an_email -> frappe.render_template). Returns None
+    if the Letter has no linked Notification, or one with no document_type set
+    yet, so the caller can show "pick a Document Type first" instead.
+    """
+    frappe.has_permission("Notification", "read", throw=True)
+    document_type = frappe.db.get_value("Notification", {"letter": letter}, "document_type")
+    if not document_type:
+        return None
+
+    meta = frappe.get_meta(document_type)
+    fields = [{"label": "Name (ID)", "fieldname": "name"}]
+    for df in meta.fields:
+        if df.fieldtype in (
+            "Data", "Link", "Select", "Int", "Float", "Currency", "Date",
+            "Datetime", "Check", "Small Text", "Text", "Long Text",
+        ):
+            fields.append({"label": df.label or df.fieldname, "fieldname": df.fieldname})
+
+    return {"document_type": document_type, "fields": fields}
+
+
+def resolve_merge_tags_for_preview(html: str, letter_name: str | None) -> str:
+    """Resolve `{{ doc.field }}` tags in a compiled Letter preview, if it has a
+    linked, configured Notification.
+
+    Mirrors LettersNotification.send_an_email: real sends run the compiled
+    Letter HTML through `frappe.render_template` against the triggering
+    document. There's no live document at preview time, so this substitutes
+    the most recently modified record of the Notification's `document_type`
+    as a stand-in. Returns `html` unchanged if there's no linked Notification,
+    no `document_type` set yet, or no sample record to render against.
+    """
+    if not letter_name:
+        return html
+    notif_name = frappe.db.get_value("Notification", {"letter": letter_name}, "name")
+    if not notif_name:
+        return html
+    document_type = frappe.db.get_value("Notification", notif_name, "document_type")
+    if not document_type:
+        return html
+    sample_name = frappe.db.get_value(document_type, {}, "name", order_by="modified desc")
+    if not sample_name:
+        return html
+
+    from frappe.email.doctype.notification.notification import get_context
+
+    notif = frappe.get_doc("Notification", notif_name)
+    doc = frappe.get_cached_doc(document_type, sample_name)
+    context = get_context(doc)
+    context.update({"alert": notif, "comments": None})
+    try:
+        return frappe.render_template(html, context)
+    except Exception:
+        return html
+
+
+@frappe.whitelist()
 def create_letter_for_notification(notification: str):
     """Create a blank Letter, link it to an existing Notification, and return the letter name."""
     frappe.has_permission("Notification", "write", throw=True)

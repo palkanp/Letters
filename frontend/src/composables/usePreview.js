@@ -32,6 +32,11 @@ export function usePreview(editorStore, previewText) {
       const res = await frappe.call({
         method: "letters.letters.api.render_preview",
         args: {
+          // Passed alongside `blocks` (not instead of) so the preview reflects
+          // unsaved canvas edits, while still letting the backend resolve
+          // `{{ doc.field }}` merge tags against this Letter's linked
+          // Notification, if it has one.
+          name:         editorStore.letterDoc?.name,
           blocks:       JSON.stringify(editorStore.blocks.map(stripIds)),
           preview_text: previewText.value,
           email_width:  editorStore.emailWidth,
