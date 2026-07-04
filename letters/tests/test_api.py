@@ -1097,14 +1097,18 @@ class TestSendTest:
         assert kw["recipients"] == ["user@frappe.io"]
         assert kw["subject"].startswith("[TEST]")
 
-    def test_rejects_recipient_that_is_not_session_user(self):
+    def test_accepts_recipient_other_than_session_user(self):
+        # Test emails may go to any valid recipient, not just the session user —
+        # the old "own account" restriction was intentionally removed (commit
+        # af8e227, editable recipient in the Send Test Email dialog).
         frappe_stub.session.user = "user@frappe.io"
+        frappe_stub.utils.validate_email_address.return_value = "other@example.com"
         with patch("letters.letters.utils.email_compiler.EmailCompiler") as C:
             C.return_value.compile.return_value = "<html/>"
-            with pytest.raises(FrappeValidationError, match="own account"):
-                api_module.send_test(
-                    blocks=json.dumps([]), subject="Hi", recipient="other@example.com"
-                )
+            result = api_module.send_test(
+                blocks=json.dumps([]), subject="Hi", recipient="other@example.com"
+            )
+        assert result["sent_to"] == "other@example.com"
 
     def test_falls_back_to_session_user_when_no_recipient(self):
         frappe_stub.session.user = "user@frappe.io"

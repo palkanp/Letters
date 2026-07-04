@@ -509,9 +509,12 @@ class TestSpacerRenderer:
 # ── DividerRenderer ───────────────────────────────────────────────────────────
 
 class TestDividerRenderer:
-    def test_renders_hr(self):
+    def test_renders_horizontal_rule(self):
+        # Dividers render as an email-safe table-cell rule, not an <hr> (which
+        # many clients style inconsistently).
         html = DividerRenderer().render({"type": "divider", "props": {}})
-        assert "<hr" in html
+        assert "background-color:#e0e0e0" in html
+        assert "height:1px" in html
 
     def test_custom_color(self):
         html = DividerRenderer().render({"type": "divider", "props": {"border_color": "#aabbcc"}})
