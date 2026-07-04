@@ -26,6 +26,14 @@ class SendingMixin:
             subject=f"[TEST] {subj or 'Email Preview'}",
             message=html,
             now=False,
+            # Our compiler already produces a complete, inline-styled HTML doc.
+            # raw_html keeps it intact (our <style> stays in <head>, where Gmail
+            # reads media queries — Frappe's default wrapper moves it into <body>,
+            # so Gmail ignores it). add_css skips Frappe's email CSS, which made
+            # Gmail drop all embedded styles. Both are needed for the responsive
+            # layout to survive to Gmail. See email_compiler.
+            add_css=False,
+            raw_html=True,
         )
         return {"sent_to": email}
 

@@ -17,11 +17,22 @@ _HTML_WRAPPER = """\
 <meta name="color-scheme" content="light only" />
 <meta name="supported-color-schemes" content="light only" />{font_links}
 <style type="text/css">
-:root {{ color-scheme: light only; supported-color-schemes: light only; }}
+/* Keep this <style> lean and standards-clean: Gmail drops ALL embedded styles
+   (including the responsive media queries below) if it chokes on anything here,
+   so colour-scheme lives only in the head meta tags above, not in a CSS rule. */
+/* Columns are side-by-side table cells by default. Below the breakpoint —
+   phones — stack them to full width and flip the divider from a full-height
+   vertical rule to a horizontal one. Works in Gmail now that the send path no
+   longer injects Frappe's email CSS (which was making Gmail drop these rules). */
+@media only screen and (max-width:{col_breakpoint}px) {{
+  .ltr-row {{ display:block !important; width:100% !important; }}
+  .ltr-col-2up, .ltr-col-3up, .ltr-col-4up {{ display:block !important;
+                 width:100% !important; padding-left:0 !important;
+                 padding-right:0 !important; box-sizing:border-box !important; }}
+  .ltr-coldiv {{ border-left-width:0 !important; border-top-width:1px !important;
+                 margin-top:20px !important; padding-top:20px !important; }}
+}}
 @media only screen and (max-width:{email_width}px) {{
-  .ltr-col {{ display:block !important; width:100% !important; max-width:100% !important;
-              padding-left:0 !important; padding-right:0 !important;
-              border-right:0 !important; box-sizing:border-box !important; }}
   .ltr-stack {{ display:block !important; width:100% !important; max-width:100% !important;
                 padding-left:0 !important; padding-right:0 !important;
                 border-right:0 !important; box-sizing:border-box !important; }}
@@ -72,6 +83,12 @@ class EmailCompiler:
             blocks=blocks_html,
             preheader=self._render_preheader(),
             email_width=self._email_width,
+            # Columns stack below a phone-scale width and stay 2-up above it —
+            # true responsive behaviour that now works in Gmail too, once the
+            # send path stops injecting Frappe's email CSS (which made Gmail drop
+            # all embedded styles). Well below the email width so desktop reading
+            # panes (Gmail's included) keep the 2-column layout.
+            col_breakpoint=min(self._email_width - 40, 480),
             font_links="\n" + font_links if font_links else "",
         )
 

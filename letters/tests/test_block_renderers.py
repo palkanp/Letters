@@ -338,10 +338,10 @@ class TestColumnsRenderer:
         html = self.renderer.render(block)
         assert "Left" in html
         assert "Right" in html
-        # Columns are fluid inline-block divs that stack without a media query.
-        assert html.count('class="ltr-col"') == 2
-        assert "display:inline-block" in html
-        assert "max-width:280px" in html  # (600 - 20 - 20) / 2
+        # Mobile-first: full-width block columns by default (Gmail-safe),
+        # promoted to 2-up by the head min-width media query.
+        assert html.count('ltr-col-2up') == 2
+        assert "display:table-cell" in html
 
     def test_three_columns(self):
         block = self._block([
@@ -350,7 +350,7 @@ class TestColumnsRenderer:
             {"blocks": [self._text_child("C")]},
         ])
         html = self.renderer.render(block)
-        assert html.count('class="ltr-col"') == 3
+        assert html.count('ltr-col-3up') == 3
 
     def test_empty_column_renders_nbsp(self):
         block = self._block([{"blocks": []}, {"blocks": [self._text_child("X")]}])
@@ -363,7 +363,10 @@ class TestColumnsRenderer:
             show_dividers=True, divider_color="#cccccc",
         )
         html = self.renderer.render(block)
-        assert "border-right:1px solid #cccccc" in html
+        # Divider is a top border by default (horizontal rule between stacked
+        # columns); the media query flips it to a left border side-by-side.
+        assert "border:0 solid #cccccc;border-left-width:1px;" in html
+        assert "ltr-coldiv" in html
 
     def test_background_color_applied(self):
         block = self._block([{"blocks": []}, {"blocks": []}], background_color="#f0f0f0")
@@ -1247,15 +1250,15 @@ class TestContainerRowStacks:
         )
 
     def test_row_cells_are_fluid_columns(self):
-        # A normal content row renders fluid inline-block columns that stack on
-        # phones without a media query (works even where <head> styles are
-        # dropped, e.g. the Gmail app).
+        # A normal content row renders full-width block columns by default (so
+        # they stack full-width in the Gmail app, which ignores media queries),
+        # promoted to 2-up by the head min-width media query.
         html = self._row([
             {"type": "text", "props": {"html_content": "<p>A</p>"}},
             {"type": "text", "props": {"html_content": "<p>B</p>"}},
         ])
-        assert html.count('class="ltr-col"') == 2
-        assert "display:inline-block" in html
+        assert html.count('ltr-col-2up') == 2
+        assert "display:table-cell" in html
 
     def test_four_or_more_equal_columns_get_2up_grid(self):
         html = ContainerRenderer().render({
@@ -1275,7 +1278,7 @@ class TestContainerRowStacks:
             {"type": "text", "props": {"html_content": "<p>Big headline here</p>"}},
             {"type": "button", "props": {"label": "Shop Now"}},
         ])
-        assert html.count('class="ltr-col"') == 2
+        assert html.count('ltr-col-2up') == 2
 
     def test_price_button_pair_with_explicit_opt_out_stays_side_by_side(self):
         # A genuinely tight price/label + button pair opts out explicitly via
@@ -1304,11 +1307,10 @@ class TestContainerRowStacks:
                 {"type": "text", "props": {"html_content": "<p>B</p>"}},
             ],
         })
-        # Stacking rows use fluid columns; the opted-out row uses neither hook
-        # (a plain table that stays side-by-side).
-        assert "ltr-col" in stacks_html
-        assert "ltr-col" not in no_stack_html
-        assert "ltr-stack" not in no_stack_html
+        # Stacking rows use mobile-first block columns; the opted-out row is a
+        # plain table that stays side-by-side (no ltr-col-Nup columns).
+        assert "ltr-col-2up" in stacks_html
+        assert "ltr-col-2up" not in no_stack_html
 
     def test_mobile_stack_true_forces_stacking_for_price_button_row(self):
         html = ContainerRenderer().render({
@@ -1319,24 +1321,30 @@ class TestContainerRowStacks:
                 {"type": "button", "props": {"label": "Shop Now"}},
             ],
         })
-        assert "ltr-col" in html
+        assert "ltr-col-2up" in html
 
-    def test_vertical_dividers_dont_steal_column_width(self):
+    def test_vertical_dividers_become_a_border_not_a_column(self):
+        # A divider is a hairline, not a content column: it's dropped as a cell
+        # and drawn as a border on the following column, so the three real
+        # columns keep their fluid width (and stack) rather than sharing space
+        # with two divider cells.
         html = ContainerRenderer().render({
             "type": "container",
             "props": {"layout": "row"},
             "children": [
                 {"type": "text", "props": {"html_content": "<p>A</p>"}},
-                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "divider", "props": {"orientation": "vertical", "border_color": "#cccccc"}},
                 {"type": "text", "props": {"html_content": "<p>B</p>"}},
-                {"type": "divider", "props": {"orientation": "vertical"}},
+                {"type": "divider", "props": {"orientation": "vertical", "border_color": "#cccccc"}},
                 {"type": "text", "props": {"html_content": "<p>C</p>"}},
             ],
         })
-        assert html.count('width="33%"') == 3
-        assert html.count('width="24px"') == 2
+        assert html.count("ltr-coldiv") == 2                  # two dividers -> two flip columns
+        assert html.count("border:0 solid #cccccc;border-left-width:1px;") == 2
 
-    def test_vertical_dividers_get_flatten_hook_when_stacking(self):
+    def test_vertical_divider_row_stacks_fluidly(self):
+        # Two columns split by a vertical divider must stack on phones without a
+        # media query (this is the newsletter shape that regressed in Gmail).
         html = ContainerRenderer().render({
             "type": "container",
             "props": {"layout": "row"},
@@ -1346,8 +1354,10 @@ class TestContainerRowStacks:
                 {"type": "text", "props": {"html_content": "<p>B</p>"}},
             ],
         })
-        assert 'class="ltr-vdivider"' in html
-        assert "ltr-stack" in html  # content cells still stack normally
+        assert html.count("ltr-col-2up") == 2            # two block columns
+        assert html.count("ltr-coldiv") == 1             # column after the divider
+        assert "display:table-cell" in html
+        assert "ltr-stack" not in html  # no media-query-only table cells
 
     def test_vertical_dividers_excluded_from_2up_grid_threshold(self):
         # 3 real content cells + 2 dividers shouldn't trip the >=4 stat-row
@@ -1424,7 +1434,7 @@ class TestCompilerMobileStyle:
     def test_wrapper_includes_media_query(self):
         html = EmailCompiler("[]").compile()
         assert "@media only screen and (max-width:600px)" in html
-        assert ".ltr-col" in html
+        assert ".ltr-coldiv" in html
         assert ".ltr-stack" in html
         assert ".ltr-fs-xl" in html
 

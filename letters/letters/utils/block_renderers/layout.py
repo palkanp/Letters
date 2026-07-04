@@ -27,38 +27,53 @@ def _render_child(child: dict, ctx_ref_width: int | None = None) -> str:
     return renderer.render(child)
 
 
-def _fluid_columns(
-    cols: list[tuple[str, int, str]], half_gap: int, valign_css: str, col_class: str = "ltr-col"
-) -> str:
-    """Lay out columns side-by-side on desktop but stack on phones WITHOUT a media query.
+def _fluid_columns(cols: list[tuple[str, int, bool, str]], gap: int, valign_css: str, up: int) -> str:
+    """Responsive columns using the standard table-cell + ghost-table pattern.
 
-    Each column is an inline-block <div> capped at its desktop width via
-    max-width; the wrapper's font-size:0 collapses the whitespace between the
-    inline-blocks. When the screen is narrower than the columns' combined
-    widths the trailing columns wrap underneath — so the row stacks even in
-    clients that drop the <head> <style> (e.g. the Gmail app), where the
-    responsive media query never runs. A conditional Outlook ghost table
-    restores real table columns there, since Word-rendered Outlook ignores
-    inline-block. The .ltr-col hook lets the head media query flatten each
-    column to full width where it *is* honoured (Apple Mail, most webmail).
+    Each column is a <div style="display:table-cell"> inside a
+    <div style="display:table">, so by DEFAULT they sit side-by-side and — being
+    table cells — stretch to equal height (which lets a divider border run the
+    full column height). The head media query then flips .ltr-row/.ltr-col-Nup to
+    display:block;width:100% below the breakpoint, so they stack to FULL width on
+    phones; Gmail honours embedded media queries, so this works there too. An
+    Outlook ghost table gives Word-rendered Outlook its columns.
 
-    cols: (inner_html, max_width_px, extra_css) tuples in visual order.
+    A vertical divider is a left border by default (a full-height rule between
+    the side-by-side columns) that the media query flips to a top border (a
+    horizontal rule, with spacing) once the columns stack.
+
+    cols: (inner_html, ghost_width_px, divider_before, divider_color) tuples.
+    up:   number of content columns (selects the .ltr-col-Nup width class).
     """
     n = len(cols)
+    half = max(gap // 2, 0)
+    div_pad = max(gap, 20)   # roomier gutter on either side of a divider rule
+    up_cls = f"ltr-col-{up}up"
+    col_w  = round(100 / up)
     parts = [
-        '<div style="font-size:0;">'
+        # table-layout:fixed keeps the row exactly the container's width — content
+        # (e.g. an image) can't expand it past 100%. Without it Gmail can widen
+        # its mobile viewport to fit the overflow, and then the stacking media
+        # query never fires on the phone.
+        '<div class="ltr-row" style="display:table;width:100%;table-layout:fixed;">'
         '<!--[if mso]><table role="presentation" width="100%" cellpadding="0"'
         ' cellspacing="0" border="0"><tr><![endif]-->'
     ]
-    for idx, (inner, max_w, extra) in enumerate(cols):
-        left  = 0 if idx == 0     else half_gap
-        right = 0 if idx == n - 1 else half_gap
+    for idx, (inner, gw, div_before, div_color) in enumerate(cols):
+        next_div = idx + 1 < n and cols[idx + 1][2]
+        left  = 0 if idx == 0     else (div_pad if div_before else half)
+        right = 0 if idx == n - 1 else (div_pad if next_div  else half)
+        cls = up_cls + (" ltr-coldiv" if div_before else "")
+        # Border colour+style on all sides, width only on the left: a full-height
+        # vertical rule between the side-by-side cells. The media query flips the
+        # width from left to top (same colour) for a horizontal rule when stacked.
+        border = f"border:0 solid {div_color};border-left-width:1px;" if div_before else ""
         parts.append(
-            f'<!--[if mso]><td width="{max_w}" valign="{valign_css}"'
+            f'<!--[if mso]><td width="{gw}" valign="{valign_css}"'
             f' style="padding:0 {right}px 0 {left}px;"><![endif]-->'
-            f'<div{_class_attr(col_class)} style="display:inline-block;width:100%;'
-            f'max-width:{max_w}px;vertical-align:{valign_css};box-sizing:border-box;'
-            f'padding:0 {right}px 0 {left}px;font-size:14px;{extra}">{inner}</div>'
+            f'<div class="{cls}" style="display:table-cell;width:{col_w}%;'
+            f'vertical-align:{valign_css};box-sizing:border-box;'
+            f'padding:0 {right}px 0 {left}px;font-size:14px;{border}">{inner}</div>'
             '<!--[if mso]></td><![endif]-->'
         )
     parts.append('<!--[if mso]></tr></table><![endif]--></div>')
@@ -78,7 +93,6 @@ class ColumnsRenderer(BlockRenderer):
             return ""
 
         count     = len(columns)
-        half_gap  = max(round(col_gap / 2), 0)
         outer_pad = _padding(p, 20, 20, 20, 20)
 
         _valign_map = {
@@ -89,24 +103,20 @@ class ColumnsRenderer(BlockRenderer):
 
         # This block's own rendered width (full email body unless nested inside a
         # narrower column), minus its outer padding, is the room the columns
-        # share. Each column is capped at an equal slice of it via max-width so
-        # the fluid layout wraps to a stack on phones (see _fluid_columns).
+        # share. Each column's flex-basis is an equal slice of it, so the row
+        # breaks to a full-width stack once the container drops below that
+        # (see _fluid_columns); the columns then grow to fill it.
         ref         = int(p.get("_ctx_ref_width", 600))
         content_ref = max(ref - int(p.get("padding_left", 20)) - int(p.get("padding_right", 20)), 1)
-        col_max     = max(content_ref // count, 1)
-        child_ref   = max(col_max - col_gap, 1)
+        ghost_px    = max(content_ref // count, 1)      # Outlook fixed column width
 
         cols = []
         for idx, col in enumerate(columns):
-            col_html = "".join(_render_child(c, child_ref) for c in col.get("blocks", []))
-            is_last  = idx == count - 1
-            border   = (
-                f"border-right:1px solid {divider_color};"
-                if show_dividers and not is_last else ""
-            )
-            cols.append((col_html or "&nbsp;", col_max, border))
+            col_html   = "".join(_render_child(c, ghost_px) for c in col.get("blocks", []))
+            div_before = bool(show_dividers and idx > 0)
+            cols.append((col_html or "&nbsp;", ghost_px, div_before, divider_color if div_before else ""))
 
-        inner    = _fluid_columns(cols, half_gap, valign)
+        inner    = _fluid_columns(cols, col_gap, valign, count)
         bg_style = f"background-color:{bg};" if bg and bg != "transparent" else ""
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
@@ -233,22 +243,33 @@ class ContainerRenderer(BlockRenderer):
                         return content_ref
                 return content_ref
 
-            has_vdivider = any(_is_vdivider(c) for c in children)
-            if stack_cls == "ltr-stack" and not has_vdivider:
-                # Fluid-hybrid: the common content-column row (no vertical
-                # dividers, not a stat grid, stacking allowed). Columns wrap to
-                # a stack on phones without relying on a media query, so they
-                # stack even in clients that strip <head> styles. Dividers and
-                # stat grids keep the table + media-query path below.
+            if stack_cls == "ltr-stack":
+                # Flexbox fluid columns: side-by-side while they fit, wrapping to
+                # full-width stacked columns (that grow to fill the container)
+                # when they don't — responsive to the container, no media query
+                # needed (see _fluid_columns). A vertical divider between columns
+                # isn't a real column — render it as a border on the column that
+                # follows it (a vertical rule side-by-side; the media query flips
+                # it to a horizontal rule when stacked, where supported). Stat
+                # grids and explicit no-stack rows keep the table path below.
+                content_cols  = sum(1 for c in children if not _is_vdivider(c)) or 1
+                fluid_default = f"{round(100 / content_cols)}%"
                 cols = []
-                for idx, child in enumerate(children):
-                    left_pad  = 0 if idx == 0 else half_gap
-                    right_pad = 0 if idx == len(children) - 1 else half_gap
-                    w         = explicit_widths[idx] or default_width
-                    max_w     = _cell_ref_width(w)
-                    child_ref = max(max_w - left_pad - right_pad, 1)
-                    cols.append((_render_child(child, child_ref), max_w, ""))
-                inner = _fluid_columns(cols, half_gap, valign_css)
+                pending_divider = None
+                for child in children:
+                    if _is_vdivider(child):
+                        pending_divider = _safe_css_value(
+                            child.get("props", {}).get("border_color", "#e0e0e0")
+                        )
+                        continue
+                    w        = _child_width(child) or fluid_default
+                    ghost_px = _cell_ref_width(w)     # Outlook fixed column width
+                    cols.append((
+                        _render_child(child, ghost_px), ghost_px,
+                        pending_divider is not None, pending_divider or "",
+                    ))
+                    pending_divider = None
+                inner = _fluid_columns(cols, gap, valign_css, content_cols)
             else:
                 cells = ""
                 for idx, child in enumerate(children):

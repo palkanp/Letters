@@ -51,6 +51,8 @@ def send_test(blocks: str | None = None, subject: str | None = None, preview_tex
         subject=f"[TEST] {subject or 'Email Preview'}",
         message=html,
         now=False,
+        add_css=False,    # skip Frappe's email CSS (Gmail drops all styles on it)
+        raw_html=True,    # send our complete HTML as-is; keeps <style> in <head>
     )
     return {"sent_to": email}
 
@@ -430,6 +432,8 @@ def _queue_recipients(send_doc, letter_name, emails, subject, html):
         sender=sender,
         message=html,
         now=False,
+        add_css=False,    # skip Frappe's email CSS (Gmail drops all styles on it)
+        raw_html=True,    # send our complete HTML as-is; keeps <style> in <head>
         queue_separately=True,
         send_priority=0,
         reference_doctype="Letter",
