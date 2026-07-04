@@ -133,6 +133,38 @@ export const useEditorStore = defineStore("editor", () => {
     markDirty();
   }
 
+  function wrapInContainer(id) {
+    _pushHistory(true);
+    function wrapIn(list) {
+      const idx = list.findIndex((b) => b.id === id);
+      if (idx !== -1) {
+        const wrapper = _createBlock("container", nextId());
+        wrapper.children = [list[idx]];
+        list[idx] = wrapper;
+        return wrapper;
+      }
+      for (const b of list) {
+        if (b.children) {
+          const wrapper = wrapIn(b.children);
+          if (wrapper) return wrapper;
+        }
+        if (b.columns) {
+          for (const col of b.columns) {
+            if (col.blocks) {
+              const wrapper = wrapIn(col.blocks);
+              if (wrapper) return wrapper;
+            }
+          }
+        }
+      }
+      return null;
+    }
+    const wrapper = wrapIn(blocks.value);
+    if (!wrapper) return;
+    selectedBlockId.value = wrapper.id;
+    markDirty();
+  }
+
   function moveBlock(fromIndex, toIndex) {
     _pushHistory(true);
     const item = blocks.value.splice(fromIndex, 1)[0];
@@ -630,6 +662,7 @@ export const useEditorStore = defineStore("editor", () => {
     redo,
     addBlock,
     removeBlock,
+    wrapInContainer,
     moveBlock,
     selectBlock,
     selectSubLayer,

@@ -13,31 +13,30 @@
           :style="{ left: contextMenu.x + 'px', top: contextMenu.y + 'px' }"
           @click.stop
         >
-          <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" iconLeft="lucide-pencil" @click="menuRename">
+          <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" @click="menuRename">
             Rename
           </Button>
-          <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" iconLeft="lucide-copy" @click="menuDuplicate">
+          <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" @click="menuDuplicate">
             Duplicate
           </Button>
+          <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" @click="menuWrapInContainer">
+            Wrap in container
+          </Button>
           <template v-if="store.selectedBlock?.type !== 'container'">
-            <div class="h-px bg-outline-gray-1 my-0.5 mx-2" />
-            <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" iconLeft="lucide-droplet" @click="menuCopyStyle">
+            <Button variant="ghost" size="sm" class="w-full !justify-start px-3 text-ink-gray-7" @click="menuCopyStyle">
               Copy style
             </Button>
             <Button
+              v-if="store.styleClipboard"
               variant="ghost"
               size="sm"
-              class="w-full !justify-start px-3"
-              :class="store.styleClipboard ? 'text-ink-gray-7' : 'text-ink-gray-3 cursor-not-allowed'"
-              :disabled="!store.styleClipboard"
-              iconLeft="lucide-clipboard"
+              class="w-full !justify-start px-3 text-ink-gray-7"
               @click="menuPasteStyle"
             >
               Paste style
             </Button>
           </template>
-          <div class="h-px bg-outline-gray-1 my-0.5 mx-2" />
-          <Button variant="ghost" size="sm" theme="red" class="w-full !justify-start px-3" iconLeft="lucide-trash-2" @click="menuRemove">
+          <Button variant="ghost" size="sm" theme="red" class="w-full !justify-start px-3" @click="menuRemove">
             Remove
           </Button>
         </div>
@@ -92,6 +91,7 @@ function openContextMenu(blockId, e) {
 function closeContextMenu() { contextMenu.value = null; }
 function menuRename()     { startRename(contextMenu.value.blockId); closeContextMenu(); }
 function menuDuplicate()  { store.duplicateBlock(contextMenu.value.blockId); closeContextMenu(); }
+function menuWrapInContainer() { store.wrapInContainer(contextMenu.value.blockId); closeContextMenu(); }
 function menuCopyStyle()  { store.copyStyle(contextMenu.value.blockId); closeContextMenu(); }
 function menuPasteStyle() { if (store.styleClipboard) store.pasteStyle(contextMenu.value.blockId); closeContextMenu(); }
 function menuRemove()     { store.removeBlock(contextMenu.value.blockId); closeContextMenu(); }
