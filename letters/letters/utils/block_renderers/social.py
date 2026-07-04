@@ -6,25 +6,50 @@ from typing import Any
 from .base import BlockRenderer, _class_attr, _pad_class, _padding, _safe_css_value, _safe_url, _spacing_wrapper
 
 
+def _platform_slug(label: str) -> str:
+    return label.lower().replace(" / ", "-").replace(" ", "-")
+
+
+def _hex_to_rgb(color: str) -> tuple[int, int, int]:
+    """Parse a #rgb / #rrggbb color to an (r, g, b) tuple; fall back to slate."""
+    h = color.lstrip("#")
+    if len(h) == 3:
+        h = "".join(c * 2 for c in h)
+    try:
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except (ValueError, IndexError):
+        return 0x37, 0x41, 0x51  # #374151, the social block default
+
+
+def _tint_mask_png(platform: str, color: str, out_path: Path) -> None:
+    """Write a color-tinted PNG of a social glyph by painting `color` through the
+    pre-baked alpha mask shipped at images/social-masks/<platform>.png. Pillow is
+    a core Frappe dependency, so this needs no runtime SVG rasterizer.
+    """
+    from PIL import Image
+    import frappe
+
+    mask_path = frappe.get_app_path(
+        "letters", "public", "images", "social-masks", f"{platform}.png")
+    alpha = Image.open(mask_path).convert("RGBA").getchannel("A")
+    tinted = Image.new("RGBA", alpha.size, _hex_to_rgb(color) + (255,))
+    tinted.putalpha(alpha)
+    tinted.save(out_path, "PNG")
+
+
 @lru_cache(maxsize=256)
 def _social_icon_img(svg_path: str, color: str, label: str, size: int = 24) -> str:
-    """Return an <img> tag for a social icon, hosting it as a static SVG file.
+    """Return an <img> tag for a social icon as a color-tinted PNG.
 
-    data: URIs are blocked by Gmail and most email clients, so we write a
-    color-keyed SVG file to the Frappe site's public directory and reference
-    it with an absolute URL.  The file is written once per (platform, color)
-    pair and cached in memory afterwards.
+    Gmail/Outlook/Yahoo don't render SVG (or data-URI) <img> sources, so we serve
+    a raster PNG: the glyph's pre-baked alpha mask tinted to the chosen color and
+    hosted with an absolute URL. Written once per (platform, color) and cached in
+    memory afterwards. Outside a Frappe runtime (unit tests) we fall back to a
+    data-URI SVG so rendering still works there.
     """
+    platform  = _platform_slug(label)
     color_key = color.lstrip("#").lower()
-    platform  = label.lower().replace(" / ", "-").replace(" ", "-")
-    filename  = f"{platform}-{color_key}.svg"
-
-    svg_content = (
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"'
-        f' width="{size}" height="{size}">'
-        f'<path fill="{color}" d="{svg_path}"/>'
-        f'</svg>'
-    )
+    filename  = f"{platform}-{color_key}.png"
 
     try:
         import frappe
@@ -32,12 +57,18 @@ def _social_icon_img(svg_path: str, color: str, label: str, size: int = 24) -> s
         icons_dir.mkdir(parents=True, exist_ok=True)
         icon_file = icons_dir / filename
         if not icon_file.exists():
-            icon_file.write_text(svg_content, encoding="utf-8")
+            _tint_mask_png(platform, color, icon_file)
         from frappe.utils import get_url
         src = escape(get_url(f"/files/social-icons/{filename}"))
     except Exception:
-        # Outside Frappe (unit tests / local dev without context) — fall back to data URI
+        # Outside Frappe (unit tests / local dev without context) — data-URI SVG.
         from base64 import b64encode
+        svg_content = (
+            f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"'
+            f' width="{size}" height="{size}">'
+            f'<path fill="{color}" d="{svg_path}"/>'
+            f'</svg>'
+        )
         encoded = b64encode(svg_content.encode()).decode()
         src = f"data:image/svg+xml;base64,{encoded}"
 

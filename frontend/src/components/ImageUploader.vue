@@ -4,13 +4,13 @@
        dropped files into the uploader's hidden <input>. -->
   <FileUploader
     ref="uploader"
-    :file-types="'image/*'"
+    :file-types="'image/png,image/jpeg,image/gif,image/webp'"
     :upload-args="{ is_private: 0, folder: 'Home/Attachments' }"
     :validate-file="validateImage"
     @success="onSuccess"
     @failure="onFailure"
   >
-    <template #default="{ uploading, progress, openFileSelector }">
+    <template #default="{ uploading, progress, error, openFileSelector }">
       <div style="line-height:0;font-size:0;">
 
         <!-- Uploaded image — rendering delegated to the parent via slot -->
@@ -51,11 +51,12 @@
           <template v-else>
             <span :class="compact ? 'lucide-image size-4' : 'lucide-image size-6'" class="text-ink-gray-4" aria-hidden="true" />
             <span class="text-xs text-ink-gray-6 font-medium text-center leading-tight">{{ compact ? 'Add logo' : 'Click or drop image' }}</span>
-            <span v-if="!compact" class="text-xs text-ink-gray-4 text-center leading-tight">PNG, JPG or WebP · max 5 MB</span>
+            <span v-if="!compact" class="text-xs text-ink-gray-4 text-center leading-tight">PNG, JPG or GIF · max 5 MB</span>
           </template>
         </div>
 
-        <p v-if="uploadError" class="mt-1 text-xs text-red-500">{{ uploadError }}</p>
+        <p v-if="error" class="mt-1 text-xs text-red-500">{{ error }}</p>
+        <p v-else-if="uploadWarning" class="mt-1 text-xs text-amber-600">{{ uploadWarning }}</p>
       </div>
     </template>
   </FileUploader>
@@ -76,14 +77,28 @@ const props = defineProps({
 
 const emit = defineEmits(["uploaded"]);
 
-const uploader    = ref(null);
-const isDragging  = ref(false);
-const uploadError = ref("");
+const uploader      = ref(null);
+const isDragging    = ref(false);
+const uploadWarning = ref("");
 
+// SVG is rejected outright: Gmail, Outlook, and Yahoo all fail to render SVG
+// <img> sources (only Apple Mail does), so it would ship as a broken image to
+// most recipients. WebP isn't recommended as the fallback here even though we
+// allow it below — it's broken (not just non-animating, like GIF) in Outlook
+// desktop, so PNG/JPG/GIF are the actually-safe options for this message.
+//
+// A string return here becomes FileUploader's internal `error` state (exposed
+// via the default slot below) — it does NOT emit @failure or reach onFailure,
+// which only fires for actual network upload errors.
 function validateImage(file) {
   if (!file.type?.startsWith("image/")) return "Please choose an image file.";
+  if (file.type === "image/svg+xml") {
+    return "SVG images don't display in Gmail, Outlook, or Yahoo Mail. Please use PNG, JPG, or GIF instead.";
+  }
   if (file.size > 5 * 1024 * 1024) return "Image must be under 5 MB. Please resize or compress before uploading.";
-  uploadError.value = "";
+  uploadWarning.value = file.type === "image/webp"
+    ? "WebP images won't display in Outlook desktop — PNG or JPG is safer if that audience matters."
+    : "";
   return null;
 }
 
@@ -92,8 +107,8 @@ function onSuccess(fileDoc) {
   if (fileUrl) emit("uploaded", fileUrl);
 }
 
-function onFailure(err) {
-  uploadError.value = err?.message || "Upload failed";
+function onFailure() {
+  uploadWarning.value = "";
 }
 
 function onDrop(e) {

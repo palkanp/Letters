@@ -19,3 +19,7 @@ skills-lock.json
 
 # template preview build artifacts (throwaway)
 letters/public/_tpl_preview/
+
+# pytest artifact: renderers mkdir a MagicMock() get_site_path() when frappe is
+# mocked outside a bench (see block_renderers/social.py)
+MagicMock/

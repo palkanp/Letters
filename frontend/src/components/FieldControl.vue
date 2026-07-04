@@ -95,6 +95,22 @@
     @update:model-value="emit('change', $event || undefined)"
   />
 
+  <!-- image URL: a plain link, not an upload, so file-picker/MIME checks don't
+       apply — validate by extension instead (best-effort; we can't safely fetch
+       an arbitrary remote URL server-side to sniff its real content-type). -->
+  <div v-else-if="field.type === 'image_url'">
+    <TextInput
+      type="text"
+      :placeholder="field.placeholder || ''"
+      size="sm"
+      class="w-full"
+      :model-value="value"
+      @update:model-value="onImageUrlChange"
+    />
+    <p v-if="imageUrlError" class="mt-1 text-xs text-red-500">{{ imageUrlError }}</p>
+    <p v-else-if="imageUrlWarning" class="mt-1 text-xs text-amber-600">{{ imageUrlWarning }}</p>
+  </div>
+
   <!-- default: text -->
   <TextInput
     v-else
@@ -133,6 +149,28 @@ function commitNumber() {
   nextTick(() => {
     localNumber.value = props.value != null ? `${props.value}${props.field.unit || ""}` : "";
   });
+}
+
+// SVG links are rejected outright (same rule as file uploads — Gmail, Outlook,
+// and Yahoo all fail to render SVG <img> sources), WebP links are allowed with
+// a warning (everything renders it except Outlook desktop). Extension match
+// only: a URL with no extension, or one that lies about it, slips through —
+// the real backstop is the server-side check in _abs_image_src.
+const imageUrlError   = ref("");
+const imageUrlWarning = ref("");
+watch(() => props.field, () => { imageUrlError.value = ""; imageUrlWarning.value = ""; });
+
+function onImageUrlChange(url) {
+  if (/\.svg(?:[?#]|$)/i.test(url || "")) {
+    imageUrlError.value = "SVG images don't display in Gmail, Outlook, or Yahoo Mail. Please use a PNG, JPG, or GIF link instead.";
+    imageUrlWarning.value = "";
+    return; // don't save a value we know will render broken
+  }
+  imageUrlError.value = "";
+  imageUrlWarning.value = /\.webp(?:[?#]|$)/i.test(url || "")
+    ? "WebP images won't display in Outlook desktop — a PNG or JPG link is safer if that audience matters."
+    : "";
+  emit("change", url);
 }
 
 const resolvedOptions = computed(() =>

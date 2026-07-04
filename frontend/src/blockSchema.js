@@ -159,7 +159,7 @@ export const BLOCK_SCHEMA = {
         id: "content",
         title: "Content",
         fields: [
-          { key: "image_url", label: "Image URL", type: "text", placeholder: "https://example.com" },
+          { key: "image_url", label: "Image URL", type: "image_url", placeholder: "https://example.com" },
           { key: "link_url", label: "Link URL", type: "text", placeholder: "https://example.com" },
           { key: "alt", label: "Alt text", type: "text", placeholder: "Describe the image" },
         ],
@@ -230,7 +230,7 @@ export const BLOCK_SCHEMA = {
         id: "image",
         title: "Image",
         fields: [
-          { key: "image_url", label: "Image URL", type: "text", placeholder: "https://example.com" },
+          { key: "image_url", label: "Image URL", type: "image_url", placeholder: "https://example.com" },
           {
             key: "image_position",
             label: "Image side",
@@ -700,7 +700,7 @@ export const BLOCK_SCHEMA = {
         id: "content",
         title: "Content",
         fields: [
-          { key: "image_url",    label: "Image URL",    type: "text", placeholder: "https://example.com" },
+          { key: "image_url",    label: "Image URL",    type: "image_url", placeholder: "https://example.com" },
           { key: "button_url",   label: "Button URL",   type: "text", placeholder: "https://example.com" },
         ],
       },
@@ -743,7 +743,7 @@ export const BLOCK_SCHEMA = {
         id: "content",
         title: "Content",
         fields: [
-          { key: "logo_url",   label: "Logo URL",    type: "text", placeholder: "https://example.com/logo.png" },
+          { key: "logo_url",   label: "Logo URL",    type: "image_url", placeholder: "https://example.com/logo.png" },
           { key: "logo_height", label: "Logo height", type: "text", placeholder: "40px" },
           { key: "tagline",    label: "Tagline",     type: "text", placeholder: "Monthly newsletter" },
         ],
@@ -792,7 +792,7 @@ export const BLOCK_SCHEMA = {
         id: "content",
         title: "Content",
         fields: [
-          { key: "thumbnail_url", label: "Thumbnail URL", type: "text", placeholder: "https://example.com" },
+          { key: "thumbnail_url", label: "Thumbnail URL", type: "image_url", placeholder: "https://example.com" },
           { key: "video_url",     label: "Video URL",      type: "text", placeholder: "https://youtube.com/watch?v=…" },
           { key: "caption",       label: "Caption",        type: "text", placeholder: "Watch the video" },
         ],

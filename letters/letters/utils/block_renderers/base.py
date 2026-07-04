@@ -36,6 +36,21 @@ def _safe_url(url: str) -> str:
     return escape(url)
 
 
+_SVG_EXT_RE = re.compile(r"\.svg(?:[?#]|$)", re.IGNORECASE)
+
+
+def _is_svg_src(url: str) -> bool:
+    """Best-effort check for an SVG image by file extension.
+
+    We can't inspect the real content-type of an arbitrary hotlinked URL without
+    fetching it server-side (an SSRF risk we don't want to take on), so this is
+    an extension match, not a content sniff. Good enough to catch the common
+    case: an upload or pasted link ending in .svg (optionally followed by a
+    query string or fragment).
+    """
+    return bool(_SVG_EXT_RE.search((url or "").strip()))
+
+
 def _abs_image_src(url: str) -> str:
     """Make an image src absolute and HTML-escape it.
 
@@ -44,9 +59,20 @@ def _abs_image_src(url: str) -> str:
     renders as a broken image in the inbox. Prepend the site's public URL so the
     image loads. Already-absolute (http/https/protocol-relative/data) URLs and
     empty values are left untouched.
+
+    SVG sources are dropped entirely (returns "") regardless of how the URL got
+    into the block — upload, pasted link, or fixture — because Gmail, Outlook,
+    and Yahoo all fail to render SVG <img> sources (only Apple Mail does), so an
+    SVG here would always ship as a broken image to most recipients. This is the
+    single choke point every renderer routes image/thumbnail/logo URLs through,
+    so this guard covers all of them.
     """
     url = (url or "").strip()
-    if not url or url.startswith(("http://", "https://", "//", "data:")):
+    if not url:
+        return ""
+    if _is_svg_src(url):
+        return ""
+    if url.startswith(("http://", "https://", "//", "data:")):
         return escape(url)
     if url.startswith("/"):
         try:
