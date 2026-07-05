@@ -111,6 +111,7 @@
                     </div>
                   </div>
                 </label>
+
                 <label class="block">
                   <span class="block text-xs font-semibold text-ink-gray-6  mb-1.5">Preview Text</span>
                   <TextInput
@@ -578,6 +579,7 @@ watch(
     if (tab === "analytics") loadAnalytics();
     if (tab === "recipients" && isSent.value) loadRecipients();
     if (tab === "html") loadHtml();
+    if (tab === "details" && isNotification.value && !mergeFields.value.length) loadMergeFields();
   }
 );
 

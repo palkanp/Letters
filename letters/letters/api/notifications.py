@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import frappe
 
 
@@ -230,6 +232,32 @@ def get_merge_fields(letter: str):
     return {"document_type": document_type, "fields": fields}
 
 
+_MERGE_TAG_RE = re.compile(r"\{\{\s*doc\.([a-zA-Z0-9_]+)\s*\}\}")
+
+
+def _pick_sample_record(document_type: str, html: str) -> str | None:
+    """Return the most recently modified record with real values for every
+    field the preview's `{{ doc.field }}` tags reference, so the preview
+    doesn't show a blank where a merge tag would otherwise resolve to empty.
+
+    Checks up to the 20 most recently modified records and takes the first
+    one where all referenced fields are non-empty, falling back to the single
+    most recently modified record if none qualify (or if the html has no
+    merge tags to check against).
+    """
+    fieldnames = sorted(set(_MERGE_TAG_RE.findall(html)) - {"name"})
+    if not fieldnames:
+        return frappe.db.get_value(document_type, {}, "name", order_by="modified desc")
+
+    candidates = frappe.get_all(
+        document_type, fields=["name", *fieldnames], order_by="modified desc", limit=20
+    )
+    for row in candidates:
+        if all(row.get(f) not in (None, "") for f in fieldnames):
+            return row["name"]
+    return candidates[0]["name"] if candidates else None
+
+
 def resolve_merge_tags_for_preview(html: str, letter_name: str | None) -> str:
     """Resolve `{{ doc.field }}` tags in a compiled Letter preview, if it has a
     linked, configured Notification.
@@ -238,8 +266,11 @@ def resolve_merge_tags_for_preview(html: str, letter_name: str | None) -> str:
     Letter HTML through `frappe.render_template` against the triggering
     document. There's no live document at preview time, so this substitutes
     the most recently modified record of the Notification's `document_type`
-    as a stand-in. Returns `html` unchanged if there's no linked Notification,
-    no `document_type` set yet, or no sample record to render against.
+    that actually has data in every field the preview's tags reference (see
+    `_pick_sample_record`) — otherwise a stale/incomplete record could render
+    as blank and look like the feature is broken. Returns `html` unchanged if
+    there's no linked Notification, no `document_type` set yet, or no record
+    to render against.
     """
     if not letter_name:
         return html
@@ -249,7 +280,7 @@ def resolve_merge_tags_for_preview(html: str, letter_name: str | None) -> str:
     document_type = frappe.db.get_value("Notification", notif_name, "document_type")
     if not document_type:
         return html
-    sample_name = frappe.db.get_value(document_type, {}, "name", order_by="modified desc")
+    sample_name = _pick_sample_record(document_type, html)
     if not sample_name:
         return html
 
