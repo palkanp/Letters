@@ -55,6 +55,17 @@ function openLetter(name) {
   // meaningful navigation the user should be able to step back out of one at
   // a time, same as List → Form elsewhere in Desk.
   if (typeof frappe !== "undefined" && frappe.set_route) {
+    // frappe.set_route()'s route resolution is async (it awaits parsing the
+    // new URL before firing this page's "show" event), racing independently
+    // against Vue's own reactivity flush of the activeLetter assignment
+    // above. If Frappe's page-show fires first, syncFromRoute() below reads
+    // frappe.get_route() before it's caught up — landing back on a stale/
+    // empty route and clobbering the activeLetter we just set, which is what
+    // made the very first click silently do nothing (mounting the builder
+    // with no letter) until a second click let the route catch up. Since we
+    // already set activeLetter correctly ourselves, skip the very next
+    // page-show resync — it can only be reacting to this same navigation.
+    _ignoreNextPageShow = true;
     frappe.set_route("letter-builder", name);
   }
 }
@@ -80,6 +91,7 @@ async function onNewLetterSubmit(blocks) {
 function closeLetter() {
   activeLetter.value = null;
   if (typeof frappe !== "undefined" && frappe.set_route) {
+    _ignoreNextPageShow = true;
     frappe.set_route("letter-builder");
   }
 }
@@ -88,7 +100,14 @@ function closeLetter() {
 // page (main.js wires this to the "letters:page-show" event) — that includes
 // browser back/forward, which changes the URL without remounting the app, so
 // without this activeLetter would keep showing whatever it last showed.
+// See the _ignoreNextPageShow comment in openLetter() for why a page-show
+// triggered by our OWN navigation needs to be skipped rather than resynced.
+let _ignoreNextPageShow = false;
 function syncFromRoute() {
+  if (_ignoreNextPageShow) {
+    _ignoreNextPageShow = false;
+    return;
+  }
   activeLetter.value = getRouteParam();
 }
 
