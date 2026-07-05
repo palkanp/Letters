@@ -14,8 +14,8 @@ html, body {
   height: 100%;
 }
 
-#letters-builder,
-#letters-builder > .letters-builder {
+#letter-builder,
+#letter-builder > .letter-builder {
   width: 100%;
   height: 100vh;
 }
@@ -25,11 +25,11 @@ html, body {
 }
 
 /* Explicit dark mode panel colors — near-black like Frappe Builder */
-[data-theme="dark"] .letters-builder > header,
-[data-theme="dark"] .letters-builder > div > aside {
+[data-theme="dark"] .letter-builder > header,
+[data-theme="dark"] .letter-builder > div > aside {
   background-color: rgb(15 15 15) !important;
 }
-[data-theme="dark"] .letters-builder > div > main {
+[data-theme="dark"] .letter-builder > div > main {
   background-color: rgb(43 43 43) !important;
 }
 
@@ -85,15 +85,15 @@ html, body {
 }
 
 /* Thin themed scrollbars — matches Frappe Builder */
-.letters-builder *::-webkit-scrollbar {
+.letter-builder *::-webkit-scrollbar {
   width: 8px;
   height: 8px;
   background: var(--surface-gray-1);
 }
-.letters-builder *::-webkit-scrollbar-thumb {
+.letter-builder *::-webkit-scrollbar-thumb {
   border-radius: 9999px;
   background: var(--surface-gray-3);
 }
-.letters-builder *::-webkit-scrollbar-thumb:hover {
+.letter-builder *::-webkit-scrollbar-thumb:hover {
   background: var(--surface-gray-4);
 }

@@ -7,7 +7,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { FrappeUIProvider } from "frappe-ui";
 import { useDark, useToggle } from "@vueuse/core";
 import LettersDashboard from "./pages/LettersDashboard.vue";
@@ -15,6 +15,10 @@ import BuilderPage from "./pages/BuilderPage.vue";
 import TemplatePicker from "./components/TemplatePicker.vue";
 
 const isDark = useDark({
+  // Scope to our own mount root (main.js), not the default 'html' — this page
+  // shares the DOM with the rest of Frappe Desk, and setting data-theme on
+  // <html> leaked dark styling into Desk itself once you navigated away.
+  selector: "#letter-builder",
   attribute: "data-theme",
   valueDark: "dark",
   valueLight: "light",
@@ -35,12 +39,10 @@ function getRouteParam() {
 
 function openLetter(name) {
   activeLetter.value = name;
-  // replace_route: this only syncs the URL for bookmarking — the dashboard →
-  // builder switch already happened client-side via activeLetter above, so a
-  // real pushState here would add a history entry the user never perceives as
-  // a distinct page, making the browser back button take two presses to leave.
+  // A real pushState (default for set_route): opening a letter is a
+  // meaningful navigation the user should be able to step back out of one at
+  // a time, same as List → Form elsewhere in Desk.
   if (typeof frappe !== "undefined" && frappe.set_route) {
-    frappe.route_flags.replace_route = true;
     frappe.set_route("letter-builder", name);
   }
 }
@@ -66,13 +68,21 @@ async function onNewLetterSubmit(blocks) {
 function closeLetter() {
   activeLetter.value = null;
   if (typeof frappe !== "undefined" && frappe.set_route) {
-    frappe.route_flags.replace_route = true;
     frappe.set_route("letter-builder");
   }
 }
 
+// Runs on initial mount AND whenever Frappe redisplays this already-mounted
+// page (main.js wires this to the "letters:page-show" event) — that includes
+// browser back/forward, which changes the URL without remounting the app, so
+// without this activeLetter would keep showing whatever it last showed.
+function syncFromRoute() {
+  activeLetter.value = getRouteParam();
+}
+
 onMounted(() => {
-  const name = getRouteParam();
-  if (name) activeLetter.value = name;
+  syncFromRoute();
+  window.addEventListener("letters:page-show", syncFromRoute);
 });
+onUnmounted(() => window.removeEventListener("letters:page-show", syncFromRoute));
 </script>

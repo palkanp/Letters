@@ -22,6 +22,14 @@ if (typeof window !== "undefined" && window.frappe && window.frappe.pages) {
   const page = (frappe.pages["letter-builder"] =
     frappe.pages["letter-builder"] || {});
 
+  // Desk always shows its own app sidebar unless the page opts out via
+  // page.page.hide_sidebar (the flag frappe.ui.make_app_page() normally sets
+  // up — we don't use that helper, so without this the sidebar was rendered
+  // every time this page showed, reserving a blank strip on the left that
+  // just happened to be invisible before because a dark-mode style leak was
+  // painting it black too).
+  page.page = { hide_sidebar: true };
+
   page.on_page_load = function (wrapper) {
     // frappe-ui's request/upload layer reads window.csrf_token, but Desk only
     // sets frappe.csrf_token. Without this bridge, POSTs through frappe-ui
@@ -40,6 +48,13 @@ if (typeof window !== "undefined" && window.frappe && window.frappe.pages) {
     mountApp(el);
   };
 
+  // Frappe reuses this same page instance for every visit — browser back/
+  // forward and in-desk navigation both just change the sub-route and fire
+  // on_page_show, without remounting the Vue app. Forward that as a DOM event
+  // so App.vue can resync activeLetter from the new URL.
+  page.on_page_show = function () {
+    window.dispatchEvent(new CustomEvent("letters:page-show"));
+  };
 
 } else {
   // Standalone dev (vite dev server / index.html)
