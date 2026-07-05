@@ -1,5 +1,5 @@
 <template>
-  <div class="flex items-center gap-2 py-1.5">
+  <div class="flex items-center gap-2 py-1">
     <div class="shrink-0" :class="compact ? '' : 'w-24'">
       <component :is="hint ? TooltipWrap : 'span'" :text="hint" placement="left">
         <span class="text-xs text-ink-gray-5" :class="compact ? '' : 'block truncate'">{{ label }}</span>

@@ -109,7 +109,7 @@
             />
           </template>
         </Button>
-        <div v-show="openSections.has(section.id)" class="px-3 pb-4 flex flex-col gap-2">
+        <div v-show="openSections.has(section.id)" class="px-3 pt-2 pb-4 flex flex-col gap-0.5">
           <PropRow
             v-for="field in section.fields.filter(f => !f.showWhen || f.showWhen(block?.props))"
             :key="field.key"

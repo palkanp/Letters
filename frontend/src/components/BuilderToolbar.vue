@@ -1,5 +1,5 @@
 <template>
-  <header class="flex-shrink-0 h-12 bg-surface-base border-b border-outline-gray-1 flex items-center px-4 gap-3 relative">
+  <header class="flex-shrink-0 h-12 bg-surface-base border-b border-outline-gray-1 flex items-center px-2 gap-0.5 relative">
 
     <!-- Brand + page menu (Frappe Builder-style left dropdown) -->
     <Dropdown :options="menuOptions" placement="bottom-start">
@@ -8,7 +8,7 @@
           variant="ghost"
           size="sm"
           aria-label="Letter menu"
-          class="flex-shrink-0 gap-1 pl-1.5 pr-1 focus-visible:!ring-0"
+          class="flex-shrink-0 !gap-1 !px-0.5 focus-visible:!ring-0"
         >
           <template #prefix>
             <span class="w-6 h-6 rounded-md bg-[var(--ink-gray-9)] text-ink-white flex items-center justify-center text-xs font-bold flex-shrink-0">L</span>
@@ -20,20 +20,18 @@
       </template>
     </Dropdown>
 
-    <div class="w-px h-4 bg-outline-gray-2 mx-0.5" />
-
     <!-- Add block / Add container — icon tools -->
     <Tooltip text="Add block">
-      <Button variant="ghost" size="sm" icon="lucide-plus" aria-label="Add block" @click.stop="emit('add-block')" />
+      <Button variant="ghost" size="sm" icon="lucide-plus" aria-label="Add block" class="!w-7 !h-7 !p-0 !min-w-0" @click.stop="emit('add-block')" />
     </Tooltip>
     <Tooltip text="Add container">
-      <Button variant="ghost" size="sm" icon="lucide-square" aria-label="Add container" @click.stop="emit('add-container')" />
+      <Button variant="ghost" size="sm" icon="lucide-square" aria-label="Add container" class="!w-7 !h-7 !p-0 !min-w-0" @click.stop="emit('add-container')" />
     </Tooltip>
     <Tooltip text="Add text">
-      <Button variant="ghost" size="sm" icon="lucide-type" aria-label="Add text" @click.stop="emit('insert', 'text')" />
+      <Button variant="ghost" size="sm" icon="lucide-type" aria-label="Add text" class="!w-7 !h-7 !p-0 !min-w-0" @click.stop="emit('insert', 'text')" />
     </Tooltip>
     <Tooltip text="Add image">
-      <Button variant="ghost" size="sm" icon="lucide-image" aria-label="Add image" @click.stop="emit('insert', 'image')" />
+      <Button variant="ghost" size="sm" icon="lucide-image" aria-label="Add image" class="!w-7 !h-7 !p-0 !min-w-0" @click.stop="emit('insert', 'image')" />
     </Tooltip>
 
     <!-- Centered letter title — absolute so it's centered to the page -->
