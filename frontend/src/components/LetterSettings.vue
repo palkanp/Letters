@@ -240,7 +240,11 @@
                           target="_blank"
                           class="text-ink-red-5 hover:underline"
                         >Failed</a>
-                        <span v-else :class="r.status === 'Sent' ? 'text-ink-gray-4' : 'text-ink-red-5'">{{ r.status }}</span>
+                        <span v-else :class="{
+                          'text-ink-gray-4':  r.status === 'Sent',
+                          'text-ink-red-5':   r.status === 'Failed',
+                          'text-ink-amber-6': r.status === 'Excluded' || r.status === 'Invalid',
+                        }">{{ r.status }}</span>
                       </div>
                     </div>
 
