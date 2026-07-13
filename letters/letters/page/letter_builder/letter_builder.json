@@ -7,6 +7,12 @@
   "roles": [
     {
       "role": "System Manager"
+    },
+    {
+      "role": "Letters Manager"
+    },
+    {
+      "role": "Marketing Manager"
     }
   ]
 }

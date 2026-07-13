@@ -1,16 +1,34 @@
 import frappe
 
+from letters.letters.permissions import sync_letter_builder_page_roles
+
 
 def after_install():
+    _ensure_letters_manager_role()
     seed_templates()
     _add_notification_letter_field()
     _add_notification_message_type_field()
+    sync_letter_builder_page_roles()
 
 
 def after_migrate():
+    _ensure_letters_manager_role()
     seed_templates()
     _add_notification_letter_field()
     _add_notification_message_type_field()
+    sync_letter_builder_page_roles()
+
+
+def _ensure_letters_manager_role():
+    """Create the Letters Manager role referenced by this app's DocType permissions."""
+    if frappe.db.exists("Role", "Letters Manager"):
+        return
+    frappe.get_doc({
+        "doctype": "Role",
+        "role_name": "Letters Manager",
+        "desk_access": 1,
+    }).insert(ignore_permissions=True)
+    frappe.db.commit()
 
 
 def seed_templates():

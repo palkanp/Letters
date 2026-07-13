@@ -46,3 +46,10 @@ override_doctype_class = {
 permission_query_conditions = {
     "Letter": "letters.letters.doctype.letter.letter.get_permission_query_conditions",
 }
+
+doc_events = {
+    "Custom DocPerm": {
+        "on_update": "letters.letters.permissions.sync_letter_builder_page_roles",
+        "on_trash": "letters.letters.permissions.sync_letter_builder_page_roles",
+    },
+}
