@@ -408,6 +408,52 @@ def _execute_send(send_doc_name, letter_name):
             frappe.log_error(frappe.get_traceback(), "Letters _execute_send cleanup error")
 
 
+#: Fixed English text Frappe core always appends after the unsubscribe link
+#: (frappe.email.queue.get_unsubscribe_message) - there's no parameter to
+#: suppress it, so strip_unsubscribe_sentence removes this exact substring.
+UNSUBSCRIBE_SENTENCE_SUFFIX = " to stop receiving emails of this type"
+
+
+def _append_unsubscribe_footer(html):
+    """Insert core's unsubscribe-link marker before </body>.
+
+    raw_html=True (needed so Gmail keeps our <style> media queries) skips
+    core's footer-TEMPLATE insertion, but core still swaps a real anchor tag
+    in for this exact marker regardless of raw_html - see the unconditional
+    `if unsubscribe_link: html = html.replace("<!--unsubscribe link here-->", ...)`
+    in frappe.email.email_body.get_formatted_html. That swap happens *after*
+    scrub_urls() runs, which matters: building the <a href="<!--unsubscribe_url-->">
+    ourselves ahead of time would have scrub_urls mistake the still-unresolved
+    placeholder for a relative link and prefix the site URL onto it *before*
+    the real per-recipient URL gets substituted in later, producing a doubled
+    URL. Letting core insert the anchor at its own safe, post-scrub point
+    avoids that. Core's template also appends a fixed English sentence after
+    the link with no parameter to suppress it - see strip_unsubscribe_sentence.
+    """
+    marker = "<!--unsubscribe link here-->"
+    if "</body>" in html:
+        return html.replace("</body>", marker + "</body>", 1)
+    return html + marker
+
+
+def strip_unsubscribe_sentence(doc, method=None):
+    """Email Queue after_insert hook.
+
+    Core's unsubscribe footer (see _append_unsubscribe_footer) always reads
+    "<link> to stop receiving emails of this type", with no override
+    parameter for that trailing sentence. Letters only wants the bare link,
+    so strip the known fixed suffix off any Letter-referencing queue row.
+    """
+    if doc.reference_doctype != "Letter":
+        return
+    if UNSUBSCRIBE_SENTENCE_SUFFIX not in (doc.message or ""):
+        return
+    doc.db_set(
+        "message", doc.message.replace(UNSUBSCRIBE_SENTENCE_SUFFIX, ""),
+        update_modified=False,
+    )
+
+
 def _queue_recipients(send_doc, letter_name, emails, subject, html):
     """Hand the full recipient list to core's Email Queue in one bulk call.
 
@@ -424,6 +470,9 @@ def _queue_recipients(send_doc, letter_name, emails, subject, html):
         unsubscribe_method = "/api/method/letters.letters.api.unsubscribe.unsubscribe_redirect"
     else:
         unsubscribe_method = None
+
+    if unsubscribe_method:
+        html = _append_unsubscribe_footer(html)
 
     letter = frappe.get_doc("Letter", letter_name)
     sender_email = (letter.sender_email or "").strip()
@@ -446,7 +495,7 @@ def _queue_recipients(send_doc, letter_name, emails, subject, html):
         reference_doctype="Letter",
         reference_name=letter_name,
         unsubscribe_method=unsubscribe_method,
-        unsubscribe_message=_("Unsubscribe") if include_unsub else None,
+        unsubscribe_message=_("Unsubscribe here") if include_unsub else None,
         add_unsubscribe_link=1 if include_unsub else 0,
         email_read_tracker_url="/api/method/letters.letters.api.track_open",
     )

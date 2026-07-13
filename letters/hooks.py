@@ -52,4 +52,7 @@ doc_events = {
         "on_update": "letters.letters.permissions.sync_letter_builder_page_roles",
         "on_trash": "letters.letters.permissions.sync_letter_builder_page_roles",
     },
+    "Email Queue": {
+        "after_insert": "letters.letters.api.sending.strip_unsubscribe_sentence",
+    },
 }
