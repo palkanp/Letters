@@ -336,12 +336,12 @@ export function useLetter(editorStore, { initialName = null, skipTemplatePrompt 
         }
       }
       const res = await frappe.call({ method: "letters.letters.api.send_letter", args });
-      const { count, skipped_invalid } = res.message;
-      let msg = `Queued for ${count} recipient${count === 1 ? "" : "s"}!`;
-      if (skipped_invalid > 0) {
-        msg += ` (${skipped_invalid} invalid address${skipped_invalid === 1 ? "" : "es"} skipped)`;
-      }
-      toast.success(msg);
+      const { count } = res.message;
+      // Invalid addresses aren't just mentioned in passing here — they're
+      // written to the recipient list with an "Invalid" status (see
+      // LetterSettings' Recipients tab), so there's no need to also call
+      // them out in this transient toast.
+      toast.success(`Queued for ${count} recipient${count === 1 ? "" : "s"}!`);
       sendProgress.value = { status: "Queued", sent: 0, delivered: 0, failed: 0, total: count };
       if (editorStore.letterDoc) editorStore.letterDoc.status = "Sending";
       _startProgressPolling();

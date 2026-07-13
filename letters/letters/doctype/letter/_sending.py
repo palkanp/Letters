@@ -142,7 +142,7 @@ class SendingMixin:
             email_group = email_group  # local alias; may stay None
             if email_group or doctype_config or recipients:
                 # Explicit args — route through the legacy single-source resolver
-                recipient_list, email_group, mode, invalid_count = _resolve_recipients(
+                recipient_list, email_group, mode, invalid_emails = _resolve_recipients(
                     email_group, recipients, doctype_config, MAX_RECIPIENTS,
                     suppressed_fn, _valid_emails,
                 )
@@ -157,12 +157,12 @@ class SendingMixin:
                     eg  = src.get("email_group") if src.get("type") == "group" else None
                     dc  = {k: src[k] for k in ("doctype", "email_field", "filters") if k in src} if src.get("type") == "doctype" else None
                     rc  = src.get("recipients") if src.get("type") == "paste" else None
-                    recipient_list, email_group, mode, invalid_count = _resolve_recipients(
+                    recipient_list, email_group, mode, invalid_emails = _resolve_recipients(
                         eg, rc, dc, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
                     )
                 else:
                     # Multi-source array — merge, dedup, validate
-                    recipient_list, invalid_count = _resolve_multi_source(
+                    recipient_list, invalid_emails = _resolve_multi_source(
                         sources, MAX_RECIPIENTS, suppressed_fn, _valid_emails,
                         letter_name=self.name,
                     )
@@ -171,6 +171,10 @@ class SendingMixin:
 
             # Snapshot the content at send time so edits after clicking Send can't
             # change what recipients receive. _execute_send reads from the snapshot.
+            # total_recipients/sent_count only ever count the valid, queued
+            # list — invalid addresses never reach the Email Queue, so counting
+            # them here would make get_send_progress wait forever for a queue
+            # count that can never arrive.
             send_doc = frappe.get_doc({
                 "doctype": "Email Send",
                 "letter": self.name,
@@ -186,11 +190,15 @@ class SendingMixin:
                 "include_unsubscribe":   1 if getattr(self, "include_unsubscribe", False) else 0,
             })
             send_doc.insert(ignore_permissions=True)
-            _bulk_insert_recipients(send_doc.name, recipient_list)
+            _bulk_insert_recipients(send_doc.name, recipient_list, status="Pending")
+            if invalid_emails:
+                _bulk_insert_recipients(
+                    send_doc.name, invalid_emails, status="Invalid", start_idx=len(recipient_list) + 1,
+                )
             frappe.db.commit()
 
             _enqueue_send(send_doc.name, self.name)
-            return {"queued": True, "count": len(recipient_list), "mode": mode, "skipped_invalid": invalid_count}
+            return {"queued": True, "count": len(recipient_list), "mode": mode, "skipped_invalid": len(invalid_emails)}
 
         except Exception:
             frappe.db.set_value("Letter", self.name, "status", "Draft", update_modified=False)
@@ -202,7 +210,7 @@ class SendingMixin:
 def _resolve_recipients(email_group, recipients, doctype_config, max_recipients, suppressed_fn, valid_fn):
     """Resolve the final recipient list from whichever source was provided.
 
-    Returns (recipient_list, email_group, mode, invalid_count).
+    Returns (recipient_list, email_group, mode, invalid_emails).
     Throws on empty or oversized results so the caller gets a clear error.
     """
     if email_group:
@@ -245,7 +253,7 @@ def _resolve_recipients(email_group, recipients, doctype_config, max_recipients,
     if not recipient_list:
         frappe.throw(_("All selected recipients have unsubscribed from this letter."))
 
-    recipient_list, invalid_count = valid_fn(recipient_list)
+    recipient_list, invalid_emails = valid_fn(recipient_list)
     if not recipient_list:
         frappe.throw(_("No valid email addresses to send to."))
 
@@ -255,4 +263,4 @@ def _resolve_recipients(email_group, recipients, doctype_config, max_recipients,
             "per-letter limit. Narrow your filters or split the send."
         ).format(max_recipients))
 
-    return recipient_list, email_group, mode, invalid_count
+    return recipient_list, email_group, mode, invalid_emails

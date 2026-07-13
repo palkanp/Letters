@@ -324,6 +324,55 @@ class TestSendEnqueue(LettersTestCase):
         self.assertEqual(frappe.db.count("Email Send", {"letter": doc.name}), 1)
 
 
+class TestInvalidRecipients(LettersTestCase):
+    """Invalid addresses must be persisted as a visible 'Invalid' row instead
+    of being silently dropped with only a toast-friendly count."""
+
+    def _send_doc_of(self, letter_name):
+        send_name = frappe.db.get_value("Email Send", {"letter": letter_name}, "name")
+        self._created.append(("Email Send", send_name))
+        return send_name
+
+    def test_invalid_addresses_persisted_with_invalid_status(self):
+        doc = self.new_letter()
+        with patch("frappe.enqueue"):
+            result = doc.send(recipients=["a@example.com", "not-an-email", "b@example.com"])
+        self.assertEqual(result["count"], 2)
+        self.assertEqual(result["skipped_invalid"], 1)
+
+        send_name = self._send_doc_of(doc.name)
+        rows = {
+            r.email: r.status for r in frappe.get_all(
+                "Email Send Recipient", filters={"parent": send_name}, fields=["email", "status"],
+            )
+        }
+        self.assertEqual(rows["not-an-email"], "Invalid")
+        self.assertEqual(rows["a@example.com"], "Pending")
+        self.assertEqual(rows["b@example.com"], "Pending")
+
+    def test_total_recipients_excludes_invalid(self):
+        """total_recipients must stay valid-only, or get_send_progress would
+        wait forever for a queued count that invalid rows can never reach."""
+        doc = self.new_letter()
+        with patch("frappe.enqueue"):
+            doc.send(recipients=["a@example.com", "bad", "also-bad"])
+        send_name = self._send_doc_of(doc.name)
+        total = frappe.db.get_value("Email Send", send_name, "total_recipients")
+        self.assertEqual(total, 1)
+
+    def test_get_recipients_surfaces_invalid_row(self):
+        # frappe.enqueue is mocked, so _execute_send (which flips valid rows
+        # Pending -> Sent) never actually runs here — only the Invalid status
+        # is under test, which is written synchronously by send() itself.
+        doc = self.new_letter()
+        with patch("frappe.enqueue"):
+            doc.send(recipients=["a@example.com", "not-an-email"])
+        self._send_doc_of(doc.name)
+        by_email = {r.email: r.status for r in doc.get_recipients()}
+        self.assertEqual(by_email["not-an-email"], "Invalid")
+        self.assertEqual(by_email["a@example.com"], "Pending")
+
+
 class TestSendSnapshot(LettersTestCase):
     """Content is snapshotted onto Email Send at queue time."""
 

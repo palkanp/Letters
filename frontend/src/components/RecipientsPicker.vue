@@ -284,10 +284,14 @@ function buildSourceConfig(src) {
     return { type: "group", email_group: src.email_group };
   }
   if (src.type === "paste") {
+    // Keep malformed-looking entries too (only drop truly empty lines) — the
+    // backend re-validates at send time and records anything invalid with a
+    // visible "Invalid" status in the Recipients tab. Silently dropping them
+    // here would erase that visibility before send ever sees them.
     const recipients = (src._raw || "")
       .split(/[\n,;]/)
       .map(e => e.trim().toLowerCase())
-      .filter(e => EMAIL_RE.test(e));
+      .filter(Boolean);
     return { type: "paste", recipients };
   }
   if (src.type === "doctype") {

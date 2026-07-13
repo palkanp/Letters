@@ -123,11 +123,13 @@ def _resolve_single_source_emails(source):
 
 def _resolve_multi_source(sources, max_recipients, suppressed_fn, valid_fn, letter_name=None):
     """Resolve a list of source configs to a final deduplicated, validated
-    email list after suppression.  Returns (email_list, invalid_count).
+    email list after suppression.  Returns (valid_emails, invalid_emails).
 
     When letter_name is provided, also snapshots the resolved email list back
     into each source's resolved_emails field on recipient_config so the sent
-    view can display per-source recipients exactly.
+    view can display per-source recipients exactly (valid and invalid alike —
+    invalid addresses still need to show up under their original source with
+    an "Invalid" status rather than vanishing).
     """
     seen = set()
     merged = []
@@ -156,7 +158,7 @@ def _resolve_multi_source(sources, max_recipients, suppressed_fn, valid_fn, lett
     if not merged:
         frappe.throw(_("No recipients found across all selected audience sources."))
 
-    valid, invalid_count = valid_fn(merged)
+    valid, invalid = valid_fn(merged)
     if not valid:
         frappe.throw(_("No valid email addresses to send to."))
 
@@ -167,20 +169,16 @@ def _resolve_multi_source(sources, max_recipients, suppressed_fn, valid_fn, lett
         ).format(max_recipients))
 
     # Snapshot resolved emails back into recipient_config so the sent view
-    # can show per-source recipient lists without re-querying.
+    # can show per-source recipient lists without re-querying. Keep invalid
+    # addresses in the snapshot too (not just valid ones) — they still need
+    # to render under their original source with an "Invalid" status.
     if letter_name and sources:
-        valid_set = {e.lower() for e in valid}
-        updated = []
-        for src, src_emails in zip(sources, per_source):
-            updated.append({
-                **src,
-                "resolved_emails": [e for e in src_emails if e.lower() in valid_set],
-            })
+        updated = [{**src, "resolved_emails": src_emails} for src, src_emails in zip(sources, per_source)]
         frappe.db.set_value(
             "Letter", letter_name, "recipient_config", json.dumps(updated)
         )
 
-    return valid, invalid_count
+    return valid, invalid
 
 
 
@@ -360,10 +358,12 @@ def _suppressed_emails(letter_name=None):
 
 
 def _valid_emails(emails):
-    """Drop malformed addresses using Frappe's validator (never trust the
-    client). Returns (valid_emails, dropped_count)."""
-    valid = [e for e in emails if frappe.utils.validate_email_address(e, throw=False)]
-    return valid, len(emails) - len(valid)
+    """Split addresses using Frappe's validator (never trust the client).
+    Returns (valid_emails, invalid_emails)."""
+    valid, invalid = [], []
+    for e in emails:
+        (valid if frappe.utils.validate_email_address(e, throw=False) else invalid).append(e)
+    return valid, invalid
 
 
 

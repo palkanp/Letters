@@ -18,7 +18,7 @@
       "fieldname": "status",
       "fieldtype": "Select",
       "label": "Status",
-      "options": "Pending\nSent\nFailed",
+      "options": "Pending\nSent\nFailed\nInvalid",
       "default": "Pending",
       "in_list_view": 1,
       "columns": 2

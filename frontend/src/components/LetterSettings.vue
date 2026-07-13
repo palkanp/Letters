@@ -216,7 +216,7 @@
                               <span v-else :class="{
                                 'text-ink-gray-4':  r.status === 'Sent',
                                 'text-ink-red-5':   r.status === 'Failed',
-                                'text-ink-amber-6': r.status === 'Excluded',
+                                'text-ink-amber-6': r.status === 'Excluded' || r.status === 'Invalid',
                               }">{{ r.status }}</span>
                             </div>
                           </div>

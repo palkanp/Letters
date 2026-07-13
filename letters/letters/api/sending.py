@@ -173,7 +173,14 @@ def resume_send(name: str):
             "not stuck. Check back shortly instead of resuming."
         ))
 
-    all_emails = frappe.get_all("Email Send Recipient", filters={"parent": send.name}, pluck="email")
+    # Invalid rows are never queued by design (see _execute_send) — exclude
+    # them here too, otherwise they'd always show up as "missing" and this
+    # would try to send to them.
+    all_emails = frappe.get_all(
+        "Email Send Recipient",
+        filters={"parent": send.name, "status": ["!=", "Invalid"]},
+        pluck="email",
+    )
     queued_emails = {
         r[0] for r in frappe.db.sql(
             """
@@ -288,7 +295,7 @@ def _resume_send(send_doc_name, letter_name, letter_doc):
     """Re-enqueue a partial/failed Email Send."""
     unsent = frappe.db.count(
         "Email Send Recipient",
-        {"parent": send_doc_name, "status": ["!=", "Sent"]},
+        {"parent": send_doc_name, "status": ["not in", ["Sent", "Invalid"]]},
     )
     frappe.db.set_value("Email Send", send_doc_name, "status", "Sending")
     letter_doc.status = "Sending"
@@ -298,7 +305,7 @@ def _resume_send(send_doc_name, letter_name, letter_doc):
     return {"queued": True, "count": unsent, "resumed": True}
 
 
-def _bulk_insert_recipients(send_doc_name, recipient_list):
+def _bulk_insert_recipients(send_doc_name, recipient_list, status="Pending", start_idx=1):
     """Write child rows for an Email Send in one batched INSERT."""
     now  = frappe.utils.now()
     user = frappe.session.user
@@ -309,7 +316,7 @@ def _bulk_insert_recipients(send_doc_name, recipient_list):
     values = [
         (
             frappe.generate_hash(length=10), now, now, user, user, 0,
-            idx + 1, send_doc_name, "recipients", "Email Send", email, "Pending",
+            start_idx + idx, send_doc_name, "recipients", "Email Send", email, status,
         )
         for idx, email in enumerate(recipient_list)
     ]
@@ -365,7 +372,9 @@ def _execute_send(send_doc_name, letter_name):
         compiler = EmailCompiler(blocks_json, preview_text=preview_text, email_width=email_width)
         html = compiler.compile()
 
-        pending = [row.email for row in send_doc.recipients if row.status != "Sent"]
+        # Invalid rows were never resolved to an address worth queuing — they
+        # exist purely so the Recipients tab can show them, not to be sent.
+        pending = [row.email for row in send_doc.recipients if row.status not in ("Sent", "Invalid")]
         if pending:
             _queue_recipients(send_doc, letter_name, pending, subject, html)
             # queue_separately hands each address to the Email Queue. Mark the
@@ -374,7 +383,7 @@ def _execute_send(send_doc_name, letter_name):
             # (see _delivery_counts / get_send_progress).
             frappe.db.sql(
                 "update `tabEmail Send Recipient` set status='Sent' "
-                "where parent=%s and status!='Sent'",
+                "where parent=%s and status not in ('Sent', 'Invalid')",
                 send_doc_name,
             )
 
@@ -383,7 +392,10 @@ def _execute_send(send_doc_name, letter_name):
         # status once core's Email Queue has drained.
         frappe.db.set_value(
             "Email Send", send_doc_name,
-            {"status": "Sending", "sent_count": len(send_doc.recipients)},
+            {
+                "status": "Sending",
+                "sent_count": len([r for r in send_doc.recipients if r.status != "Invalid"]),
+            },
             update_modified=False,
         )
         frappe.db.set_value(
@@ -401,7 +413,7 @@ def _execute_send(send_doc_name, letter_name):
             (
                 frappe.qb.update(recipient)
                 .set(recipient.status, "Failed")
-                .where((recipient.parent == send_doc_name) & (recipient.status != "Sent"))
+                .where((recipient.parent == send_doc_name) & (~recipient.status.isin(["Sent", "Invalid"])))
             ).run()
             frappe.db.commit()
         except Exception:
