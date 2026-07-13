@@ -81,6 +81,23 @@ class AnalyticsMixin:
             limit=int(limit),
         )
 
+        # Email Send Recipient.status only means "accepted into the Email
+        # Queue" (set at queue time, see _execute_send) — it does not reflect
+        # actual SMTP delivery. Real per-recipient outcome lives on core's
+        # Email Queue (queue_separately creates one row per recipient), so
+        # overlay that here and attach the Email Queue row name for failures
+        # so the UI can link straight to its error history.
+        delivery = self._recipient_delivery_status()
+        for row in sent:
+            info = delivery.get(row.email.lower())
+            if not info:
+                continue
+            if info["status"] == "Error":
+                row.status = "Failed"
+                row.email_queue = info["name"]
+            elif info["status"] == "Sent":
+                row.status = "Sent"
+
         # Also surface emails that were suppressed for this letter (unsubscribed).
         # These were never inserted into Email Send Recipient, so we look them up
         # from Email Unsubscribe scoped to this letter + its folder.
@@ -102,6 +119,23 @@ class AnalyticsMixin:
             if r.email not in sent_emails
         ]
         return sent + excluded
+
+    def _recipient_delivery_status(self):
+        """Map lowercased recipient email -> {status, name} from core's Email
+        Queue for this letter. `name` is the Email Queue row, used to link a
+        failed recipient to its full error history (a row can accumulate
+        multiple Error Log entries across retries, so only the row name is
+        useful here — not a single error text snapshot).
+        """
+        EQ = frappe.qb.DocType("Email Queue")
+        EQR = frappe.qb.DocType("Email Queue Recipient")
+        rows = (
+            frappe.qb.from_(EQ)
+            .join(EQR).on(EQR.parent == EQ.name)
+            .select(EQR.recipient, EQ.status, EQ.name)
+            .where((EQ.reference_doctype == "Letter") & (EQ.reference_name == self.name))
+        ).run(as_dict=True)
+        return {r.recipient.lower(): {"status": r.status, "name": r.name} for r in rows}
 
     def get_send_progress(self):
         frappe.has_permission("Letter", "read", doc=self, throw=True)

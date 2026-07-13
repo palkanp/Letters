@@ -525,6 +525,85 @@ class TestSendProgressLiveDelivery(LettersTestCase):
         self.assertEqual(prog["status"], "Sending")
 
 
+class TestReconcileActiveSends(LettersTestCase):
+    """reconcile_active_sends must re-settle 'Partial' letters whose failed
+    Email Queue rows were retried outside of Letters (e.g. from the Email
+    Queue list view), not just letters still stuck 'Sending'."""
+
+    def _make_queue_row(self, letter_name, status):
+        row = frappe.get_doc({
+            "doctype": "Email Queue",
+            "sender": "Frappe <test@example.com>",
+            "message": "Subject: x\n\nbody",
+            "status": status,
+            "reference_doctype": "Letter",
+            "reference_name": letter_name,
+        })
+        row.insert(ignore_permissions=True, ignore_mandatory=True)
+        self._created.append(("Email Queue", row.name))
+        return row
+
+    def _partial_letter(self, total=3, modified=None):
+        doc = self.new_letter()
+        frappe.db.set_value("Letter", doc.name, "status", "Partial")
+        send = self.new_email_send(
+            doc.name, status="Partial",
+            recipients=[{"email": f"r{i}@example.com", "status": "Sent"} for i in range(total)],
+        )
+        frappe.db.set_value(
+            "Email Send", send.name,
+            {"total_recipients": total, "sent_count": total - 1},
+            update_modified=False,
+        )
+        if modified:
+            frappe.db.set_value("Letter", doc.name, "modified", modified, update_modified=False)
+        frappe.db.commit()
+        return doc, send
+
+    def test_settles_to_sent_once_retried_rows_succeed(self):
+        """Even after the retry clears the last Error row, a recently-Partial
+        letter must still be revisited and flipped to Sent."""
+        from letters.letters.api.sending import reconcile_active_sends
+
+        doc, send = self._partial_letter(total=3)
+        for _ in range(3):
+            self._make_queue_row(doc.name, "Sent")  # all rows now succeeded, no Error left
+
+        reconcile_active_sends()
+
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Sent")
+        self.assertEqual(frappe.db.get_value("Email Send", send.name, "status"), "Sent")
+
+    def test_leaves_partial_alone_when_still_failing(self):
+        from letters.letters.api.sending import reconcile_active_sends
+
+        doc, send = self._partial_letter(total=3)
+        self._make_queue_row(doc.name, "Sent")
+        self._make_queue_row(doc.name, "Sent")
+        self._make_queue_row(doc.name, "Error")  # not retried yet
+
+        reconcile_active_sends()
+
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Partial")
+
+    def test_skips_partial_letters_outside_recheck_window(self):
+        """A Partial letter settled more than 24h ago is left alone, even if
+        its Email Queue rows have since changed — bounds the rescan so this
+        doesn't grow into an unbounded historical scan."""
+        from frappe.utils import add_to_date, now_datetime
+
+        from letters.letters.api.sending import reconcile_active_sends
+
+        old = add_to_date(now_datetime(), hours=-48)
+        doc, send = self._partial_letter(total=3, modified=old)
+        for _ in range(3):
+            self._make_queue_row(doc.name, "Sent")
+
+        reconcile_active_sends()
+
+        self.assertEqual(frappe.db.get_value("Letter", doc.name, "status"), "Partial")
+
+
 class TestAtomicSendClaim(LettersTestCase):
     """send() must atomically transition Draft → Sending to prevent double-sends."""
 
@@ -655,6 +734,50 @@ class TestGetRecipients(LettersTestCase):
             {"email": f"r{i}@example.com", "status": "Sent"} for i in range(5)
         ])
         self.assertEqual(len(doc.get_recipients(limit=2)), 2)
+
+    def _make_queue_row(self, letter_name, recipient, status, doc=None):
+        row = frappe.get_doc({
+            "doctype": "Email Queue",
+            "sender": "Frappe <test@example.com>",
+            "message": "Subject: x\n\nbody",
+            "status": status,
+            "reference_doctype": "Letter",
+            "reference_name": letter_name,
+        })
+        row.insert(ignore_permissions=True, ignore_mandatory=True)
+        row.append("recipients", {"recipient": recipient, "status": "Sent" if status == "Sent" else "Not Sent"})
+        row.save(ignore_permissions=True)
+        self._created.append(("Email Queue", row.name))
+        return row
+
+    def test_overlays_real_delivery_status_from_email_queue(self):
+        """Email Send Recipient.status only means 'accepted into the queue' —
+        get_recipients must report actual SMTP outcome from Email Queue, and
+        attach the failed row's name so the UI can link to its error history."""
+        doc = self.new_letter()
+        self.new_email_send(doc.name, recipients=[
+            {"email": "a@example.com", "status": "Sent"},
+            {"email": "b@example.com", "status": "Sent"},
+        ])
+        self._make_queue_row(doc.name, "a@example.com", "Sent")
+        fail_row = self._make_queue_row(doc.name, "b@example.com", "Error")
+
+        by_email = {r.email: r for r in doc.get_recipients()}
+        self.assertEqual(by_email["a@example.com"].status, "Sent")
+        self.assertIsNone(by_email["a@example.com"].get("email_queue"))
+        self.assertEqual(by_email["b@example.com"].status, "Failed")
+        self.assertEqual(by_email["b@example.com"].email_queue, fail_row.name)
+
+    def test_no_email_queue_rows_leaves_stored_status(self):
+        """Old sends (or sends whose Email Queue logs were cleared) should
+        keep showing whatever was stored, not get blanked out."""
+        doc = self.new_letter()
+        self.new_email_send(doc.name, recipients=[
+            {"email": "a@example.com", "status": "Sent"},
+        ])
+        result = doc.get_recipients()
+        self.assertEqual(result[0].status, "Sent")
+        self.assertIsNone(result[0].get("email_queue"))
 
 
 class TestGetSendProgress(LettersTestCase):

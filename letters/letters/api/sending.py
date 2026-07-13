@@ -567,10 +567,25 @@ def _reconcile_send_status(letter_name, send_name, total, current_status, queued
 
 def reconcile_active_sends():
     """Scheduled fallback: settle Letters stuck in 'Sending' once their Email
-    Queue has drained, for sends nobody is actively polling in the builder."""
+    Queue has drained, for sends nobody is actively polling in the builder.
+
+    Also re-checks recently-settled 'Partial' letters. A Partial settle isn't
+    necessarily final — failed rows can be manually retried straight from the
+    Email Queue list view, outside of Letters entirely, and nothing else would
+    tell Letters to look again. Bounded to the last 24 hours (rather than
+    "still has an Error row") since a successful retry clears the Error row
+    that would otherwise be needed to notice the retry happened at all.
+    """
     from frappe.utils import add_to_date, now_datetime
 
-    for letter_name in frappe.get_all("Letter", filters={"status": "Sending"}, pluck="name"):
+    sending = frappe.get_all("Letter", filters={"status": "Sending"}, pluck="name")
+    recently_partial = frappe.get_all(
+        "Letter",
+        filters={"status": "Partial", "modified": [">", add_to_date(now_datetime(), hours=-24)]},
+        pluck="name",
+    )
+
+    for letter_name in [*sending, *recently_partial]:
         try:
             sends = frappe.get_all(
                 "Email Send",

@@ -170,63 +170,59 @@
 
                     <div v-for="(src, i) in audienceSources" :key="i">
 
-                      <!-- Email group: link only, no expand -->
-                      <div v-if="src.link" class="flex items-center gap-3 px-3 py-2.5">
-                        <span :class="`lucide-${src.icon} size-3.5 flex-shrink-0 text-ink-gray-4`" aria-hidden="true" />
+                      <button
+                        class="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-surface-gray-1 transition-colors text-left"
+                        @click="toggleSource(i)"
+                      >
                         <div class="flex-1 min-w-0">
-                          <p class="text-xs font-medium text-ink-gray-7">Email Group</p>
-                          <a
-                            :href="src.link"
-                            target="_blank"
-                            class="text-2xs text-ink-blue-4 hover:underline"
-                          >{{ src.title }}</a>
+                          <p class="text-xs font-medium text-ink-gray-7">
+                            <a
+                              v-if="src.externalLink"
+                              :href="src.externalLink"
+                              target="_blank"
+                              class="text-ink-blue-4 hover:underline"
+                              @click.stop
+                            >{{ src.title }}</a>
+                            <template v-else>{{ src.title }}</template>
+                            <span class="font-normal text-ink-gray-4 ml-1">({{ src.subset.length }})</span>
+                          </p>
+                          <p v-if="src.detail" class="text-2xs text-ink-gray-4 mt-0.5">{{ src.detail }}</p>
+                        </div>
+                        <span
+                          class="lucide-chevron-right size-3.5 text-ink-gray-3 transition-transform flex-shrink-0"
+                          :class="expandedSources.has(i) ? 'rotate-90' : ''"
+                          aria-hidden="true"
+                        />
+                      </button>
+
+                      <div v-if="expandedSources.has(i)" class="border-t border-outline-gray-1 bg-surface-gray-1">
+                        <div class="max-h-52 overflow-y-auto divide-y divide-outline-gray-1">
+                          <div
+                            v-for="r in src.subset"
+                            :key="r.email"
+                            class="flex items-center justify-between px-4 py-2 text-xs"
+                          >
+                            <span class="text-ink-gray-7 truncate mr-3">{{ r.email }}</span>
+                            <div class="flex items-center gap-2 flex-shrink-0">
+                              <span v-if="r.opened" class="flex items-center gap-0.5 text-ink-green-6">
+                                <span class="lucide-eye size-3" aria-hidden="true" /> Opened
+                              </span>
+                              <a
+                                v-if="r.status === 'Failed' && r.email_queue"
+                                :href="`/app/error-log?reference_doctype=Email%20Queue&reference_name=${encodeURIComponent(r.email_queue)}`"
+                                target="_blank"
+                                class="text-ink-red-5 hover:underline"
+                              >Failed</a>
+                              <span v-else :class="{
+                                'text-ink-gray-4':  r.status === 'Sent',
+                                'text-ink-red-5':   r.status === 'Failed',
+                                'text-ink-amber-6': r.status === 'Excluded',
+                              }">{{ r.status }}</span>
+                            </div>
+                          </div>
+                          <div v-if="!src.subset.length" class="px-4 py-4 text-xs text-ink-gray-4 text-center">No recipients found.</div>
                         </div>
                       </div>
-
-                      <!-- Paste / DocType: expandable with count -->
-                      <template v-else>
-                        <button
-                          class="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-surface-gray-1 transition-colors text-left"
-                          @click="toggleSource(i)"
-                        >
-                          <span :class="`lucide-${src.icon} size-3.5 flex-shrink-0 text-ink-gray-4`" aria-hidden="true" />
-                          <div class="flex-1 min-w-0">
-                            <p class="text-xs font-medium text-ink-gray-7">
-                              {{ src.title }}
-                              <span class="font-normal text-ink-gray-4 ml-1">({{ src.subset.length }})</span>
-                            </p>
-                            <p v-if="src.detail" class="text-2xs text-ink-gray-4 mt-0.5">{{ src.detail }}</p>
-                          </div>
-                          <span
-                            class="lucide-chevron-right size-3.5 text-ink-gray-3 transition-transform flex-shrink-0"
-                            :class="expandedSources.has(i) ? 'rotate-90' : ''"
-                            aria-hidden="true"
-                          />
-                        </button>
-
-                        <div v-if="expandedSources.has(i)" class="border-t border-outline-gray-1 bg-surface-gray-1">
-                          <div class="max-h-52 overflow-y-auto divide-y divide-outline-gray-1">
-                            <div
-                              v-for="r in src.subset"
-                              :key="r.email"
-                              class="flex items-center justify-between px-4 py-2 text-xs"
-                            >
-                              <span class="text-ink-gray-7 truncate mr-3">{{ r.email }}</span>
-                              <div class="flex items-center gap-2 flex-shrink-0">
-                                <span v-if="r.opened" class="flex items-center gap-0.5 text-ink-green-6">
-                                  <span class="lucide-eye size-3" aria-hidden="true" /> Opened
-                                </span>
-                                <span :class="{
-                                  'text-ink-gray-4':  r.status === 'Sent',
-                                  'text-ink-red-5':   r.status === 'Failed',
-                                  'text-ink-amber-6': r.status === 'Excluded',
-                                }">{{ r.status }}</span>
-                              </div>
-                            </div>
-                            <div v-if="!src.subset.length" class="px-4 py-4 text-xs text-ink-gray-4 text-center">No recipients found.</div>
-                          </div>
-                        </div>
-                      </template>
 
                     </div>
 
@@ -235,10 +231,16 @@
                       <div
                         v-for="r in recipients"
                         :key="r.email"
-                        class="flex items-center justify-between px-3 py-2 text-xs"
+                        class="flex items-center justify-between px-4 py-2 text-xs"
                       >
                         <span class="text-ink-gray-7 truncate mr-3">{{ r.email }}</span>
-                        <span :class="r.status === 'Sent' ? 'text-ink-gray-4' : 'text-ink-red-5'">{{ r.status }}</span>
+                        <a
+                          v-if="r.status === 'Failed' && r.email_queue"
+                          :href="`/app/error-log?reference_doctype=Email%20Queue&reference_name=${encodeURIComponent(r.email_queue)}`"
+                          target="_blank"
+                          class="text-ink-red-5 hover:underline"
+                        >Failed</a>
+                        <span v-else :class="r.status === 'Sent' ? 'text-ink-gray-4' : 'text-ink-red-5'">{{ r.status }}</span>
                       </div>
                     </div>
 
@@ -417,12 +419,15 @@ const audienceSources = computed(() => {
 
   return list.map(src => {
     if (src.type === "group") {
+      const members = groupMembers.value[src.email_group] || new Set();
+      const subset = resolvedSubset(src) ?? [...members]
+        .map(e => recipientMap[e.toLowerCase()])
+        .filter(Boolean);
       return {
-        icon: "users",
         title: src.email_group || "—",
         detail: null,
-        link: `/app/email-group/${encodeURIComponent(src.email_group)}`,
-        subset: null,
+        externalLink: `/app/email-group/${encodeURIComponent(src.email_group)}`,
+        subset,
       };
     }
 
@@ -430,17 +435,16 @@ const audienceSources = computed(() => {
       const subset = resolvedSubset(src) ?? (src.recipients || [])
         .map(e => recipientMap[e.toLowerCase()])
         .filter(Boolean);
-      return { icon: "clipboard-list", title: "Pasted addresses", detail: null, link: null, subset };
+      return { title: "Pasted addresses", detail: null, externalLink: null, subset };
     }
 
     if (src.type === "doctype") {
       const filterDesc = describeFilters(src.filters);
       const subset = resolvedSubset(src) ?? recipients.value;
       return {
-        icon: "database",
         title: src.doctype || "DocType",
         detail: filterDesc || null,
-        link: null,
+        externalLink: null,
         subset,
       };
     }

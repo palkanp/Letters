@@ -184,6 +184,12 @@ export function useLetter(editorStore, { initialName = null, skipTemplatePrompt 
       if (doc.status === "Sending") {
         sendProgress.value = { status: "Sending", sent: 0, delivered: 0, failed: 0, total: 0 };
         _startProgressPolling();
+      } else if (["Partial", "Failed"].includes(doc.status)) {
+        // A settled Partial/Failed send can still change later — e.g. someone
+        // manually retries failed rows from the Email Queue list view, outside
+        // of Letters entirely. Refresh once so the toolbar isn't stuck showing
+        // whatever was true at the last settle.
+        _refreshSendProgressOnce(name);
       }
       // Allow one Vue flush cycle before re-enabling dirty tracking
       await Promise.resolve();
@@ -349,6 +355,24 @@ export function useLetter(editorStore, { initialName = null, skipTemplatePrompt 
       toast.error(msg);
     } finally {
       sending.value = false;
+    }
+  }
+
+  async function _refreshSendProgressOnce(name) {
+    try {
+      const r = await frappe.call({
+        method: "letters.letters.api.get_send_progress",
+        args: { name },
+      });
+      sendProgress.value = r.message;
+      if (editorStore.letterDoc && r.message.status !== editorStore.letterDoc.status) {
+        editorStore.letterDoc.status = r.message.status;
+      }
+      // The backend may have just settled this to "Sending" again (a retry
+      // brought failed rows back to life) — pick up live polling if so.
+      if (r.message.status === "Sending") _startProgressPolling();
+    } catch {
+      // Best-effort refresh; leave the last-known progress on the toolbar.
     }
   }
 
