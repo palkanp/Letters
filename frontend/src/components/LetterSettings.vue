@@ -245,6 +245,12 @@
                     </div>
 
                   </div>
+                  <a
+                    v-if="hasSendStarted && emailQueueUrl"
+                    :href="emailQueueUrl"
+                    target="_blank"
+                    class="mt-2 inline-block text-xs text-ink-blue-4 hover:underline"
+                  >View Email Queue</a>
                 </div>
                 <!-- Before sending: picker -->
                 <RecipientsPicker
@@ -378,6 +384,13 @@ const isOpen = computed({
 
 const activeTab = ref("details");
 const isSent = computed(() => ["Sent", "Partial", "Failed", "Sending", "Scheduled"].includes(props.letterDoc?.status));
+// "Scheduled" hasn't actually started sending yet - excluded here so the
+// Email Queue link only shows once there's really something to look at.
+const hasSendStarted = computed(() => ["Sent", "Partial", "Failed", "Sending"].includes(props.letterDoc?.status));
+const emailQueueUrl = computed(() => {
+  if (!props.letterDoc?.name) return null;
+  return `/app/email-queue?reference_doctype=Letter&reference_name=${encodeURIComponent(props.letterDoc.name)}`;
+});
 
 const localSenderName  = ref(props.senderName);
 const localSenderEmail = ref(props.senderEmail);
