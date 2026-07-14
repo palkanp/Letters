@@ -188,7 +188,9 @@ class SocialRenderer(BlockRenderer):
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
-            f'<tr><td align="{align}"{pad_class} style="padding:{padding};">'
+            # Reset the inherited font-size:0/line-height:0 of the email-card
+            # <td> so text labels next to the icons stay readable.
+            f'<tr><td align="{align}"{pad_class} style="padding:{padding};font-size:14px;line-height:1.6;">'
             + "".join(links) +
             f'</td></tr></table>'
         )
