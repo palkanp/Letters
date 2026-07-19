@@ -532,6 +532,46 @@ class TestFooterRenderer:
         html = FooterRenderer().render({"type": "footer", "props": {"text": "<script>x</script>"}})
         assert "<script>" not in html
 
+    def test_renders_links(self):
+        html = FooterRenderer().render({"type": "footer", "props": {
+            "text": "Sent by Acme",
+            "links": [
+                {"label": "Unsubscribe", "url": "https://example.com/unsub"},
+                {"label": "Preferences", "url": "https://example.com/prefs"},
+            ],
+        }})
+        assert '<a href="https://example.com/unsub"' in html
+        assert "Unsubscribe" in html and "Preferences" in html
+        assert "&middot;" in html
+
+    def test_link_url_keeps_merge_tags(self):
+        html = FooterRenderer().render({"type": "footer", "props": {
+            "links": [{"label": "Unsubscribe", "url": "{{ unsubscribe_url }}"}],
+        }})
+        assert 'href="{{ unsubscribe_url }}"' in html
+
+    def test_link_xss_escaped(self):
+        html = FooterRenderer().render({"type": "footer", "props": {
+            "links": [{"label": "<script>x</script>", "url": "javascript:alert(1)"}],
+        }})
+        assert "<script>" not in html
+        assert 'href="#"' in html
+
+    def test_empty_text_emits_no_empty_paragraph(self):
+        html = FooterRenderer().render({"type": "footer", "props": {
+            "text": "",
+            "links": [{"label": "Unsubscribe", "url": "https://example.com"}],
+        }})
+        assert "margin:0 0 0" in html
+        assert html.count("<p") == 1
+
+    def test_link_color_falls_back_to_text_color(self):
+        html = FooterRenderer().render({"type": "footer", "props": {
+            "text_color": "#123456",
+            "links": [{"label": "Unsubscribe", "url": "https://example.com"}],
+        }})
+        assert 'style="color:#123456;text-decoration:underline;"' in html
+
 
 # ── QuoteRenderer ─────────────────────────────────────────────────────────────
 

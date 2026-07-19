@@ -2,7 +2,7 @@ from html import escape
 from typing import Any
 
 from letters.letters.utils.fonts import font_stack
-from .base import BlockRenderer, _abs_image_src, _class_attr, _font_scale_class, _pad_class, _padding, _safe_css_value, _spacing_wrapper
+from .base import BlockRenderer, _abs_image_src, _class_attr, _font_scale_class, _pad_class, _padding, _safe_css_value, _safe_url, _spacing_wrapper
 
 
 class HeroRenderer(BlockRenderer):
@@ -83,12 +83,40 @@ class FooterRenderer(BlockRenderer):
         font  = font_stack(p, "Arial,sans-serif")
 
         padding = _padding(p, 20, 16, 20, 16)
+
+        text_html = (
+            f'<p style="margin:0;font-family:{font};font-size:12px;'
+            f'color:{color};line-height:1.5;">{text}</p>'
+        ) if text else ""
+
+        # Compliance / service links (unsubscribe, preferences…) rendered as a
+        # single centered line. URLs may be merge-tag expressions resolved at
+        # send time — _safe_url passes those through untouched.
+        link_color = _safe_css_value(p.get("link_color", "")) or color
+        parts = []
+        for link in p.get("links") or []:
+            label = escape((link or {}).get("label", "").strip())
+            if not label:
+                continue
+            url = _safe_url((link or {}).get("url", "#"))
+            parts.append(
+                f'<a href="{url}" style="color:{link_color};'
+                f'text-decoration:underline;">{label}</a>'
+            )
+        links_html = ""
+        if parts:
+            sep = f'<span style="color:{color};">&nbsp;&nbsp;&middot;&nbsp;&nbsp;</span>'
+            margin_top = "8px" if text_html else "0"
+            links_html = (
+                f'<p style="margin:{margin_top} 0 0;font-family:{font};font-size:12px;'
+                f'color:{color};line-height:1.5;">{sep.join(parts)}</p>'
+            )
+
         html = (
             f'<table width="100%" cellpadding="0" cellspacing="0" border="0"'
             f' style="background-color:{bg};">'
             f'<tr><td align="center"{_class_attr(_pad_class(p))} style="padding:{padding};">'
-            f'<p style="margin:0;font-family:{font};font-size:12px;'
-            f'color:{color};line-height:1.5;">{text}</p>'
+            f'{text_html}{links_html}'
             f'</td></tr></table>'
         )
         return _spacing_wrapper(html, p)

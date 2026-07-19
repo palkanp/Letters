@@ -529,10 +529,16 @@ export const BLOCK_SCHEMA = {
   footer: {
     label: "Footer",
     icon: "align-justify",
+    sub_layers: [
+      { label: "Text", icon: "type" },
+      { label: "Links", icon: "link" },
+    ],
     defaults: {
       text: "You received this email because you signed up.",
+      links: [],
       background_color: "transparent",
       text_color: "#6b7280",
+      link_color: "",
       font_family: "Arial",
       padding_top: 20, padding_right: 16, padding_bottom: 20, padding_left: 16,
       ...borderDefaults,
@@ -553,6 +559,7 @@ export const BLOCK_SCHEMA = {
           letterSpacingField,
           { key: "background_color", label: "Background", type: "color" },
           { key: "text_color", label: "Text color", type: "color" },
+          { key: "link_color", label: "Link color", type: "color", hint: "Defaults to the text color when unset" },
           ...borderFields,
         ],
       },
